@@ -183,14 +183,16 @@ export default function PaginaPrincipal() {
 
              {/* Grid principal del menú - completamente responsive */}
        <div 
+         className="menu-grid"
          style={{
            display: 'grid',
-           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-           gap: '20px',
-           maxWidth: '1400px',
+           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+           gap: '12px',
+           maxWidth: '1800px',
            width: '100%',
            zIndex: 10,
-           padding: '0 15px'
+           padding: '0 15px',
+           height: 'fit-content'
          }}
        >
         {menuItems.map((item) => (
@@ -206,7 +208,7 @@ export default function PaginaPrincipal() {
                  : `linear-gradient(135deg, ${item.color}dd, ${item.color}aa)`,
                backdropFilter: 'blur(10px)',
                borderRadius: '20px',
-               padding: '30px',
+               padding: '20px',
                cursor: 'pointer',
                transition: 'all 0.3s ease',
                transform: hoveredItem === item.id ? 'translateY(-10px) scale(1.05)' : 'translateY(0) scale(1)',
@@ -216,7 +218,7 @@ export default function PaginaPrincipal() {
                border: item.id === 'reporte-general' ? '2px solid #00904c' : '2px solid transparent',
                position: 'relative',
                overflow: 'hidden',
-               minHeight: '180px',
+               minHeight: '140px',
                display: 'flex',
                flexDirection: 'column',
                justifyContent: 'center'
@@ -241,9 +243,10 @@ export default function PaginaPrincipal() {
             <div style={{ position: 'relative', zIndex: 2 }}>
                              {/* Icono principal de la tarjeta */}
                <div 
+                 className="icono"
                  style={{
-                   fontSize: '3rem',
-                   marginBottom: '15px',
+                   fontSize: '2.5rem',
+                   marginBottom: '10px',
                    textAlign: 'center',
                    filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
                  }}
@@ -255,9 +258,9 @@ export default function PaginaPrincipal() {
                <h3 
                  style={{
                    color: item.id === 'reporte-general' ? '#00904c' : 'white',
-                   fontSize: '1.4rem',
+                   fontSize: '1.2rem',
                    fontWeight: 'bold',
-                   margin: '0 0 12px 0',
+                   margin: '0 0 8px 0',
                    textAlign: 'center',
                    textShadow: item.id === 'reporte-general' ? 'none' : '1px 1px 2px rgba(0,0,0,0.5)'
                  }}
@@ -269,12 +272,12 @@ export default function PaginaPrincipal() {
                <p 
                  style={{
                    color: item.id === 'reporte-general' ? '#333' : 'white',
-                   fontSize: '1rem',
+                   fontSize: '0.9rem',
                    margin: 0,
                    textAlign: 'center',
                    opacity: item.id === 'reporte-general' ? 0.8 : 0.9,
                    textShadow: item.id === 'reporte-general' ? 'none' : '1px 1px 2px rgba(0,0,0,0.5)',
-                   lineHeight: '1.4'
+                   lineHeight: '1.3'
                  }}
                >
                  {item.descripcion}
@@ -289,29 +292,71 @@ export default function PaginaPrincipal() {
 
 
              {/* Estilos CSS para animaciones, tipografía y responsive */}
-       <style>{`
-         @keyframes shine {
-           0% { left: -100%; }
-           100% { left: 100%; }
-         }
-         
-         .pagina-principal {
-           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-         }
-         
-         /* Media queries para responsive */
-         @media (max-width: 768px) {
-           .pagina-principal {
-             padding: 10px !important;
-           }
-         }
-         
-         @media (max-width: 480px) {
-           .pagina-principal {
-             padding: 5px !important;
-           }
-         }
-       `}</style>
+      <style>{`
+        @keyframes shine {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
+        
+        .pagina-principal {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* ========================================================================
+            DISEÑO RESPONSIVE COMPLETO OPTIMIZADO PARA 12 TARJETAS SIN SCROLL
+        ======================================================================== */
+        
+        @media (max-width: 1400px) {
+          .menu-grid {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+            gap: 10px !important;
+          }
+        }
+        
+        @media (max-width: 1200px) {
+          .pagina-principal {
+            padding: 15px !important;
+          }
+          
+          .menu-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+            gap: 10px !important;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .pagina-principal {
+            padding: 10px !important;
+          }
+          
+          .menu-grid {
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+            gap: 8px !important;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .pagina-principal {
+            padding: 8px !important;
+          }
+          
+          .menu-grid {
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+            gap: 6px !important;
+          }
+        }
+        
+        @media (max-width: 360px) {
+          .pagina-principal {
+            padding: 5px !important;
+          }
+          
+          .menu-grid {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+            gap: 5px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

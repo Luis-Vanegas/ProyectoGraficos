@@ -32,7 +32,7 @@ export default function ProyectoDetalle() {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<Filters>({});
-  const [dimension, setDimension] = useState<string>(F.dependencia || F.comunaOCorregimiento || F.tipoDeIntervecion);
+
 
   // Carga inicial
   useEffect(() => {
@@ -67,19 +67,35 @@ export default function ProyectoDetalle() {
   }, [rows, proyecto]);
 
   // Opciones de filtros dinámicas
-  const opciones = useMemo(() => getFilterOptions(proyectoRows, filters), [proyectoRows, filters]);
+  // Función para combinar los campos de fecha en formato YYYY-MM-DD
+  const combineDateFields = (filters: any) => {
+    const newFilters = { ...filters };
+    
+    // Combinar fecha desde
+    if (filters.desdeDia && filters.desdeMes && filters.desdeAnio) {
+      newFilters.desde = `${filters.desdeAnio}-${filters.desdeMes}-${filters.desdeDia}`;
+    }
+    
+    // Combinar fecha hasta
+    if (filters.hastaDia && filters.hastaMes && filters.hastaAnio) {
+      newFilters.hasta = `${filters.hastaAnio}-${filters.hastaMes}-${filters.hastaDia}`;
+    }
+    
+    return newFilters;
+  };
 
-  // Aplica filtros
-  const filtered = useMemo(() => applyFilters(proyectoRows, filters), [proyectoRows, filters]);
+  const opciones = useMemo(() => getFilterOptions(proyectoRows, filters), [proyectoRows, filters]);
+  const combinedFilters = useMemo(() => combineDateFields(filters), [filters]);
+  const filtered = useMemo(() => applyFilters(proyectoRows, combinedFilters), [proyectoRows, combinedFilters]);
 
   // KPIs
   const k = useMemo(() => kpis(filtered), [filtered]);
 
   // Dataset para gráfico
   const comboDataset = useMemo(() => {
-    if (!dimension || !F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
-    return buildTwoSeriesDataset(filtered, dimension, F.costoTotalActualizado, F.presupuestoEjecutado, 12);
-  }, [filtered, dimension]);
+    if (!F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
+    return buildTwoSeriesDataset(filtered, F.dependencia, F.costoTotalActualizado, F.presupuestoEjecutado, 12);
+  }, [filtered]);
 
   // Obras entregadas y por entregar
   const entregadas = useMemo(() => {
@@ -112,17 +128,19 @@ export default function ProyectoDetalle() {
 
   return (
     <div className="shell">
-      <Navigation showBackButton={true} title={nombreProyecto} />
+      <Navigation showBackButton={true} title={proyectoNombres[proyecto!] || 'Detalle del Proyecto'} />
       <div className="container" style={{ paddingTop: '80px' }}>
         
         {/* Filtros */}
         <div className="panel">
-          <div className="toolbar">
+          <h3 className="panel-title">Filtros de búsqueda</h3>
+          <div className="filters-grid">
             {/* Dependencia */}
             {F.dependencia && (
-              <label>
-                Dependencia
+              <label className="filter-item">
+                <span className="filter-label">Dependencia</span>
                 <select
+                  className="filter-select"
                   value={filters.dependencia ?? ''}
                   onChange={e => setFilters(f => ({ ...f, dependencia: e.target.value || undefined }))}
                   disabled={opciones.dependencias.length === 0}
@@ -135,9 +153,10 @@ export default function ProyectoDetalle() {
 
             {/* Comuna / Corregimiento */}
             {F.comunaOCorregimiento && (
-              <label>
-                Comuna / Corregimiento
+              <label className="filter-item">
+                <span className="filter-label">Comuna / Corregimiento</span>
                 <select
+                  className="filter-select"
                   value={filters.comuna ?? ''}
                   onChange={e => setFilters(f => ({ ...f, comuna: e.target.value || undefined }))}
                   disabled={opciones.comunas.length === 0}
@@ -150,9 +169,10 @@ export default function ProyectoDetalle() {
 
             {/* Tipo de Intervención */}
             {F.tipoDeIntervecion && (
-              <label>
-                Tipo de Intervención
+              <label className="filter-item">
+                <span className="filter-label">Tipo de Intervención</span>
                 <select
+                  className="filter-select"
                   value={filters.tipo ?? ''}
                   onChange={e => setFilters(f => ({ ...f, tipo: e.target.value || undefined }))}
                   disabled={opciones.tipos.length === 0}
@@ -163,15 +183,138 @@ export default function ProyectoDetalle() {
               </label>
             )}
 
-            {/* Dimensión del gráfico */}
-            <label>
-              Dimensión gráfico
-              <select value={dimension ?? ''} onChange={e => setDimension(e.target.value)}>
-                {[F.dependencia, F.comunaOCorregimiento, F.tipoDeIntervecion].filter(Boolean).map(d => (
-                  <option key={d} value={d!}>{d}</option>
-                ))}
+            {/* Contratista */}
+            {F.contratista && (
+              <label className="filter-item">
+                <span className="filter-label">Contratista</span>
+                <select
+                  className="filter-select"
+                  value={filters.contratista ?? ''}
+                  onChange={e => setFilters(f => ({ ...f, contratista: e.target.value || undefined }))}
+                  disabled={opciones.contratistas?.length === 0}
+                >
+                  <option value="">Todos</option>
+                  {opciones.contratistas?.map(v => <option key={v} value={v}>{v}</option>) || []}
+                </select>
+              </label>
+            )}
+
+            {/* Estado de la Obra */}
+            <label className="filter-item">
+              <span className="filter-label">Estado de la Obra</span>
+              <select
+                className="filter-select"
+                value={filters.estado ?? ''}
+                onChange={e => setFilters(f => ({ ...f, estado: e.target.value || undefined }))}
+              >
+                <option value="">Todos los estados</option>
+                <option value="entregada">Obra Entregada</option>
+                <option value="en-ejecucion">En Ejecución</option>
+                <option value="en-planeacion">En Planeación</option>
+                <option value="suspendida">Suspendida</option>
+                <option value="cancelada">Cancelada</option>
               </select>
             </label>
+
+            {/* Filtros de fecha */}
+            {(F.fechaRealDeEntrega || F.fechaEstimadaDeEntrega) && (
+              <>
+                <div className="filter-group">
+                  <label className="filter-label">Fecha desde</label>
+                  <div className="date-inputs">
+                    <select
+                      className="filter-select date-day"
+                      value={filters.desdeDia ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeDia: e.target.value || undefined }))}
+                    >
+                      <option value="">Día</option>
+                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day.toString().padStart(2, '0')}>
+                          {day.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="filter-select date-month"
+                      value={filters.desdeMes ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeMes: e.target.value || undefined }))}
+                    >
+                      <option value="">Mes</option>
+                      <option value="01">Enero</option>
+                      <option value="02">Febrero</option>
+                      <option value="03">Marzo</option>
+                      <option value="04">Abril</option>
+                      <option value="05">Mayo</option>
+                      <option value="06">Junio</option>
+                      <option value="07">Julio</option>
+                      <option value="08">Agosto</option>
+                      <option value="09">Septiembre</option>
+                      <option value="10">Octubre</option>
+                      <option value="11">Noviembre</option>
+                      <option value="12">Diciembre</option>
+                    </select>
+                    <select
+                      className="filter-select date-year"
+                      value={filters.desdeAnio ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeAnio: e.target.value || undefined }))}
+                    >
+                      <option value="">Año</option>
+                      {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="filter-group">
+                  <label className="filter-label">Fecha hasta</label>
+                  <div className="date-inputs">
+                    <select
+                      className="filter-select date-day"
+                      value={filters.hastaDia ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaDia: e.target.value || undefined }))}
+                    >
+                      <option value="">Día</option>
+                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day.toString().padStart(2, '0')}>
+                          {day.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="filter-select date-month"
+                      value={filters.hastaMes ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaMes: e.target.value || undefined }))}
+                    >
+                      <option value="">Mes</option>
+                      <option value="01">Enero</option>
+                      <option value="02">Febrero</option>
+                      <option value="03">Marzo</option>
+                      <option value="04">Abril</option>
+                      <option value="05">Mayo</option>
+                      <option value="06">Junio</option>
+                      <option value="07">Julio</option>
+                      <option value="08">Agosto</option>
+                      <option value="09">Septiembre</option>
+                      <option value="10">Octubre</option>
+                      <option value="11">Noviembre</option>
+                      <option value="12">Diciembre</option>
+                    </select>
+                    <select
+                      className="filter-select date-year"
+                      value={filters.hastaAnio ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaAnio: e.target.value || undefined }))}
+                    >
+                      <option value="">Año</option>
+                      {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
+
+
           </div>
         </div>
 
@@ -219,7 +362,7 @@ export default function ProyectoDetalle() {
                   <ComboBars
                     title="Inversión total vs Presupuesto ejecutado"
                     dataset={comboDataset}
-                    dim={dimension!}
+                    dim={F.dependencia}
                     v1={F.costoTotalActualizado}
                     v2={F.presupuestoEjecutado}
                   />
@@ -228,29 +371,408 @@ export default function ProyectoDetalle() {
             )}
 
             {/* Tabla de obras entregadas */}
-            <WorksTable
-              title="Obras entregadas"
-              works={entregadas}
-              type="entregadas"
-              maxRows={8}
-            />
+            <div className="panel">
+              <WorksTable
+                title="Obras entregadas"
+                works={entregadas}
+                type="entregadas"
+                maxRows={8}
+              />
+            </div>
           </div>
 
           {/* Sidebar */}
           <div className="dashboard-sidebar">
             {/* Tabla de obras por entregar */}
-            <WorksTable
-              title="Obras por entregar"
-              works={porEntregar}
-              type="porEntregar"
-              maxRows={6}
-            />
+            <div className="panel">
+              <WorksTable
+                title="Obras por entregar"
+                works={porEntregar}
+                type="porEntregar"
+                maxRows={6}
+              />
+            </div>
           </div>
         </div>
 
         {/* Estado de carga */}
-        <div style={{ opacity: .7, textAlign: 'center', padding: '20px' }}>{status}</div>
+        <div className="status-indicator">{status}</div>
       </div>
+
+      {/* Estilos CSS con responsive design */}
+      <style>{`
+        .shell {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 0 20px;
+        }
+
+        .panel {
+          background: white;
+          border-radius: 15px;
+          padding: 25px;
+          margin-bottom: 25px;
+          box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+          border: 1px solid #e0e0e0;
+        }
+
+        .panel-title {
+          margin: 0 0 20px 0;
+          color: #333;
+          font-size: 1.3rem;
+          font-weight: 600;
+        }
+
+        .filters-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+        }
+
+        .filter-item {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .filter-label {
+          font-weight: 600;
+          color: #555;
+          font-size: 0.95rem;
+        }
+
+        .filter-select {
+          padding: 12px;
+          border: 2px solid #ddd;
+          border-radius: 8px;
+          font-size: 14px;
+          background: white;
+          transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+          outline: none;
+          border-color: #00904c;
+          box-shadow: 0 0 0 3px rgba(0, 144, 76, 0.1);
+        }
+
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 20px;
+        }
+
+        .dashboard-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 25px;
+        }
+
+        .dashboard-main {
+          display: flex;
+          flex-direction: column;
+          gap: 25px;
+        }
+
+        .dashboard-sidebar {
+          display: flex;
+          flex-direction: column;
+          gap: 25px;
+        }
+
+        .chart {
+          width: 100%;
+          height: 400px;
+        }
+
+        .status-indicator {
+          opacity: 0.7;
+          text-align: center;
+          padding: 20px;
+          color: #666;
+          font-style: italic;
+        }
+
+        /* ========================================================================
+            DISEÑO RESPONSIVE COMPLETO
+        ======================================================================== */
+        
+        @media (max-width: 1200px) {
+          .container {
+            padding: 0 15px;
+          }
+          
+          .filters-grid {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+          }
+          
+          .kpi-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .container {
+            padding: 0 12px;
+          }
+          
+          .panel {
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+          }
+          
+          .panel-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+          }
+          
+          .filters-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+          }
+          
+          .filter-select {
+            padding: 10px;
+            font-size: 14px;
+          }
+          
+          .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+          }
+          
+          .dashboard-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          
+          .dashboard-main {
+            gap: 20px;
+          }
+          
+          .dashboard-sidebar {
+            gap: 20px;
+          }
+          
+          .chart {
+            height: 350px;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .container {
+            padding: 0 10px;
+          }
+          
+          .panel {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+          }
+          
+          .panel-title {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+          }
+          
+          .filters-grid {
+            gap: 12px;
+          }
+          
+          .filter-label {
+            font-size: 0.9rem;
+          }
+          
+          .filter-select {
+            padding: 8px;
+            font-size: 13px;
+            border-radius: 6px;
+          }
+          
+          .kpi-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+          
+          .dashboard-grid {
+            gap: 15px;
+          }
+          
+          .dashboard-main {
+            gap: 15px;
+          }
+          
+          .dashboard-sidebar {
+            gap: 15px;
+          }
+          
+          .chart {
+            height: 300px;
+          }
+          
+          .status-indicator {
+            padding: 15px;
+            font-size: 14px;
+          }
+        }
+        
+        @media (max-width: 360px) {
+          .container {
+            padding: 0 8px;
+          }
+          
+          .panel {
+            padding: 12px;
+            margin-bottom: 12px;
+          }
+          
+          .filter-select {
+            padding: 6px;
+            font-size: 12px;
+          }
+          
+          .chart {
+            height: 250px;
+          }
+        }
+
+        /* Estilos para los inputs de fecha tipo calendario */
+        .date-inputs {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-start;
+        }
+
+        .date-inputs .filter-select {
+          border: 2px solid #79BC99;
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 14px;
+          background: white;
+          color: #2c3e50;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .date-inputs .filter-select:hover {
+          border-color: #4E8484;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .date-inputs .filter-select:focus {
+          outline: none;
+          border-color: #3B8686;
+          box-shadow: 0 0 0 3px rgba(121, 188, 153, 0.2);
+        }
+
+        .date-inputs .date-day {
+          flex: 0 0 70px;
+          min-width: 70px;
+        }
+
+        .date-inputs .date-month {
+          flex: 0 0 120px;
+          min-width: 120px;
+        }
+
+        .date-inputs .date-year {
+          flex: 0 0 90px;
+          min-width: 90px;
+        }
+
+        /* Responsive para tablets */
+        @media (max-width: 1024px) {
+          .date-inputs {
+            gap: 8px;
+          }
+          
+          .date-inputs .date-day {
+            flex: 0 0 65px;
+            min-width: 65px;
+          }
+          
+          .date-inputs .date-month {
+            flex: 0 0 110px;
+            min-width: 110px;
+          }
+          
+          .date-inputs .date-year {
+            flex: 0 0 85px;
+            min-width: 85px;
+          }
+        }
+
+        /* Responsive para móviles */
+        @media (max-width: 768px) {
+          .date-inputs {
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+          }
+          
+          .date-inputs .filter-select {
+            width: 100%;
+            max-width: 200px;
+            margin: 0 auto;
+          }
+          
+          .date-inputs .date-day,
+          .date-inputs .date-month,
+          .date-inputs .date-year {
+            flex: none;
+            min-width: auto;
+          }
+        }
+
+        /* Responsive para móviles pequeños */
+        @media (max-width: 480px) {
+          .date-inputs {
+            gap: 6px;
+          }
+          
+          .date-inputs .filter-select {
+            padding: 6px 10px;
+            font-size: 13px;
+            max-width: 180px;
+          }
+        }
+
+        /* Mejorar la apariencia de los filtros de fecha */
+        .filter-group:has(.date-inputs) .filter-label {
+          margin-bottom: 6px;
+          color: #2c3e50;
+          font-weight: 600;
+        }
+
+        /* Ajustar el grid de filtros para fechas */
+        @media (max-width: 1200px) {
+          .filter-group:has(.date-inputs) {
+            min-width: 260px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .filter-group:has(.date-inputs) {
+            min-width: auto;
+            width: 100%;
+          }
+          
+          .date-inputs {
+            justify-content: center;
+          }
+        }
+      `}</style>
     </div>
   );
 }

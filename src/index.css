@@ -90,11 +90,34 @@ h1 {
 /* que la tarjeta sepa su ancho para escalar el font-size */
 /* que la tarjeta sepa su ancho para escalar el font-size */
 /* la grilla se adapta: 1..n columnas según ancho */
-/* 4 columnas fijas para KPIs */
+/* Grid responsive para KPIs */
 .kpi-grid{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)); /* ⬅️ siempre 4 */
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+/* Estilos específicos para cada fila de KPIs */
+.kpis-row-1 {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 25px;
+}
+
+.kpis-row-2 {
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 25px;
+}
+
+.kpis-row-3 {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 0;
+  gap: 30px;
+}
+
+/* Estilo especial para la tercera fila */
+.kpis-row-3 .kpi {
+  max-width: 350px;
 }
 
 /* tarjeta KPI: label arriba, valor abajo */
@@ -102,19 +125,32 @@ h1 {
   display:grid;
   grid-template-rows: auto 1fr auto;
   gap: 8px;
-  background: linear-gradient(135deg, #1e2124 0%, #2a2f32 100%);
-  border: 1px solid #3a3f42;
-  border-radius: 12px;
-  padding: 20px;
+  background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 25px;
   min-height: 120px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Línea superior decorativa */
+.kpi::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3B8686, #79BC99, #4E8484);
 }
 
 .kpi:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  border-color: #4a4f52;
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(59, 130, 246, 0.4);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .kpi-header {
@@ -130,20 +166,32 @@ h1 {
 }
 
 .kpi-trend-up {
-  color: #4ade80;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 .kpi-trend-down {
-  color: #f87171;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 .kpi-trend-neutral {
-  color: #94a3b8;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 .kpi-subtitle {
   font-size: 12px;
-  color: #94a3b8;
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 500;
 }
 
@@ -154,9 +202,18 @@ h1 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;     /* si aún se excede, corta con … */
+  color: #FFFFFF;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.kpi-label{ font-size:13px; opacity:.95; }
+.kpi-label{ 
+  font-size: 13px; 
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
 
 /* Contenedor del gráfico (controla la altura) */
@@ -167,6 +224,58 @@ h1 {
 .table { width:100%; border-collapse: collapse; }
 .table thead { position: sticky; top: 0; background:#1b2126; z-index: 1; }
 .table th, .table td { padding: 8px; border-bottom:1px solid #233038; text-align:left; vertical-align: top; word-break: break-word; }
+
+/* Estilos responsive para KPIs */
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  
+  .kpis-row-1 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .kpis-row-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .kpis-row-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .kpi {
+    padding: 20px;
+  }
+  
+  .kpi-value {
+    font-size: clamp(16px, 2vw, 28px);
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .kpis-row-1,
+  .kpis-row-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .kpis-row-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .kpi {
+    padding: 18px;
+  }
+  
+  .kpi-value {
+    font-size: clamp(14px, 1.8vw, 24px);
+  }
+}
 
 /* Nuevos estilos para tablas mejoradas */
 .works-table, .alerts-table {
@@ -300,5 +409,973 @@ h1 {
 @media (max-width: 768px) {
   .kpi-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================================================
+    LAYOUT PRINCIPAL - MAPA Y LEYENDAS EXPANDIDAS
+======================================================================== */
+.main-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+  width: 100%;
+}
+
+.left-column, .right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.dashboard-container {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%);
+}
+
+.dashboard-content {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.left-column-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  width: 100%;
+}
+
+/* ========================================================================
+    MAPA EXPANDIDO
+======================================================================== */
+.map-card-expanded {
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+  border: 1px solid #79BC99;
+  transition: all 0.3s ease;
+}
+
+.map-card-expanded:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(121, 188, 153, 0.2);
+}
+
+/* ========================================================================
+    LEYENDA EXPANDIDA
+======================================================================== */
+.map-legend-expanded {
+  margin-bottom: 25px;
+  padding: 25px;
+  background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+  border-radius: 20px;
+  border: 1px solid #79BC99;
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
+}
+
+/* ========================================================================
+    LEYENDA DEL MAPA
+======================================================================== */
+.map-legend {
+  margin-bottom: 25px;
+  padding: 20px;
+  background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+  border-radius: 15px;
+  border: 1px solid #79BC99;
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
+}
+
+.map-legend h4 {
+  margin: 0 0 20px 0;
+  color: #3B8686;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.legend-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 10px;
+  border: 1px solid #79BC99;
+  box-shadow: 0 2px 8px rgba(121, 188, 153, 0.08);
+  transition: all 0.3s ease;
+}
+
+.legend-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+}
+
+.legend-color {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #79BC99;
+  box-shadow: 0 2px 6px rgba(121, 188, 153, 0.3);
+}
+
+.legend-text {
+  font-size: 0.9rem;
+  color: #2C3E50;
+  font-weight: 500;
+}
+
+.map-legend-expanded h4 {
+  margin: 0 0 25px 0;
+  color: #3B8686;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.legend-items-expanded {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.legend-item-expanded {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 15px;
+  border: 1px solid #79BC99;
+  box-shadow: 0 2px 8px rgba(121, 188, 153, 0.08);
+  transition: all 0.3s ease;
+}
+
+.legend-item-expanded:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(121, 188, 153, 0.15);
+  background: linear-gradient(135deg, #F0F8FF 0%, #E8F4F8 100%);
+}
+
+.legend-color-expanded {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #79BC99;
+  box-shadow: 0 3px 8px rgba(121, 188, 153, 0.3);
+}
+
+.legend-text-expanded {
+  font-size: 1rem;
+  color: #2C3E50;
+  font-weight: 600;
+}
+
+/* ========================================================================
+    CONTENEDOR DEL MAPA EXPANDIDO
+======================================================================== */
+.map-container-expanded {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 2px solid #79BC99;
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
+  width: 100%;
+  height: 100%;
+}
+
+/* ========================================================================
+    CONTENEDOR DEL MAPA
+======================================================================== */
+.map-container {
+  border-radius: 15px;
+  overflow: hidden;
+  border: 2px solid #79BC99;
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
+}
+
+/* Asegurar que el mapa ocupe todo el ancho */
+.map-container-expanded .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-container-expanded .responsive-map {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Estilos adicionales para el mapa responsive */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.leaflet-map-pane {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.leaflet-tile-pane {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Asegurar que el contenedor del mapa ocupe todo el ancho disponible */
+.map-card-expanded {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ========================================================================
+    TARJETAS DE CONTENIDO
+======================================================================== */
+.chart-card, .map-card, .table-card {
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+  border: 1px solid #79BC99;
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover, .map-card:hover, .table-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(121, 188, 153, 0.2);
+}
+
+.chart-card:hover, .map-card:hover, .table-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(121, 188, 153, 0.2);
+}
+
+/* ========================================================================
+    SECCIÓN DE TABLAS MOVIDAS PARA ABAJO
+======================================================================== */
+.tables-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.tables-section .table-card {
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+  border: 1px solid #79BC99;
+  transition: all 0.3s ease;
+}
+
+.tables-section .table-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(121, 188, 153, 0.2);
+}
+
+/* Responsive para el nuevo layout */
+@media (max-width: 1024px) {
+  .tables-section {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
+  
+  .legend-items-expanded {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  
+  .dashboard-content {
+    padding: 15px;
+  }
+}
+
+/* Responsive para mapas */
+@media (max-width: 768px) {
+  .map-container-expanded {
+    height: 500px;
+  }
+  
+  .map-container-expanded .responsive-map {
+    height: 500px !important;
+  }
+}
+
+/* ========================================================================
+    DISEÑO RESPONSIVE
+======================================================================== */
+@media (max-width: 1200px) {
+  .tables-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    padding: 110px 15px 15px 15px;
+  }
+
+  .filters-container {
+    grid-template-columns: 1fr;
+  }
+
+  .kpis-section {
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+
+  .kpis-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .kpis-grid .kpi-card {
+    padding: 20px !important;
+  }
+
+  .kpis-grid .kpi-card .kpi-value {
+    font-size: 1.8rem !important;
+  }
+
+  .map-main-panel {
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+
+  .chart-card, .table-card {
+    padding: 25px;
+  }
+
+  .legend-items {
+    grid-template-columns: 1fr;
+  }
+
+  .tables-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .custom-popup .leaflet-popup-content {
+    min-width: 220px;
+    max-width: 260px;
+  }
+
+  .percentage-item {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .percentage-bar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-content {
+    padding: 100px 10px 10px 10px;
+  }
+
+  .filters-section {
+    padding: 25px;
+  }
+
+  .kpis-section {
+    padding: 15px;
+    margin-bottom: 25px;
+  }
+
+  .kpis-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .kpis-grid .kpi-card {
+    padding: 18px !important;
+  }
+
+  .kpis-grid .kpi-card .kpi-value {
+    font-size: 1.6rem !important;
+  }
+
+  .map-main-panel {
+    padding: 15px;
+    margin-bottom: 25px;
+  }
+
+  .chart-card, .table-card {
+    padding: 20px;
+  }
+
+  .custom-popup .leaflet-popup-content {
+    min-width: 200px;
+    max-width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    padding: 110px 15px 15px 15px;
+  }
+
+  .filters-container {
+    grid-template-columns: 1fr;
+  }
+
+  .kpis-section {
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+
+  .kpis-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+
+  .kpis-grid .kpi-card {
+    padding: 20px !important;
+  }
+
+  .kpis-grid .kpi-card .kpi-value {
+    font-size: 1.8rem !important;
+  }
+
+  .chart-card, .map-card, .table-card {
+    padding: 25px;
+  }
+
+  .legend-items {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-popup .leaflet-popup-content {
+    min-width: 220px;
+    max-width: 260px;
+  }
+
+  .percentage-item {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .percentage-bar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-content {
+    padding: 100px 10px 10px 10px;
+  }
+
+  .filters-section {
+    padding: 25px;
+  }
+
+  .kpis-section {
+    padding: 15px;
+    margin-bottom: 25px;
+  }
+
+  .kpis-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .kpis-grid .kpi-card {
+    padding: 18px !important;
+  }
+
+  .kpis-grid .kpi-card .kpi-value {
+    font-size: 1.6rem !important;
+  }
+
+  .chart-card, .map-card, .table-card {
+    padding: 20px;
+  }
+
+  .custom-popup .leaflet-popup-content {
+    min-width: 200px;
+    max-width: 240px;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-container-expanded {
+    height: 400px;
+  }
+  
+  .map-container-expanded .responsive-map {
+    height: 400px !important;
+  }
+}
+
+/* ========================================================================
+    ESTADOS DE CARGA Y ERROR
+======================================================================== */
+.loading-container, .error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  padding: 40px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #E8F4F8;
+  border-top: 4px solid #79BC99;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  color: #3B8686;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.error-container h2 {
+  color: #dc2626;
+  margin-bottom: 15px;
+}
+
+.error-container p {
+  color: #6C757D;
+  margin-bottom: 20px;
+}
+
+.error-container button {
+  background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.error-container button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.3);
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-overlay .loading-spinner {
+  margin-bottom: 15px;
+}
+
+.loading-overlay p {
+  color: #3B8686;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ========================================================================
+    INDICADOR DE ESTADO
+======================================================================== */
+.status-indicator {
+  text-align: center;
+  padding: 25px;
+  color: #6C757D;
+  font-style: italic;
+  background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+  border-radius: 15px;
+  margin-top: 30px;
+  border: 1px solid #79BC99;
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
+}
+
+.status-icon {
+  margin-right: 10px;
+  font-size: 1.2rem;
+}
+
+/* ========================================================================
+    SECCIÓN DE KPIs - DISEÑO PROFESIONAL Y ORGANIZADO
+======================================================================== */
+.kpis-section {
+  margin-bottom: 40px;
+  padding: 30px;
+  background: linear-gradient(135deg, rgba(212, 230, 241, 0.3) 0%, rgba(232, 244, 248, 0.3) 100%);
+  border-radius: 25px;
+  border: 1px solid rgba(121, 188, 153, 0.2);
+}
+
+.kpis-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+}
+
+/* Estilos específicos para cada fila de KPIs - Layout 2x2 */
+.kpis-row-1 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.kpis-row-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* ========================================================================
+    PANEL PRINCIPAL DEL MAPA - OCUPA TODA LA PARTE SUPERIOR
+======================================================================== */
+.map-main-panel {
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 25px;
+  padding: 30px;
+  margin-bottom: 40px;
+  box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
+  border: 2px solid #79BC99;
+  transition: all 0.3s ease;
+}
+
+.map-main-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(121, 188, 153, 0.2);
+}
+
+/* ========================================================================
+    SECCIÓN DE CONTENIDO INFERIOR
+======================================================================== */
+.content-section {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+}
+
+/* ========================================================================
+    LEYENDA DEL MAPA
+======================================================================== */
+.map-legend {
+  margin-bottom: 25px;
+  padding: 20px;
+  background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+  border-radius: 15px;
+  border: 1px solid #79BC99;
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
+}
+
+.map-legend h4 {
+  margin: 0 0 20px 0;
+  color: #3B8686;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.legend-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 10px;
+  border: 1px solid #79BC99;
+  box-shadow: 0 2px 8px rgba(121, 188, 153, 0.08);
+  transition: all 0.3s ease;
+}
+
+.legend-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+}
+
+.legend-color {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #79BC99;
+  box-shadow: 0 2px 6px rgba(121, 188, 153, 0.3);
+}
+
+.legend-text {
+  font-size: 0.9rem;
+  color: #2C3E50;
+  font-weight: 500;
+}
+
+/* ========================================================================
+    CONTENEDOR DEL MAPA EXPANDIDO
+======================================================================== */
+.map-container-expanded {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 2px solid #79BC99;
+  box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
+  width: 100%;
+  height: 100%;
+}
+
+/* Asegurar que el mapa ocupe todo el ancho */
+.map-container-expanded .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-container-expanded .responsive-map {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-container-expanded .leaflet-map-pane {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-container-expanded .leaflet-tile-pane {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ========================================================================
+    POPUP PERSONALIZADO DEL MAPA
+======================================================================== */
+.custom-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(121, 188, 153, 0.2);
+}
+
+.custom-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+  min-width: 240px;
+  max-width: 280px;
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 12px;
+}
+
+.map-popup {
+  padding: 0;
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+  border-radius: 12px;
+}
+
+.popup-header {
+  padding: 12px 16px;
+  border-left: 4px solid;
+  background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 2px 8px rgba(121, 188, 153, 0.1);
+}
+
+.popup-header h4 {
+  margin: 0 0 6px 0;
+  color: #2C3E50;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.popup-dependency {
+  color: #00904c;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.popup-info {
+  padding: 10px 16px;
+  border-bottom: 1px solid #79BC99;
+  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+}
+
+.popup-info p {
+  margin: 6px 0;
+  font-size: 0.85rem;
+  color: #6C757D;
+  line-height: 1.4;
+}
+
+.popup-info strong {
+  color: #2C3E50;
+}
+
+.popup-percentages {
+  padding: 10px 16px;
+}
+
+.popup-percentages h5 {
+  margin: 0 0 12px 0;
+  color: #00904c;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.percentage-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.percentage-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.percentage-label {
+  font-size: 0.8rem;
+  color: #6C757D;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.percentage-bar {
+  width: 70px;
+  height: 8px;
+  background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.percentage-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.percentage-value {
+  font-size: 0.75rem;
+  color: #00904c;
+  font-weight: 600;
+  min-width: 30px;
+  text-align: right;
+}
+
+/* ========================================================================
+    SECCIÓN DE FILTROS - RESPONSIVE
+======================================================================== */
+.filters-section {
+  background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+  border-radius: 20px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+  border: 1px solid #79BC99;
+}
+
+.filters-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #3B8686;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-select,
+.filter-input {
+  padding: 12px 16px;
+  border: 2px solid #79BC99;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #F0F8FF 0%, #E8F4F8 100%);
+  color: #2C3E50;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: #4E8484;
+  box-shadow: 0 0 0 3px rgba(121, 188, 153, 0.2);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0F8FF 100%);
+}
+
+.filter-select:hover,
+.filter-input:hover {
+  border-color: #4E8484;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0F8FF 100%);
+}
+
+/* Responsive para filtros */
+@media (max-width: 1024px) {
+  .filters-container {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .filters-container {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+  }
+  
+  .filters-section {
+    padding: 25px;
+  }
+}
+
+@media (max-width: 480px) {
+  .filters-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .filters-section {
+    padding: 20px;
   }
 }

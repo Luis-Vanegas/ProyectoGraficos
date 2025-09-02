@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { F } from '../dataConfig';
-import { 
-  applyFilters, 
-  kpis, 
-  buildTwoSeriesDataset, 
+import {
+  applyFilters,
+  kpis,
+  buildTwoSeriesDataset,
   getFilterOptions,
   cleanDependentFilters,
-  type Row, 
+  type Row,
   type Filters
 } from '../utils/utils/metrics';
 
@@ -18,24 +18,60 @@ import WorksTable from '../components/WorksTable';
 import AlertsTable from '../components/AlertsTable';
 import Navigation from '../components/Navigation';
 
-// Colores para diferentes proyectos estratégicos
-const PROJECT_COLORS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-  '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-  '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+// ============================================================================
+// PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
+// ============================================================================
+const CORPORATE_COLORS = {
+  primary: '#79BC99',      // Verde principal - usado para elementos destacados
+  secondary: '#4E8484',    // Verde azulado - usado para elementos secundarios
+  accent: '#3B8686',       // Verde oscuro - usado para acentos y textos importantes
+  white: '#FFFFFF',        // Blanco puro - usado para fondos y textos claros
+  lightGray: '#F8F9FA',    // Gris claro - usado para fondos secundarios
+  darkGray: '#2C3E50',     // Gris oscuro - usado para textos principales
+  mediumGray: '#6C757D',   // Gris medio - usado para textos secundarios
+  border: '#E9ECEF'        // Gris borde - usado para separadores y bordes
+};
+
+// ============================================================================
+// COLORES PARA DEPENDENCIAS - COLORS DIFERENTES PARA CADA DEPENDENCIA
+// ============================================================================
+const DEPENDENCY_COLORS = [
+  '#FF6B6B',  // Rojo coral
+  '#4ECDC4',  // Turquesa
+  '#45B7D1',  // Azul cielo
+  '#96CEB4',  // Verde menta
+  '#FFEAA7',  // Amarillo suave
+  '#DDA0DD',  // Lavanda
+  '#98D8C8',  // Verde agua
+  '#F7DC6F',  // Amarillo dorado
+  '#BB8FCE',  // Violeta
+  '#85C1E9',  // Azul claro
+  '#F8C471',  // Naranja
+  '#82E0AA',  // Verde lima
+  '#F1948A',  // Rosa salmón
+  '#D7BDE2',  // Lila claro
+  '#A9CCE3',  // Azul grisáceo
+  '#FAD7A0'   // Melocotón
 ];
 
-// Función para obtener color basado en el nombre del proyecto
-const getProjectColor = (projectName: string): string => {
-  if (!projectName) return '#95A5A6';
-  const hash = projectName.split('').reduce((a, b) => {
+// ============================================================================
+// FUNCIÓN PARA ASIGNAR COLORES A DEPENDENCIAS
+// ============================================================================
+const getDependencyColor = (dependencyName: string): string => {
+  if (!dependencyName) return CORPORATE_COLORS.mediumGray;
+
+  // Crear un hash único para cada dependencia para asignar colores consistentes
+  const hash = dependencyName.split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a;
   }, 0);
-  return PROJECT_COLORS[Math.abs(hash) % PROJECT_COLORS.length];
+
+  return DEPENDENCY_COLORS[Math.abs(hash) % DEPENDENCY_COLORS.length];
 };
 
-// Función para obtener todos los campos de porcentaje
+// ============================================================================
+// FUNCIÓN PARA OBTENER CAMPOS DE PORCENTAJE DE UNA OBRA
+// ============================================================================
 const getPercentageFields = (obra: Row) => {
   const percentageFields = [
     { key: 'presupuestoPorcentajeEjecutado', label: 'Presupuesto Ejecutado' },
@@ -66,17 +102,30 @@ const getPercentageFields = (obra: Row) => {
     .filter((item): item is NonNullable<typeof item> => item !== null);
 };
 
-export default function Dashboard() {
-  // --- datos crudos del backend ---
+// ============================================================================
+// COMPONENTE PRINCIPAL DEL DASHBOARD
+// ============================================================================
+type UIFilters = Filters & {
+  desdeDia?: string;
+  desdeMes?: string;
+  desdeAnio?: string;
+  hastaDia?: string;
+  hastaMes?: string;
+  hastaAnio?: string;
+};
+
+const Dashboard = () => {
+  // ============================================================================
+  // ESTADOS Y VARIABLES
+  // ============================================================================
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
+  const [filters, setFilters] = useState<UIFilters>({});
 
-  // --- filtros seleccionados ---
-  const [filters, setFilters] = useState<Filters>({});
-  // dimensión para el gráfico de barras (eje X)
-  const [dimension, setDimension] = useState<string>(F.dependencia || F.comunaOCorregimiento || F.tipoDeIntervecion);
 
-  // Carga inicial
+  // ============================================================================
+  // EFECTOS Y CARGA DE DATOS
+  // ============================================================================
   useEffect(() => {
     (async () => {
       try {
@@ -86,38 +135,56 @@ export default function Dashboard() {
         const dres = await fetch(`/api/data?sheet=${encodeURIComponent(hoja)}`);
         const { rows } = await dres.json();
         setRows(rows);
-        setStatus(`${rows.length} filas`);
+        setStatus(`${rows.length} filas cargadas exitosamente`);
       } catch (e) {
-        console.error(e);
-        setStatus('No se pudieron cargar los datos');
+        console.error('Error al cargar datos:', e);
+        setStatus('Error: No se pudieron cargar los datos');
       }
     })();
   }, []);
 
-  // Opciones de filtros dinámicas (relacionadas)
+  // ============================================================================
+  // CÁLCULOS Y FILTRADO DE DATOS
+  // ============================================================================
+  
+  // Función para combinar los campos de fecha en formato YYYY-MM-DD
+  const combineDateFields = (filters: UIFilters): Filters => {
+    const newFilters: UIFilters = { ...filters };
+    
+    // Combinar fecha desde
+    if (filters.desdeDia && filters.desdeMes && filters.desdeAnio) {
+      newFilters.desde = `${filters.desdeAnio}-${filters.desdeMes}-${filters.desdeDia}`;
+    }
+    
+    // Combinar fecha hasta
+    if (filters.hastaDia && filters.hastaMes && filters.hastaAnio) {
+      newFilters.hasta = `${filters.hastaAnio}-${filters.hastaMes}-${filters.hastaDia}`;
+    }
+    
+    return newFilters;
+  };
+
   const opciones = useMemo(() => getFilterOptions(rows, filters), [rows, filters]);
-
-  // Aplica filtros
-  const filtered = useMemo(() => applyFilters(rows, filters), [rows, filters]);
-
-  // KPIs (con filtros aplicados)
+  const combinedFilters = useMemo(() => combineDateFields(filters), [filters]);
+  const filtered = useMemo(() => applyFilters(rows, combinedFilters), [rows, combinedFilters]);
   const k = useMemo(() => kpis(filtered), [filtered]);
 
-  // Dataset para "Inversión total vs Presupuesto ejecutado"
+  // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
   const comboDataset = useMemo(() => {
-    if (!dimension || !F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
-    return buildTwoSeriesDataset(filtered, dimension, F.costoTotalActualizado, F.presupuestoEjecutado, 12);
-  }, [filtered, dimension]);
+    if (!F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
+    return buildTwoSeriesDataset(filtered, F.dependencia, F.costoTotalActualizado, F.presupuestoEjecutado, 12);
+  }, [filtered]);
 
-  // Listas: entregadas / por entregar
+  // ============================================================================
+  // CLASIFICACIÓN DE OBRAS
+  // ============================================================================
   const entregadas = useMemo(() => {
     return filtered.filter(r => {
-      // Estado contiene "entreg" O la fecha real es <= año actual
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
       const okEstado = est.includes('entreg');
       if (okEstado) return true;
       if (F.fechaRealDeEntrega) {
-        const y = Number(String(r[F.fechaRealDeEntrega] ?? '').slice(0,4));
+        const y = Number(String(r[F.fechaRealDeEntrega] ?? '').slice(0, 4));
         return !!y && y <= new Date().getFullYear();
       }
       return false;
@@ -126,26 +193,26 @@ export default function Dashboard() {
 
   const porEntregar = useMemo(() => {
     return filtered.filter(r => {
-      // Si el estado NO contiene "entreg" Y la fecha estimada es > año actual
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
       const noEntregada = est && !est.includes('entreg');
       if (noEntregada) return true;
       if (F.fechaEstimadaDeEntrega) {
-        const y = Number(String(r[F.fechaEstimadaDeEntrega] ?? '').slice(0,4));
+        const y = Number(String(r[F.fechaEstimadaDeEntrega] ?? '').slice(0, 4));
         return !!y && y > new Date().getFullYear();
       }
       return false;
     });
   }, [filtered]);
 
-  // Alertas
   const alertas = useMemo(() => {
-    return filtered.filter(r => 
+    return filtered.filter(r =>
       F.descripcionDelRiesgo && String(r[F.descripcionDelRiesgo] ?? '').trim().length > 0
     );
   }, [filtered]);
 
-  // Datos para el mapa (obras con coordenadas) organizados por proyecto
+  // ============================================================================
+  // DATOS PARA EL MAPA - ORGANIZADOS POR DEPENDENCIA
+  // ============================================================================
   const mapData = useMemo(() => {
     const obrasConCoordenadas = filtered.filter(r => {
       const lat = F.latitud ? parseFloat(String(r[F.latitud] ?? '')) : null;
@@ -153,307 +220,467 @@ export default function Dashboard() {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    // Agrupar por proyecto estratégico para mejor organización
-    const groupedByProject = obrasConCoordenadas.reduce((acc, obra) => {
-      const proyecto = F.proyectoEstrategico ? String(obra[F.proyectoEstrategico] ?? 'Sin Proyecto') : 'Sin Proyecto';
-      if (!acc[proyecto]) {
-        acc[proyecto] = [];
+    console.log('Obras con coordenadas encontradas:', obrasConCoordenadas.length);
+    console.log('Total de obras filtradas:', filtered.length);
+    console.log('Campos de latitud y longitud:', F.latitud, F.longitud);
+
+    // Agrupar por dependencia para organización visual por colores
+    const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
+      const dependencia = F.dependencia ? String(obra[F.dependencia] ?? 'Sin Dependencia') : 'Sin Dependencia';
+      if (!acc[dependencia]) {
+        acc[dependencia] = [];
       }
-      acc[proyecto].push(obra);
+      acc[dependencia].push(obra);
       return acc;
     }, {} as Record<string, Row[]>);
 
-    return groupedByProject;
+    console.log('Datos del mapa agrupados:', groupedByDependency);
+    return groupedByDependency;
   }, [filtered]);
 
-  // Función para manejar cambios en filtros con limpieza automática
-  const handleFilterChange = (filterKey: keyof Filters, value: string) => {
+  // ============================================================================
+  // MANEJADORES DE EVENTOS
+  // ============================================================================
+  const handleFilterChange = (filterKey: keyof UIFilters, value: string) => {
     const newValue = value || undefined;
     const newFilters = { ...filters, [filterKey]: newValue };
-    
-    // Limpia filtros dependientes
+
+    // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
     setFilters(cleanedFilters);
   };
 
+  // ============================================================================
+  // RENDERIZADO DEL COMPONENTE
+  // ============================================================================
   return (
     <div className="dashboard-container">
+      {/* Navegación superior */}
       <Navigation showBackButton={true} title="Reporte General" />
-      
-      {/* Contenedor principal con diseño moderno */}
+
+      {/* Contenedor principal del dashboard */}
       <div className="dashboard-content">
-        
-        {/* Sección de filtros con diseño mejorado */}
+
+        {/* ========================================================================
+             INDICADOR DE CARGA - SOLO SE MUESTRA MIENTRAS CARGA
+         ======================================================================== */}
+        {status === 'Cargando...' && (
+          <div className="loading-container">
+            <div className="loading-spinner">
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+              <div className="spinner-ring"></div>
+            </div>
+            <div className="loading-text">
+              <h3>Cargando datos del proyecto...</h3>
+              <p>Por favor espera mientras se procesan las obras</p>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================
+             SECCIÓN DE FILTROS - PRIMERA POSICIÓN
+         ======================================================================== */}
         <div className="filters-section">
           <div className="filters-container">
-            {/* Proyecto estratégico */}
+            {/* Filtro: Proyectos estratégicos */}
             {F.proyectoEstrategico && (
               <div className="filter-group">
-                <label className="filter-label">Proyectos estratégicos</label>
+                <label className="filter-label">PROYECTOS ESTRATÉGICOS</label>
                 <select
                   className="filter-select"
                   value={filters.proyecto ?? ''}
                   onChange={e => handleFilterChange('proyecto', e.target.value)}
                 >
-                  <option value="">Todos</option>
+                  <option value="">Todos los proyectos</option>
                   {opciones.proyectos.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
             )}
 
-            {/* Dependencia */}
+            {/* Filtro: Dependencia */}
             {F.dependencia && (
               <div className="filter-group">
-                <label className="filter-label">Dependencia</label>
+                <label className="filter-label">DEPENDENCIA</label>
                 <select
                   className="filter-select"
                   value={filters.dependencia ?? ''}
                   onChange={e => handleFilterChange('dependencia', e.target.value)}
                   disabled={opciones.dependencias.length === 0}
                 >
-                  <option value="">Todas</option>
+                  <option value="">Todas las dependencias</option>
                   {opciones.dependencias.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
             )}
 
-            {/* Comuna / Corregimiento */}
+            {/* Filtro: Comuna / Corregimiento */}
             {F.comunaOCorregimiento && (
               <div className="filter-group">
-                <label className="filter-label">Comuna / Corregimiento</label>
+                <label className="filter-label">COMUNA / CORREGIMIENTO</label>
                 <select
                   className="filter-select"
                   value={filters.comuna ?? ''}
                   onChange={e => handleFilterChange('comuna', e.target.value)}
                   disabled={opciones.comunas.length === 0}
                 >
-                  <option value="">Todas</option>
+                  <option value="">Todas las comunas</option>
                   {opciones.comunas.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
             )}
 
-            {/* Tipo de Intervención */}
+            {/* Filtro: Tipo de Intervención */}
             {F.tipoDeIntervecion && (
               <div className="filter-group">
-                <label className="filter-label">Tipo de Intervención</label>
+                <label className="filter-label">TIPO DE INTERVENCIÓN</label>
                 <select
                   className="filter-select"
                   value={filters.tipo ?? ''}
                   onChange={e => handleFilterChange('tipo', e.target.value)}
                   disabled={opciones.tipos.length === 0}
                 >
-                  <option value="">Todas</option>
+                  <option value="">Todos los tipos</option>
                   {opciones.tipos.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
             )}
 
-            {/* Fecha de entrega */}
+            {/* Filtro: Contratista */}
+            {F.contratistaOperador && (
+              <div className="filter-group">
+                <label className="filter-label">CONTRATISTA</label>
+                <select
+                  className="filter-select"
+                  value={filters.contratista ?? ''}
+                  onChange={e => handleFilterChange('contratista', e.target.value)}
+                  disabled={opciones.contratistas?.length === 0}
+                >
+                  <option value="">Todos los contratistas</option>
+                  {opciones.contratistas?.map(v => <option key={v} value={v}>{v}</option>) || []}
+                </select>
+              </div>
+            )}
+
+            {/* Filtro: Estado de la Obra */}
+            <div className="filter-group">
+              <label className="filter-label">ESTADO DE LA OBRA</label>
+              <select
+                className="filter-select"
+                value={filters.estadoDeLaObra ?? ''}
+                onChange={e => handleFilterChange('estadoDeLaObra', e.target.value)}
+              >
+                <option value="">Todos los estados</option>
+                {opciones.estadoDeLaObra.map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+
+            {/* Filtros de fecha */}
             {(F.fechaRealDeEntrega || F.fechaEstimadaDeEntrega) && (
               <>
-                <div className="filter-group">
-                  <label className="filter-label">Desde (YYYY o YYYY-MM)</label>
-                  <input
-                    className="filter-input"
-                    placeholder="2024 o 2024-04"
-                    value={filters.desde ?? ''}
-                    onChange={e=>setFilters(f=>({...f, desde: e.target.value || undefined}))}
-                  />
+                <div className="filter-group date-filter-group">
+                  <label className="filter-label">Fecha desde</label>
+                  <div className="date-inputs">
+                    <select
+                      className="filter-select date-day"
+                      value={filters.desdeDia ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeDia: e.target.value || undefined }))}
+                    >
+                      <option value="">Día</option>
+                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day.toString().padStart(2, '0')}>
+                          {day.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="filter-select date-month"
+                      value={filters.desdeMes ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeMes: e.target.value || undefined }))}
+                    >
+                      <option value="">Mes</option>
+                      <option value="01">Enero</option>
+                      <option value="02">Febrero</option>
+                      <option value="03">Marzo</option>
+                      <option value="04">Abril</option>
+                      <option value="05">Mayo</option>
+                      <option value="06">Junio</option>
+                      <option value="07">Julio</option>
+                      <option value="08">Agosto</option>
+                      <option value="09">Septiembre</option>
+                      <option value="10">Octubre</option>
+                      <option value="11">Noviembre</option>
+                      <option value="12">Diciembre</option>
+                    </select>
+                    <select
+                      className="filter-select date-year"
+                      value={filters.desdeAnio ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeAnio: e.target.value || undefined }))}
+                    >
+                      <option value="">Año</option>
+                      {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div className="filter-group">
-                  <label className="filter-label">Hasta</label>
-                  <input
-                    className="filter-input"
-                    placeholder="2026 o 2026-12"
-                    value={filters.hasta ?? ''}
-                    onChange={e=>setFilters(f=>({...f, hasta: e.target.value || undefined}))}
-                  />
+                <div className="filter-group date-filter-group">
+                  <label className="filter-label">Fecha hasta</label>
+                  <div className="date-inputs">
+                    <select
+                      className="filter-select date-day"
+                      value={filters.hastaDia ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaDia: e.target.value || undefined }))}
+                    >
+                      <option value="">Día</option>
+                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day.toString().padStart(2, '0')}>
+                          {day.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="filter-select date-month"
+                      value={filters.hastaMes ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaMes: e.target.value || undefined }))}
+                    >
+                      <option value="">Mes</option>
+                      <option value="01">Enero</option>
+                      <option value="02">Febrero</option>
+                      <option value="03">Marzo</option>
+                      <option value="04">Abril</option>
+                      <option value="05">Mayo</option>
+                      <option value="06">Junio</option>
+                      <option value="07">Julio</option>
+                      <option value="08">Agosto</option>
+                      <option value="09">Septiembre</option>
+                      <option value="10">Octubre</option>
+                      <option value="11">Noviembre</option>
+                      <option value="12">Diciembre</option>
+                    </select>
+                    <select
+                      className="filter-select date-year"
+                      value={filters.hastaAnio ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaAnio: e.target.value || undefined }))}
+                    >
+                      <option value="">Año</option>
+                      {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </>
             )}
 
-            {/* Dimensión del gráfico */}
-            <div className="filter-group">
-              <label className="filter-label">Dimensión gráfico</label>
-              <select 
-                className="filter-select"
-                value={dimension ?? ''} 
-                onChange={e => setDimension(e.target.value)}
-              >
-                {[F.dependencia, F.comunaOCorregimiento, F.tipoDeIntervecion].filter(Boolean).map(d => (
-                  <option key={d} value={d!}>{d}</option>
-                ))}
-              </select>
+
+          </div>
+        </div>
+
+        {/* ========================================================================
+             SECCIÓN DE KPIs - SEGUNDA POSICIÓN
+         ======================================================================== */}
+        <div className="kpis-section">
+          <div className="kpis-container">
+            {/* Primera fila: 2 KPIs principales */}
+            <div className="kpis-grid kpis-row-1">
+              <Kpi 
+                label="Total obras" 
+                value={k.totalObras} 
+                trend="neutral"
+              />
+              <Kpi 
+                label="Inversión total" 
+                value={k.invTotal} 
+                format="money" 
+                compactMoney 
+                subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
+                trend="up"
+              />
+            </div>
+
+            {/* Segunda fila: 2 KPIs */}
+            <div className="kpis-grid kpis-row-2">
+              <Kpi 
+                label="Presupuesto ejecutado" 
+                value={k.ejec} 
+                format="money" 
+                compactMoney 
+                subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
+                trend="up"
+              />
+              <Kpi 
+                label="Obras entregadas" 
+                value={k.entregadas} 
+                subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
+                trend="up"
+              />
             </div>
           </div>
         </div>
 
-        {/* Sección de KPIs con diseño moderno */}
-        <div className="kpis-section">
-          <div className="kpis-grid">
-            <Kpi 
-              label="Total obras" 
-              value={k.totalObras} 
-              trend="neutral"
-            />
-            <Kpi 
-              label="Inversión total" 
-              value={k.invTotal} 
-              format="money" 
-              compactMoney 
-              subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
-              trend="up"
-            />
-            <Kpi 
-              label="Entregadas" 
-              value={k.entregadas} 
-              subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
-              trend="up"
-            />
-            <Kpi 
-              label="Presupuesto ejecutado" 
-              value={k.ejec} 
-              format="money" 
-              compactMoney 
-              subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
-              trend="up"
-            />
+        {/* ========================================================================
+             PANEL PRINCIPAL DEL MAPA - TERCERA POSICIÓN
+         ======================================================================== */}
+        <div className="map-main-panel">
+          {/* Leyenda del mapa con colores por dependencia */}
+          <div className="map-legend">
+            <h4>Leyenda por Dependencia:</h4>
+            <div className="legend-items">
+              {Object.keys(mapData).map((dependencia) => (
+                <div key={dependencia} className="legend-item">
+                  <div 
+                    className="legend-color" 
+                    style={{ backgroundColor: getDependencyColor(dependencia) }}
+                  ></div>
+                  <span className="legend-text">{dependencia}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+          
 
-        {/* Layout principal con mapa y gráficos */}
-        <div className="main-content">
-          {/* Columna izquierda - Gráfico y mapa */}
-          <div className="left-column">
-            {/* Gráfico principal */}
-            {comboDataset.length > 0 && (
-              <div className="chart-card">
-                <ComboBars
-                  title="Inversión total vs Presupuesto ejecutado"
-                  dataset={comboDataset}
-                  dim={dimension!}
-                  v1={F.costoTotalActualizado}
-                  v2={F.presupuestoEjecutado}
-                />
-              </div>
-            )}
-
-            {/* Mapa de obras mejorado */}
-            <div className="map-card">
-              <h3 className="card-title">Ubicación de Obras por Proyecto Estratégico</h3>
-              <div className="map-legend">
-                <h4>Leyenda de Proyectos:</h4>
-                <div className="legend-items">
-                  {Object.keys(mapData).map((proyecto) => (
-                    <div key={proyecto} className="legend-item">
-                      <div 
-                        className="legend-color" 
-                        style={{ backgroundColor: getProjectColor(proyecto) }}
-                      ></div>
-                      <span className="legend-text">{proyecto}</span>
-                    </div>
-                  ))}
+          
+          {/* Contenedor del mapa corregido */}
+          <div className="map-container-expanded">
+            {Object.keys(mapData).length === 0 ? (
+              <div className="no-data-message">
+                <div>
+                  <h3>No hay datos para mostrar en el mapa</h3>
+                  <p>Esto puede deberse a:</p>
+                  <ul style={{ textAlign: 'left', display: 'inline-block' }}>
+                    <li>No hay obras con coordenadas válidas</li>
+                    <li>Los campos de latitud/longitud están vacíos</li>
+                    <li>Los filtros aplicados no tienen datos geográficos</li>
+                  </ul>
+                  <p><strong>Campos de coordenadas:</strong> {F.latitud} / {F.longitud}</p>
                 </div>
               </div>
-              <div className="map-container">
-                                 <MapContainer 
-                   center={[6.5, -75.5]} // Coordenadas centradas en Antioquia
-                   zoom={8} // Zoom para ver toda Antioquia
-                   style={{ height: '500px', width: '100%' }}
-                   className="responsive-map"
-                 >
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  />
+            ) : (
+              <MapContainer 
+                center={[6.5, -75.5]} // Coordenadas centradas en Antioquia
+                zoom={8} // Zoom para ver toda Antioquia
+                style={{ height: '600px', width: '100%' }}
+                className="responsive-map"
+                zoomControl={true}
+                scrollWheelZoom={true}
+                dragging={true}
+                touchZoom={true}
+                doubleClickZoom={true}
+                boxZoom={true}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                
+                {/* Renderizar marcadores agrupados por dependencia */}
+                {Object.entries(mapData).map(([dependencia, obras]) => {
+                  const dependencyColor = getDependencyColor(dependencia);
                   
-                  {/* Renderizar marcadores agrupados por proyecto */}
-                  {Object.entries(mapData).map(([proyecto, obras]) => {
-                    const projectColor = getProjectColor(proyecto);
+                  return obras.map((obra, obraIndex) => {
+                    const lat = F.latitud ? parseFloat(String(obra[F.latitud] ?? '')) : 0;
+                    const lng = F.longitud ? parseFloat(String(obra[F.longitud] ?? '')) : 0;
+                    const nombre = F.nombre ? String(obra[F.nombre] ?? '') : 'Obra sin nombre';
+                    const proyecto = F.proyectoEstrategico ? String(obra[F.proyectoEstrategico] ?? '') : '';
+                    const comuna = F.comunaOCorregimiento ? String(obra[F.comunaOCorregimiento] ?? '') : '';
+                    const porcentajes = getPercentageFields(obra);
                     
-                    return obras.map((obra, obraIndex) => {
-                      const lat = F.latitud ? parseFloat(String(obra[F.latitud] ?? '')) : 0;
-                      const lng = F.longitud ? parseFloat(String(obra[F.longitud] ?? '')) : 0;
-                      const nombre = F.nombre ? String(obra[F.nombre] ?? '') : 'Obra sin nombre';
-                      const dependencia = F.dependencia ? String(obra[F.dependencia] ?? '') : '';
-                      const comuna = F.comunaOCorregimiento ? String(obra[F.comunaOCorregimiento] ?? '') : '';
-                      const porcentajes = getPercentageFields(obra);
-                      
-                      return (
-                        <CircleMarker
-                          key={`${proyecto}-${obraIndex}`}
-                          center={[lat, lng]}
-                          radius={8}
-                          fillColor={projectColor}
-                          color={projectColor}
-                          weight={2}
-                          opacity={0.8}
-                          fillOpacity={0.6}
-                        >
-                                                     <Popup className="custom-popup">
-                             <div className="map-popup">
-                               <div className="popup-header" style={{ borderLeftColor: projectColor }}>
-                                 <h4>{nombre.length > 30 ? nombre.substring(0, 30) + '...' : nombre}</h4>
-                                 <div className="popup-project">{proyecto.length > 25 ? proyecto.substring(0, 25) + '...' : proyecto}</div>
-                               </div>
-                               
-                               <div className="popup-info">
-                                 {dependencia && (
-                                   <p><strong>Dep:</strong> {dependencia.length > 20 ? dependencia.substring(0, 20) + '...' : dependencia}</p>
-                                 )}
-                                 {comuna && (
-                                   <p><strong>Com:</strong> {comuna.length > 20 ? comuna.substring(0, 20) + '...' : comuna}</p>
-                                 )}
-                               </div>
+                    return (
+                      <CircleMarker
+                        key={`${dependencia}-${obraIndex}`}
+                        center={[lat, lng]}
+                        radius={8}
+                        fillColor={dependencyColor}
+                        color={dependencyColor}
+                        weight={2}
+                        opacity={0.8}
+                        fillOpacity={0.6}
+                      >
+                        {/* Popup compacto con información de la obra */}
+                        <Popup className="custom-popup">
+                          <div className="map-popup">
+                            <div className="popup-header" style={{ borderLeftColor: dependencyColor }}>
+                              <h4>{nombre.length > 30 ? nombre.substring(0, 30) + '...' : nombre}</h4>
+                              <div className="popup-dependency">{dependencia}</div>
+                            </div>
+                            
+                            <div className="popup-info">
+                              {proyecto && (
+                                <p><strong>Proyecto:</strong> {proyecto.length > 20 ? proyecto.substring(0, 20) + '...' : proyecto}</p>
+                              )}
+                              {comuna && (
+                                <p><strong>Comuna:</strong> {comuna.length > 20 ? comuna.substring(0, 20) + '...' : comuna}</p>
+                              )}
+                            </div>
 
-                               {porcentajes.length > 0 && (
-                                 <div className="popup-percentages">
-                                   <h5>Avance:</h5>
-                                   <div className="percentage-grid">
-                                     {porcentajes.slice(0, 6).map((item, idx) => {
-                                       if (!item) return null;
-                                       return (
-                                         <div key={idx} className="percentage-item">
-                                           <div className="percentage-label">{item.label.length > 15 ? item.label.substring(0, 15) + '...' : item.label}</div>
-                                           <div className="percentage-bar">
-                                             <div 
-                                               className="percentage-fill" 
-                                               style={{ 
-                                                 width: `${Math.min(item.value, 100)}%`,
-                                                 backgroundColor: projectColor
-                                               }}
-                                             ></div>
-                                           </div>
-                                           <div className="percentage-value">{item.value}%</div>
-                                         </div>
-                                       );
-                                     })}
-                                     {porcentajes.length > 6 && (
-                                       <div className="percentage-item">
-                                         <div className="percentage-label">+{porcentajes.length - 6} más...</div>
-                                       </div>
-                                     )}
-                                   </div>
-                                 </div>
-                               )}
-                             </div>
-                           </Popup>
-                        </CircleMarker>
-                      );
-                    });
-                  })}
-                </MapContainer>
-              </div>
-            </div>
+                            {/* Porcentajes de avance */}
+                            {porcentajes.length > 0 && (
+                              <div className="popup-percentages">
+                                <h5>Avance del Proyecto:</h5>
+                                <div className="percentage-grid">
+                                  {porcentajes.slice(0, 6).map((item, idx) => {
+                                    if (!item) return null;
+                                    return (
+                                      <div key={idx} className="percentage-item">
+                                        <div className="percentage-label">
+                                          {item.label.length > 15 ? item.label.substring(0, 15) + '...' : item.label}
+                                        </div>
+                                        <div className="percentage-bar">
+                                          <div 
+                                            className="percentage-fill" 
+                                            style={{ 
+                                              width: `${Math.min(item.value, 100)}%`,
+                                              backgroundColor: dependencyColor
+                                            }}
+                                          ></div>
+                                        </div>
+                                        <div className="percentage-value">{item.value}%</div>
+                                      </div>
+                                    );
+                                  })}
+                                  {porcentajes.length > 6 && (
+                                    <div className="percentage-item">
+                                      <div className="percentage-label">+{porcentajes.length - 6} más...</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </Popup>
+                      </CircleMarker>
+                    );
+                  });
+                })}
+              </MapContainer>
+            )}
           </div>
+        </div>
 
-          {/* Columna derecha - Tablas */}
-          <div className="right-column">
+        {/* ========================================================================
+             SECCIÓN DE CONTENIDO INFERIOR - GRÁFICOS Y TABLAS
+         ======================================================================== */}
+        <div className="content-section">
+          {/* Gráfico principal de inversión */}
+          {comboDataset.length > 0 && (
+            <div className="chart-card">
+              <ComboBars
+                title=""
+                dataset={comboDataset}
+                dim={F.dependencia}
+                v1={F.costoTotalActualizado}
+                v2={F.presupuestoEjecutado}
+              />
+            </div>
+          )}
+
+          {/* Tablas de información */}
+          <div className="tables-grid">
             {/* Tabla de obras entregadas */}
             <div className="table-card">
               <WorksTable
-                title="Obras entregadas"
+                title=""
                 works={entregadas}
                 type="entregadas"
                 maxRows={6}
@@ -463,14 +690,14 @@ export default function Dashboard() {
             {/* Tabla de obras por entregar */}
             <div className="table-card">
               <WorksTable
-                title="Obras por entregar"
+                title=""
                 works={porEntregar}
                 type="porEntregar"
                 maxRows={4}
               />
             </div>
 
-            {/* Tabla de alertas */}
+            {/* Tabla de alertas y riesgos */}
             <div className="table-card">
               <AlertsTable
                 alerts={alertas}
@@ -480,265 +707,623 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Estado de carga */}
-        <div className="status-indicator">{status}</div>
+        {/* Indicador de estado de carga */}
+        <div className="status-indicator">
+          <span className="status-icon">📊</span>
+          {status}
+        </div>
       </div>
 
-      {/* Estilos CSS para el diseño moderno */}
+      {/* ========================================================================
+           ESTILOS CSS - DISEÑO MODERNO CON COLORES CORPORATIVOS
+       ======================================================================== */}
       <style>{`
+        /* ========================================================================
+            ESTILOS GENERALES DEL DASHBOARD
+        ======================================================================== */
         .dashboard-container {
           min-height: 100vh;
-          background: linear-gradient(135deg,rgb(200, 217, 234) 0%,rgb(127, 140, 152) 100%);
+          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%);
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .dashboard-content {
-          padding: 100px 20px 20px 20px;
+          padding: 120px 20px 20px 20px;
           max-width: 1600px;
           margin: 0 auto;
         }
 
+        /* ========================================================================
+            INDICADOR DE CARGA - SOLO SE MUESTRA MIENTRAS CARGA
+        ======================================================================== */
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 300px; /* Altura fija para el indicador de carga */
+          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          border-radius: 20px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
+          border: 2px solid ${CORPORATE_COLORS.primary};
+          margin-bottom: 30px;
+        }
+
+        .loading-spinner {
+          position: relative;
+          width: 80px;
+          height: 80px;
+          margin-bottom: 20px;
+        }
+
+        .spinner-ring {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border: 4px solid transparent;
+          border-top-color: ${CORPORATE_COLORS.primary};
+          border-radius: 50%;
+          animation: spin 1.5s linear infinite;
+        }
+
+        .spinner-ring:nth-child(1) {
+          border-top-color: ${CORPORATE_COLORS.primary};
+          animation-delay: -0.8s;
+        }
+
+        .spinner-ring:nth-child(2) {
+          border-top-color: ${CORPORATE_COLORS.secondary};
+          animation-delay: -0.4s;
+        }
+
+        .spinner-ring:nth-child(3) {
+          border-top-color: ${CORPORATE_COLORS.accent};
+          animation-delay: 0s;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+          text-align: center;
+          color: ${CORPORATE_COLORS.darkGray};
+        }
+
+        .loading-text h3 {
+          font-size: 1.2rem;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: ${CORPORATE_COLORS.accent};
+        }
+
+        .loading-text p {
+          font-size: 0.9rem;
+          color: ${CORPORATE_COLORS.mediumGray};
+        }
+
+        /* ========================================================================
+            SECCIÓN DE FILTROS - DISEÑO MEJORADO
+        ======================================================================== */
         .filters-section {
-          background: white;
-          border-radius: 15px;
-          padding: 25px;
-          margin-bottom: 25px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-          border: 1px solid rgb(72, 157, 242);
+          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          border-radius: 20px;
+          padding: 30px;
+          margin-bottom: 30px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
+          border: 2px solid ${CORPORATE_COLORS.primary};
         }
 
         .filters-container {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          grid-template-columns: repeat(4, 1fr);
           gap: 20px;
+          align-items: end;
         }
 
         .filter-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
+          min-width: 0;
         }
 
         .filter-label {
           font-weight: 600;
-          color: #00904c;
-          font-size: 0.9rem;
+          color: ${CORPORATE_COLORS.primary};
+          font-size: 0.95rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .filter-select, .filter-input {
-          padding: 12px;
-          border: 2px solid #e9ecef;
-          border-radius: 8px;
-          font-size: 0.95rem;
+          padding: 14px 16px;
+          border: 2px solid ${CORPORATE_COLORS.primary};
+          border-radius: 12px;
+          font-size: 1rem;
           transition: all 0.3s ease;
-          background: white;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          color: ${CORPORATE_COLORS.darkGray};
+          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.1);
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .filter-select:focus, .filter-input:focus {
           outline: none;
-          border-color: #00904c;
-          box-shadow: 0 0 0 3px rgba(0, 144, 76, 0.1);
+          border-color: ${CORPORATE_COLORS.accent};
+          box-shadow: 0 0 0 4px rgba(59, 134, 134, 0.25);
+          transform: translateY(-2px);
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
         }
 
+        .filter-select:hover, .filter-input:hover {
+          border-color: ${CORPORATE_COLORS.secondary};
+          transform: translateY(-1px);
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+        }
+
+        /* Estilos específicos para móviles en filtros */
+        @media (max-width: 768px) {
+          .filters-section {
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+          }
+
+          .filters-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+          }
+
+          .filter-group {
+            gap: 8px;
+          }
+
+          .filter-label {
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+          }
+
+          .filter-select, .filter-input {
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            border-radius: 10px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .filters-section {
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+          }
+
+          .filters-container {
+            gap: 12px;
+          }
+
+          .filter-group {
+            gap: 6px;
+          }
+
+          .filter-label {
+            font-size: 0.8rem;
+            letter-spacing: 0.2px;
+          }
+
+          .filter-select, .filter-input {
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            border-radius: 8px;
+          }
+        }
+
+        /* ========================================================================
+            SECCIÓN DE KPIs - DISEÑO MEJORADO
+        ======================================================================== */
         .kpis-section {
-          margin-bottom: 25px;
+          margin-bottom: 40px;
+          padding: 30px;
+          background: linear-gradient(135deg, rgba(212, 230, 241, 0.3) 0%, rgba(232, 244, 248, 0.3) 100%);
+          border-radius: 25px;
+          border: 1px solid rgba(121, 188, 153, 0.2);
+        }
+
+        .kpis-container {
+          display: flex;
+          flex-direction: column;
+          gap: 30px;
         }
 
         .kpis-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 25px;
         }
 
+        /* Estilos para las tarjetas de KPI - Colores corporativos */
+        .kpis-grid .kpi {
+          background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%) !important;
+          color: white !important;
+          border-radius: 20px !important;
+          padding: 25px !important;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.25) !important;
+          border: 2px solid rgba(255, 255, 255, 0.2) !important;
+          transition: all 0.3s ease !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
+
+        .kpis-grid .kpi:hover {
+          transform: translateY(-5px) !important;
+          box-shadow: 0 15px 35px rgba(121, 188, 153, 0.4) !important;
+          border-color: rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .kpis-grid .kpi::before {
+          content: '' !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          height: 4px !important;
+          background: linear-gradient(90deg, #3B8686, #79BC99, #4E8484) !important;
+        }
+
+        /* Estilos para el contenido de los KPIs */
+        .kpis-grid .kpi .kpi-label {
+          font-size: 0.9rem !important;
+          font-weight: 600 !important;
+          color: rgba(255, 255, 255, 0.9) !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+          margin-bottom: 8px !important;
+        }
+
+        .kpis-grid .kpi .kpi-value {
+          font-size: 2.2rem !important;
+          font-weight: 700 !important;
+          color: #FFFFFF !important;
+          margin-bottom: 5px !important;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+          line-height: 1.2 !important;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        }
+
+        .kpis-grid .kpi .kpi-subtitle {
+          font-size: 0.85rem !important;
+          color: rgba(255, 255, 255, 0.8) !important;
+          font-weight: 500 !important;
+        }
+
+        /* Estilos específicos para cada fila de KPIs */
+        .kpis-row-1 {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .kpis-row-2 {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .kpis-row-3 {
+          grid-template-columns: repeat(1, 1fr);
+          max-width: 400px;
+          margin: 0 auto;
+        }
+
+        /* ========================================================================
+            LAYOUT PRINCIPAL
+        ======================================================================== */
         .main-content {
           display: grid;
           grid-template-columns: 2fr 1fr;
-          gap: 25px;
+          gap: 30px;
         }
 
         .left-column, .right-column {
           display: flex;
           flex-direction: column;
-          gap: 25px;
+          gap: 30px;
         }
 
-        .chart-card, .map-card, .table-card {
-          background: white;
-          border-radius: 15px;
-          padding: 25px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-          border: 1px solid #e9ecef;
+        /* ========================================================================
+            SECCIÓN DE CONTENIDO INFERIOR
+        ======================================================================== */
+        .content-section {
+          margin-bottom: 40px;
         }
 
-        .card-title {
-          color: #00904c;
-          font-size: 1.3rem;
-          font-weight: 600;
-          margin: 0 0 20px 0;
+        .tables-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          gap: 30px;
+          margin-top: 30px;
         }
 
-        /* Estilos para la leyenda del mapa */
+        /* ========================================================================
+            TARJETAS DE CONTENIDO
+        ======================================================================== */
+        .chart-card, .table-card {
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 20px;
+          padding: 30px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+          border: 1px solid ${CORPORATE_COLORS.primary};
+          transition: all 0.3s ease;
+        }
+
+        .chart-card:hover, .table-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 35px rgba(121, 188, 153, 0.2);
+        }
+
+        /* ========================================================================
+            LAYOUT PRINCIPAL
+        ======================================================================== */
+        .main-content {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 30px;
+        }
+
+        .left-column, .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 30px;
+        }
+
+        /* ========================================================================
+            LAYOUT PRINCIPAL
+        ======================================================================== */
+        .main-content {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 30px;
+        }
+
+        .left-column, .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 30px;
+        }
+
+        /* ========================================================================
+            LEYENDA DEL MAPA
+        ======================================================================== */
         .map-legend {
-          margin-bottom: 20px;
-          padding: 15px;
-          background: #f8f9fa;
-          border-radius: 10px;
-          border: 1px solid #e9ecef;
+          margin-bottom: 25px;
+          padding: 20px;
+          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          border-radius: 15px;
+          border: 1px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
         }
 
         .map-legend h4 {
-          margin: 0 0 15px 0;
-          color: #00904c;
-          font-size: 1rem;
+          margin: 0 0 20px 0;
+          color: ${CORPORATE_COLORS.accent};
+          font-size: 1.1rem;
+          font-weight: 600;
         }
 
         .legend-items {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 10px;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 15px;
         }
 
         .legend-item {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
+          padding: 8px 12px;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 10px;
+          border: 1px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.08);
+          transition: all 0.3s ease;
+        }
+
+        .legend-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
         }
 
         .legend-color {
-          width: 16px;
-          height: 16px;
+          width: 18px;
+          height: 18px;
           border-radius: 50%;
-          border: 2px solid white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          border: 2px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 2px 6px rgba(121, 188, 153, 0.3);
         }
 
         .legend-text {
           font-size: 0.9rem;
-          color: #666;
+          color: ${CORPORATE_COLORS.darkGray};
           font-weight: 500;
         }
 
-        .map-container {
-          border-radius: 10px;
+        /* ========================================================================
+            CONTENEDOR DEL MAPA
+        ======================================================================== */
+        .map-container-expanded {
+          width: 100%;
+          height: 600px;
+          border-radius: 15px;
           overflow: hidden;
-          border: 1px solid #e9ecef;
+          border: 2px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
+          position: relative;
         }
 
-                 /* Estilos para el popup personalizado */
-         .custom-popup .leaflet-popup-content-wrapper {
-           border-radius: 8px;
-           box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-         }
+        .map-container-expanded .leaflet-container {
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 15px;
+        }
 
-         .custom-popup .leaflet-popup-content {
-           margin: 0;
-           padding: 0;
-           min-width: 220px;
-           max-width: 250px;
-         }
+        .map-container-expanded .responsive-map {
+          width: 100% !important;
+          height: 100% !important;
+        }
 
-         .map-popup {
-           padding: 0;
-         }
-
-         .popup-header {
-           padding: 10px 12px;
-           border-left: 3px solid;
-           background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-           border-radius: 8px 8px 0 0;
-         }
-
-         .popup-header h4 {
-           margin: 0 0 5px 0;
-           color: #2c3e50;
-           font-size: 0.95rem;
-           font-weight: 600;
-           line-height: 1.2;
-         }
-
-         .popup-project {
-           color: #00904c;
-           font-weight: 600;
-           font-size: 0.8rem;
-         }
-
-         .popup-info {
-           padding: 8px 12px;
-           border-bottom: 1px solid #e9ecef;
-         }
-
-         .popup-info p {
-           margin: 4px 0;
-           font-size: 0.8rem;
-           color: #666;
-           line-height: 1.3;
-         }
-
-         .popup-info strong {
-           color: #2c3e50;
-         }
-
-         .popup-percentages {
-           padding: 8px 12px;
-         }
-
-         .popup-percentages h5 {
-           margin: 0 0 8px 0;
-           color: #00904c;
-           font-size: 0.85rem;
-           font-weight: 600;
-         }
-
-         .percentage-grid {
-           display: flex;
-           flex-direction: column;
-           gap: 6px;
-         }
-
-         .percentage-item {
-           display: grid;
-           grid-template-columns: 1fr auto;
-           gap: 6px;
-           align-items: center;
-         }
-
-         .percentage-label {
-           font-size: 0.75rem;
-           color: #666;
-           font-weight: 500;
-           line-height: 1.2;
-         }
-
-         .percentage-bar {
-           width: 60px;
-           height: 6px;
-           background: #e9ecef;
-           border-radius: 3px;
-           overflow: hidden;
-         }
-
-         .percentage-fill {
-           height: 100%;
-           border-radius: 3px;
-           transition: width 0.3s ease;
-         }
-
-         .percentage-value {
-           font-size: 0.7rem;
-           color: #00904c;
-           font-weight: 600;
-           min-width: 25px;
-           text-align: right;
-         }
-
-        .status-indicator {
+        /* Mensaje cuando no hay datos */
+        .no-data-message {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          font-size: 1.2rem;
+          color: ${CORPORATE_COLORS.mediumGray};
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 15px;
           text-align: center;
           padding: 20px;
-          color: #666;
-          font-style: italic;
         }
 
-        /* Responsive design */
+        /* ========================================================================
+            POPUP PERSONALIZADO DEL MAPA
+        ======================================================================== */
+        .custom-popup .leaflet-popup-content-wrapper {
+          border-radius: 12px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.2);
+        }
+
+        .custom-popup .leaflet-popup-content {
+          margin: 0;
+          padding: 0;
+          min-width: 240px;
+          max-width: 280px;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 12px;
+        }
+
+        .map-popup {
+          padding: 0;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 12px;
+        }
+
+        .popup-header {
+          padding: 12px 16px;
+          border-left: 4px solid;
+          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          border-radius: 12px 12px 0 0;
+          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.1);
+        }
+
+        .popup-header h4 {
+          margin: 0 0 6px 0;
+          color: ${CORPORATE_COLORS.darkGray};
+          font-size: 1rem;
+          font-weight: 600;
+          line-height: 1.3;
+        }
+
+        .popup-dependency {
+          color: #00904c;
+          font-weight: 600;
+          font-size: 0.85rem;
+        }
+
+        .popup-info {
+          padding: 10px 16px;
+          border-bottom: 1px solid ${CORPORATE_COLORS.primary};
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+        }
+
+        .popup-info p {
+          margin: 6px 0;
+          font-size: 0.85rem;
+          color: ${CORPORATE_COLORS.mediumGray};
+          line-height: 1.4;
+        }
+
+        .popup-info strong {
+          color: ${CORPORATE_COLORS.darkGray};
+        }
+
+        .popup-percentages {
+          padding: 10px 16px;
+        }
+
+        .popup-percentages h5 {
+          margin: 0 0 12px 0;
+          color: #00904c;
+          font-size: 0.9rem;
+          font-weight: 600;
+        }
+
+        .percentage-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .percentage-item {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .percentage-label {
+          font-size: 0.8rem;
+          color: ${CORPORATE_COLORS.mediumGray};
+          font-weight: 500;
+          line-height: 1.3;
+        }
+
+        .percentage-bar {
+          width: 70px;
+          height: 8px;
+          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          border-radius: 4px;
+          overflow: hidden;
+          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .percentage-fill {
+          height: 100%;
+          border-radius: 4px;
+          transition: width 0.3s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .percentage-value {
+          font-size: 0.75rem;
+          color: #00904c;
+          font-weight: 600;
+          min-width: 30px;
+          text-align: right;
+        }
+
+        /* ========================================================================
+            INDICADOR DE ESTADO
+        ======================================================================== */
+        .status-indicator {
+          text-align: center;
+          padding: 25px;
+          color: ${CORPORATE_COLORS.mediumGray};
+          font-style: italic;
+          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          border-radius: 15px;
+          margin-top: 30px;
+          border: 1px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
+        }
+
+        .status-icon {
+          margin-right: 10px;
+          font-size: 1.2rem;
+        }
+
+        /* ========================================================================
+            DISEÑO RESPONSIVE
+        ======================================================================== */
         @media (max-width: 1200px) {
           .main-content {
             grid-template-columns: 1fr;
@@ -747,60 +1332,440 @@ export default function Dashboard() {
 
         @media (max-width: 768px) {
           .dashboard-content {
-            padding: 90px 15px 15px 15px;
-          }
-
-          .filters-container {
-            grid-template-columns: 1fr;
-          }
-
-          .kpis-grid {
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-          }
-
-          .chart-card, .map-card, .table-card {
-            padding: 20px;
-          }
-
-          .legend-items {
-            grid-template-columns: 1fr;
-          }
-
-                     .custom-popup .leaflet-popup-content {
-             min-width: 200px;
-             max-width: 220px;
-           }
-
-           .percentage-item {
-             grid-template-columns: 1fr;
-             gap: 4px;
-           }
-
-           .percentage-bar {
-             width: 100%;
-           }
-        }
-
-        @media (max-width: 480px) {
-          .dashboard-content {
-            padding: 80px 10px 10px 10px;
+            padding: 90px 10px 10px 10px;
           }
 
           .filters-section {
             padding: 20px;
+            margin-bottom: 20px;
           }
 
-          .chart-card, .map-card, .table-card {
+          .filters-container {
+            grid-template-columns: 1fr;
+            gap: 15px;
+          }
+
+          .filter-group {
+            gap: 8px;
+          }
+
+          .filter-label {
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+          }
+
+          .filter-select, .filter-input {
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            border-radius: 10px;
+          }
+
+          .kpis-section {
+            padding: 20px;
+            margin-bottom: 25px;
+          }
+
+          .kpis-container {
+            gap: 20px;
+          }
+
+          .kpis-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+          }
+
+          .kpis-grid .kpi {
+            padding: 20px !important;
+          }
+
+          .kpis-grid .kpi .kpi-value {
+            font-size: 1.8rem !important;
+          }
+
+          .kpis-grid .kpi .kpi-label {
+            font-size: 0.8rem !important;
+          }
+
+          .map-main-panel {
+            padding: 20px;
+            margin-bottom: 25px;
+          }
+
+          .map-legend {
+            padding: 15px;
+            margin-bottom: 20px;
+          }
+
+          .map-legend h4 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+          }
+
+          .legend-items {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+
+          .legend-item {
+            padding: 6px 10px;
+          }
+
+          .map-container-expanded {
+            height: 400px;
+          }
+
+          .chart-card, .table-card {
+            padding: 20px;
+          }
+
+          .content-section {
+            margin-bottom: 25px;
+          }
+
+          .tables-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-top: 20px;
+          }
+
+          .custom-popup .leaflet-popup-content {
+            min-width: 200px;
+            max-width: 240px;
+          }
+
+          .percentage-item {
+            grid-template-columns: 1fr;
+            gap: 5px;
+          }
+
+          .percentage-bar {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .dashboard-content {
+            padding: 80px 8px 8px 8px;
+          }
+
+          .filters-section {
+            padding: 15px;
+            margin-bottom: 15px;
+          }
+
+          .filters-container {
+            gap: 12px;
+          }
+
+          .filter-group {
+            gap: 6px;
+          }
+
+          .filter-label {
+            font-size: 0.8rem;
+            letter-spacing: 0.2px;
+          }
+
+          .filter-select, .filter-input {
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            border-radius: 8px;
+          }
+
+          .kpis-section {
+            padding: 15px;
+            margin-bottom: 20px;
+          }
+
+          .kpis-container {
+            gap: 15px;
+          }
+
+          .kpis-grid {
+            gap: 12px;
+          }
+
+          .kpis-grid .kpi {
+            padding: 18px !important;
+          }
+
+          .kpis-grid .kpi .kpi-value {
+            font-size: 1.6rem !important;
+          }
+
+          .kpis-grid .kpi .kpi-label {
+            font-size: 0.75rem !important;
+          }
+
+          .map-main-panel {
+            padding: 15px;
+            margin-bottom: 20px;
+          }
+
+          .map-legend {
+            padding: 12px;
+            margin-bottom: 15px;
+          }
+
+          .map-legend h4 {
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+          }
+
+          .legend-items {
+            gap: 8px;
+          }
+
+          .legend-item {
+            padding: 5px 8px;
+          }
+
+          .legend-color {
+            width: 16px;
+            height: 16px;
+          }
+
+          .legend-text {
+            font-size: 0.8rem;
+          }
+
+          .map-container-expanded {
+            height: 350px;
+          }
+
+          .chart-card, .table-card {
             padding: 15px;
           }
 
-                     .custom-popup .leaflet-popup-content {
-             min-width: 180px;
-             max-width: 200px;
-           }
+          .content-section {
+            margin-bottom: 20px;
+          }
+
+          .tables-grid {
+            gap: 15px;
+            margin-top: 15px;
+          }
+
+          .custom-popup .leaflet-popup-content {
+            min-width: 180px;
+            max-width: 220px;
+          }
+
+          .popup-header h4 {
+            font-size: 0.9rem;
+          }
+
+          .popup-info p {
+            font-size: 0.8rem;
+          }
+
+          .percentage-label {
+            font-size: 0.75rem;
+          }
+
+          .percentage-value {
+            font-size: 0.7rem;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .dashboard-content {
+            padding: 75px 5px 5px 5px;
+          }
+
+          .filters-section {
+            padding: 12px;
+          }
+
+          .kpis-section {
+            padding: 12px;
+          }
+
+          .map-main-panel {
+            padding: 12px;
+          }
+
+          .map-container-expanded {
+            height: 300px;
+          }
+
+          .chart-card, .table-card {
+            padding: 12px;
+          }
+
+          .kpis-grid .kpi {
+            padding: 15px !important;
+          }
+
+          .kpis-grid .kpi .kpi-value {
+            font-size: 1.4rem !important;
+          }
+        }
+
+        /* Estilos para los inputs de fecha tipo calendario */
+        .date-inputs {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          align-items: end;
+        }
+
+        /* Contenedor específico para filtros de fecha */
+        .filter-group:has(.date-inputs) {
+          min-width: 280px;
+        }
+
+        .date-inputs .filter-select {
+          border: 2px solid #79BC99;
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 14px;
+          background: white;
+          color: #2c3e50;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .date-inputs .filter-select:hover {
+          border-color: #4E8484;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .date-inputs .filter-select:focus {
+          outline: none;
+          border-color: #3B8686;
+          box-shadow: 0 0 0 3px rgba(121, 188, 153, 0.2);
+        }
+
+        .date-inputs .date-day,
+        .date-inputs .date-month,
+        .date-inputs .date-year {
+          width: 100%;
+        }
+
+        /* Responsive para tablets */
+        @media (max-width: 1024px) {
+          .date-inputs { gap: 8px; }
+        }
+
+        /* Responsive para móviles */
+        @media (max-width: 768px) {
+          .date-inputs {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            width: 100%;
+          }
+        }
+
+        /* Responsive para móviles pequeños */
+        @media (max-width: 480px) {
+          .date-inputs {
+            gap: 6px;
+          }
+          
+          .date-inputs .filter-select {
+            padding: 6px 10px;
+            font-size: 13px;
+            max-width: 180px;
+          }
+        }
+
+        /* Mejorar la apariencia de los filtros de fecha */
+        .filter-group:has(.date-inputs) .filter-label {
+          margin-bottom: 6px;
+          color: #2c3e50;
+          font-weight: 600;
+        }
+
+        /* Ajustar el grid de filtros para fechas */
+        @media (max-width: 1200px) {
+          .filter-group:has(.date-inputs) {
+            min-width: 260px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .filter-group:has(.date-inputs) {
+            min-width: auto;
+            width: 100%;
+          }
+          
+          .date-inputs {
+            justify-content: center;
+          }
+        }
+
+        /* ========================================================================
+             ESTILOS PARA FILTROS ORGANIZADOS EN FILAS
+         ======================================================================== */
+        
+        /* Contenedor de filtros organizados en filas */
+        .filters-container {
+          /* Mantener grilla definida arriba */
+          width: 100%;
+        }
+
+        /* Fila de filtros */
+        .filters-row {
+          display: grid;
+          gap: 20px;
+          width: 100%;
+        }
+
+        /* Primera fila: 4 columnas */
+        .filters-row-1 {
+          grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* Segunda fila: 3 columnas */
+        .filters-row-2 {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* Filtro de fechas: ocupar 1 columna en desktop, 2 en md si caben */
+        .date-filter-group {
+          grid-column: span 1;
+        }
+
+        /* Contenedor de rango de fechas */
+        .date-range-inputs {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        /* Grupo de entrada de fecha */
+        .date-input-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* Etiqueta de fecha */
+        .date-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #2c3e50;
+          min-width: 45px;
+        }
+
+        /* Responsive para tablets */
+        @media (max-width: 1200px) {
+          .filters-container {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        /* Responsive para móviles */
+        @media (max-width: 768px) {
+          .filters-container {
+            grid-template-columns: 1fr;
+          }
+          .date-filter-group { grid-column: span 1; }
         }
       `}</style>
     </div>
   );
-}
+};
+
+export default Dashboard;
