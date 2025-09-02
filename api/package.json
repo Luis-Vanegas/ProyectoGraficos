@@ -1,0 +1,9 @@
+{
+  "name": "proyecto-graficos-api",
+  "version": "1.0.0",
+  "description": "API serverless para Proyecto Gráficos",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^1.11.0"
+  }
+}
