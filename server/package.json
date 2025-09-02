@@ -4,6 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "prod": "NODE_ENV=production node index.js",
+    "pm2": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop proyecto-graficos-api",
+    "pm2:restart": "pm2 restart proyecto-graficos-api",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

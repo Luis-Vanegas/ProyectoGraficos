@@ -64,8 +64,8 @@ export default function ConsultarObra() {
       filteredRows = filteredRows.filter(row => {
         // Buscar en campos relevantes
         const campos = [
-          F.nombreDeLaObra,
-          F.descripcionDeLaObra,
+          F.nombre,
+          F.descripcion,
           F.proyectoEstrategico,
           F.dependencia,
           F.comunaOCorregimiento,
@@ -176,7 +176,7 @@ export default function ConsultarObra() {
             )}
 
             {/* Contratista */}
-            {F.contratista && (
+            {F.contratistaOperador && (
               <label className="filter-item">
                 <span className="filter-label">Contratista</span>
                 <select
@@ -196,8 +196,8 @@ export default function ConsultarObra() {
               <span className="filter-label">Estado de la Obra</span>
               <select
                 className="filter-select"
-                value={filters.estado ?? ''}
-                onChange={e => handleFilterChange('estado', e.target.value)}
+                value={filters.estadoDeLaObra ?? ''}
+                onChange={e => handleFilterChange('estadoDeLaObra', e.target.value)}
               >
                 <option value="">Todos los estados</option>
                 <option value="entregada">Obra Entregada</option>
@@ -321,7 +321,7 @@ export default function ConsultarObra() {
             <WorksTable
               title=""
               works={filtered}
-              type="consulta"
+              type="entregadas"
               maxRows={20}
             />
           ) : (

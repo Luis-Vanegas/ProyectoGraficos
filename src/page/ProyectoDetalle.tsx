@@ -124,7 +124,7 @@ export default function ProyectoDetalle() {
     });
   }, [filtered]);
 
-  const nombreProyecto = proyecto ? proyectoNombres[proyecto] || proyecto : 'Proyecto';
+  // const nombreProyecto = proyecto ? proyectoNombres[proyecto] || proyecto : 'Proyecto';
 
   return (
     <div className="shell">
@@ -184,7 +184,7 @@ export default function ProyectoDetalle() {
             )}
 
             {/* Contratista */}
-            {F.contratista && (
+            {F.contratistaOperador && (
               <label className="filter-item">
                 <span className="filter-label">Contratista</span>
                 <select
@@ -204,8 +204,8 @@ export default function ProyectoDetalle() {
               <span className="filter-label">Estado de la Obra</span>
               <select
                 className="filter-select"
-                value={filters.estado ?? ''}
-                onChange={e => setFilters(f => ({ ...f, estado: e.target.value || undefined }))}
+                value={filters.estadoDeLaObra ?? ''}
+                onChange={e => setFilters(f => ({ ...f, estadoDeLaObra: e.target.value || undefined }))}
               >
                 <option value="">Todos los estados</option>
                 <option value="entregada">Obra Entregada</option>
