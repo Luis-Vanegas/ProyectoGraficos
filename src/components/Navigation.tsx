@@ -45,7 +45,7 @@ export default function Navigation({ showBackButton = false, title }: Navigation
               gap: '8px'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
+              e.currentTarget.style.background = 'rgba(255, 36, 36, 0.05)';
               e.currentTarget.style.transform = 'translateX(-3px)';
             }}
             onMouseLeave={(e) => {
