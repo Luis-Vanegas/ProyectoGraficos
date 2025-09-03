@@ -20,16 +20,16 @@ export default function PaginaPrincipal() {
   // Estado para controlar qué elemento del menú está siendo hover
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
-  // Array con todos los elementos del menú principal
-  const menuItems: MenuItem[] = [
-         {
-       id: 'reporte-general',
-       titulo: 'Reporte General',
-       descripcion: 'Visor de proyectos estratégicos',
-       icono: '📊',
-       ruta: '/dashboard',
-       color: '#00904c'
-     },
+  // Array con los elementos principales destacados
+  const menuItemsPrincipales: MenuItem[] = [
+    {
+      id: 'reporte-general',
+      titulo: 'Reporte General',
+      descripcion: 'Visor de proyectos estratégicos',
+      icono: '📊',
+      ruta: '/dashboard',
+      color: '#00904c'
+    },
     {
       id: 'consultar-obra',
       titulo: 'Consultar Obra',
@@ -37,7 +37,11 @@ export default function PaginaPrincipal() {
       icono: '🔍',
       ruta: '/consultar-obra',
       color: '#4682B4'
-    },
+    }
+  ];
+
+  // Array con los elementos del menú secundario
+  const menuItemsSecundarios: MenuItem[] = [
     {
       id: 'escenarios-deportivos',
       titulo: 'Escenarios Deportivos',
@@ -109,14 +113,6 @@ export default function PaginaPrincipal() {
       icono: '🏥',
       ruta: '/proyectos/unidad-hospitalaria',
       color: '#F44336'
-    },
-    {
-      id: 'otras-obras',
-      titulo: 'Otras Obras',
-      descripcion: 'Proyectos adicionales',
-      icono: '💡',
-      ruta: '/proyectos/otras-obras',
-      color: '#607D8B'
     }
   ];
 
@@ -136,93 +132,194 @@ export default function PaginaPrincipal() {
         backgroundAttachment: 'fixed',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        padding: '20px',
-        position: 'relative'
+        padding: '15px',
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
-             {/* Header con logo y branding - responsive */}
-       <div 
-         style={{
-           position: 'absolute',
-           top: '20px',
-           left: '20px',
-           display: 'flex',
-           alignItems: 'center',
-           gap: '10px',
-           zIndex: 10,
-           padding: '10px'
-         }}
-       >
-         <img 
-           src={logoNegroInicio} 
-           alt="Logo Alcaldía de Medellín" 
-           style={{ 
-             height: 'clamp(40px, 8vw, 60px)',
-             maxWidth: '100%'
-           }}
-         />
-       </div>
-             {/* Título principal centrado - responsive */}
-       <div style={{ textAlign: 'center', marginBottom: '40px', zIndex: 10, padding: '0 20px' }}>
-         <h1 
-           style={{
-             color: 'white',
-             fontSize: 'clamp(2rem, 5vw, 3.5rem)',
-             fontWeight: 'bold',
-             margin: 0,
-             textShadow: '2px 2px 4px rgba(0,0,0,0.7)',
-             letterSpacing: '2px',
-             lineHeight: '1.2'
-           }}
-         >
-           Visor de Proyectos Estratégicos
-         </h1>
-       </div>
+      {/* Header con logo y branding - responsive */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: '15px',
+          left: '15px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          zIndex: 10,
+          padding: '6px'
+        }}
+      >
+        <img 
+          src={logoNegroInicio} 
+          alt="Logo Alcaldía de Medellín" 
+          style={{ 
+            height: 'clamp(35px, 6vw, 100px)',
+            maxWidth: '100%'
+          }}
+        />
+      </div>
 
-             {/* Grid principal del menú - completamente responsive */}
-       <div 
-         className="menu-grid"
-         style={{
-           display: 'grid',
-           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-           gap: '12px',
-           maxWidth: '1800px',
-           width: '100%',
-           zIndex: 10,
-           padding: '0 15px',
-           height: 'fit-content'
-         }}
-       >
-        {menuItems.map((item) => (
-          // Tarjeta individual del menú con efectos de hover
+      {/* Título principal centrado - responsive */}
+      <div style={{ textAlign: 'center', marginBottom: '20px', zIndex: 10, padding: '0 14px', marginTop: '12px' }}>
+        <h1 
+          style={{
+            color: 'white',
+            fontSize: 'clamp(1.2rem, 4vw, 2.5rem)',
+            fontWeight: 'bold',
+            margin: 0,
+            textShadow: '2px 2px 4px rgba(0,0,0,0.7)',
+            letterSpacing: '1.5px',
+            lineHeight: '1.2'
+          }}
+        >
+          Visor de Proyectos Estratégicos
+        </h1>
+      </div>
+
+      {/* Panel principal destacado para Reporte General y Consultar Obra */}
+      <div 
+        className="panel-principal"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
+          gap: '18px',
+          maxWidth: '830px',
+          width: '100%',
+          zIndex: 10,
+          padding: '0 20px',
+          marginBottom: '11px'
+        }}
+      >
+        {menuItemsPrincipales.map((item) => (
           <div
             key={item.id}
             onClick={() => handleItemClick(item.ruta)}
             onMouseEnter={() => setHoveredItem(item.id)}
             onMouseLeave={() => setHoveredItem(null)}
-                         style={{
-               background: item.id === 'reporte-general' 
-                 ? 'linear-gradient(135deg, #ffffffdd, #ffffffaa)' 
-                 : `linear-gradient(135deg, ${item.color}dd, ${item.color}aa)`,
-               backdropFilter: 'blur(10px)',
-               borderRadius: '20px',
-               padding: '20px',
-               cursor: 'pointer',
-               transition: 'all 0.3s ease',
-               transform: hoveredItem === item.id ? 'translateY(-10px) scale(1.05)' : 'translateY(0) scale(1)',
-               boxShadow: hoveredItem === item.id 
-                 ? '0 20px 40px rgba(0,0,0,0.3)' 
-                 : '0 10px 30px rgba(0,0,0,0.2)',
-               border: item.id === 'reporte-general' ? '2px solid #00904c' : '2px solid transparent',
-               position: 'relative',
-               overflow: 'hidden',
-               minHeight: '140px',
-               display: 'flex',
-               flexDirection: 'column',
-               justifyContent: 'center'
-             }}
+            style={{
+              background: 'linear-gradient(135deg, #ffffffdd, #ffffffaa)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              padding: '25px',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              transform: hoveredItem === item.id ? 'translateY(-8px) scale(1.03)' : 'translateY(0) scale(1)',
+              boxShadow: hoveredItem === item.id 
+                ? '0 15px 35px rgba(0,0,0,0.3)' 
+                : '0 8px 25px rgba(0,0,0,0.2)',
+              border: `3px solid ${item.color}`,
+              position: 'relative',
+              overflow: 'hidden',
+              minHeight: '140px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
+            {/* Efecto de brillo que se desliza al hacer hover */}
+            {hoveredItem === item.id && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                  animation: 'shine 0.6s ease-in-out',
+                  zIndex: 1
+                }}
+              />
+            )}
+
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              {/* Icono principal de la tarjeta */}
+              <div 
+                className="icono"
+                style={{
+                  fontSize: '2.5rem',
+                  marginBottom: '10px',
+                  textAlign: 'center',
+                  filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
+                }}
+              >
+                {item.icono}
+              </div>
+
+              {/* Título de la tarjeta */}
+              <h3 
+                style={{
+                  color: item.color,
+                  fontSize: '1.3rem',
+                  fontWeight: 'bold',
+                  margin: '0 0 8px 0',
+                  textAlign: 'center',
+                  textShadow: 'none'
+                }}
+              >
+                {item.titulo}
+              </h3>
+
+              {/* Descripción de la tarjeta */}
+              <p 
+                style={{
+                  color: '#333',
+                  fontSize: '0.95rem',
+                  margin: 0,
+                  textAlign: 'center',
+                  opacity: 0.8,
+                  textShadow: 'none',
+                  lineHeight: '1.2'
+                }}
+              >
+                {item.descripcion}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Grid secundario del menú - organizado en 5+4 */}
+      <div 
+        className="menu-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '15px',
+          maxWidth: '1172px',
+          width: '100%',
+          zIndex: 10,
+          padding: '0 20px'
+        }}
+      >
+        {menuItemsSecundarios.slice(0, 5).map((item) => (
+          <div
+            key={item.id}
+            onClick={() => handleItemClick(item.ruta)}
+            onMouseEnter={() => setHoveredItem(item.id)}
+            onMouseLeave={() => setHoveredItem(null)}
+            style={{
+              background: `linear-gradient(135deg, ${item.color}dd, ${item.color}aa)`,
+              backdropFilter: 'blur(10px)',
+              borderRadius: '18px',
+              padding: '16px',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              transform: hoveredItem === item.id ? 'translateY(-6px) scale(1.02)' : 'translateY(0) scale(1)',
+              boxShadow: hoveredItem === item.id 
+                ? '0 12px 30px rgba(0,0,0,0.3)' 
+                : '0 6px 20px rgba(0,0,0,0.2)',
+              border: '2px solid transparent',
+              position: 'relative',
+              overflow: 'hidden',
+              minHeight: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
           >
             {/* Efecto de brillo que se desliza al hacer hover */}
             {hoveredItem === item.id && (
@@ -241,57 +338,156 @@ export default function PaginaPrincipal() {
             )}
 
             <div style={{ position: 'relative', zIndex: 2 }}>
-                             {/* Icono principal de la tarjeta */}
-               <div 
-                 className="icono"
-                 style={{
-                   fontSize: '2.5rem',
-                   marginBottom: '10px',
-                   textAlign: 'center',
-                   filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
-                 }}
-               >
-                 {item.icono}
-               </div>
+              {/* Icono principal de la tarjeta */}
+              <div 
+                className="icono"
+                style={{
+                  fontSize: '2rem',
+                  marginBottom: '8px',
+                  textAlign: 'center',
+                  filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
+                }}
+              >
+                {item.icono}
+              </div>
 
-               {/* Título de la tarjeta */}
-               <h3 
-                 style={{
-                   color: item.id === 'reporte-general' ? '#00904c' : 'white',
-                   fontSize: '1.2rem',
-                   fontWeight: 'bold',
-                   margin: '0 0 8px 0',
-                   textAlign: 'center',
-                   textShadow: item.id === 'reporte-general' ? 'none' : '1px 1px 2px rgba(0,0,0,0.5)'
-                 }}
-               >
-                 {item.titulo}
-               </h3>
+              {/* Título de la tarjeta */}
+              <h3 
+                style={{
+                  color: 'white',
+                  fontSize: '1.05rem',
+                  fontWeight: 'bold',
+                  margin: '0 0 6px 0',
+                  textAlign: 'center',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
+                }}
+              >
+                {item.titulo}
+              </h3>
 
-               {/* Descripción de la tarjeta */}
-               <p 
-                 style={{
-                   color: item.id === 'reporte-general' ? '#333' : 'white',
-                   fontSize: '0.9rem',
-                   margin: 0,
-                   textAlign: 'center',
-                   opacity: item.id === 'reporte-general' ? 0.8 : 0.9,
-                   textShadow: item.id === 'reporte-general' ? 'none' : '1px 1px 2px rgba(0,0,0,0.5)',
-                   lineHeight: '1.3'
-                 }}
-               >
-                 {item.descripcion}
-               </p>
-
-              
+              {/* Descripción de la tarjeta */}
+              <p 
+                style={{
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  margin: 0,
+                  textAlign: 'center',
+                  opacity: 0.9,
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                  lineHeight: '1.3'
+                }}
+              >
+                {item.descripcion}
+              </p>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Segunda fila del grid - 4 tarjetas */}
+      <div 
+        className="menu-grid-segunda-fila"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: '15px',
+          maxWidth: '1005px',
+          width: '100%',
+          zIndex: 10,
+          padding: '0 21px',
+          marginTop: '10px'
+        }}
+      >
+        {menuItemsSecundarios.slice(5, 9).map((item) => (
+          <div
+            key={item.id}
+            onClick={() => handleItemClick(item.ruta)}
+            onMouseEnter={() => setHoveredItem(item.id)}
+            onMouseLeave={() => setHoveredItem(null)}
+            style={{
+              background: `linear-gradient(135deg, ${item.color}dd, ${item.color}aa)`,
+              backdropFilter: 'blur(10px)',
+              borderRadius: '18px',
+              padding: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              transform: hoveredItem === item.id ? 'translateY(-6px) scale(1.02)' : 'translateY(0) scale(1)',
+              boxShadow: hoveredItem === item.id 
+                ? '0 12px 30px rgba(0,0,0,0.3)' 
+                : '0 6px 20px rgba(0,0,0,0.2)',
+              border: '2px solid transparent',
+              position: 'relative',
+              overflow: 'hidden',
+              minHeight: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}
+          >
+            {/* Efecto de brillo que se desliza al hacer hover */}
+            {hoveredItem === item.id && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                  animation: 'shine 0.6s ease-in-out',
+                  zIndex: 1
+                }}
+              />
+            )}
 
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              {/* Icono principal de la tarjeta */}
+              <div 
+                className="icono"
+                style={{
+                  fontSize: '2rem',
+                  marginBottom: '8px',
+                  textAlign: 'center',
+                  filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
+                }}
+              >
+                {item.icono}
+              </div>
 
-             {/* Estilos CSS para animaciones, tipografía y responsive */}
+              {/* Título de la tarjeta */}
+              <h3 
+                style={{
+                  color: 'white',
+                  fontSize: '1.05rem',
+                  fontWeight: 'bold',
+                  margin: '0 0 6px 0',
+                  textAlign: 'center',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
+                }}
+              >
+                {item.titulo}
+              </h3>
+
+              {/* Descripción de la tarjeta */}
+              <p 
+                style={{
+                  color: 'white',
+                  fontSize: '0.8rem',
+                  margin: 0,
+                  textAlign: 'center',
+                  opacity: 0.9,
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                  lineHeight: '1.3'
+                }}
+              >
+                {item.descripcion}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Estilos CSS para animaciones, tipografía y responsive */}
       <style>{`
         @keyframes shine {
           0% { left: -100%; }
@@ -303,13 +499,81 @@ export default function PaginaPrincipal() {
         }
 
         /* ========================================================================
-            DISEÑO RESPONSIVE COMPLETO OPTIMIZADO PARA 12 TARJETAS SIN SCROLL
+            DISEÑO RESPONSIVE OPTIMIZADO PARA PANTALLAS GRANDES - 5+4
         ======================================================================== */
         
-        @media (max-width: 1400px) {
+        /* Pantallas muy grandes */
+        @media (min-width: 1920px) {
           .menu-grid {
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
-            gap: 10px !important;
+            grid-template-columns: repeat(5, 1fr) !important;
+            max-width: 1800px !important;
+            gap: 20px !important;
+          }
+          
+          .menu-grid-segunda-fila {
+            grid-template-columns: repeat(4, 1fr) !important;
+            max-width: 1440px !important;
+            gap: 20px !important;
+          }
+          
+          .panel-principal {
+            max-width: 1000px !important;
+            gap: 25px !important;
+          }
+        }
+        
+        @media (min-width: 1600px) and (max-width: 1919px) {
+          .menu-grid {
+            grid-template-columns: repeat(5, 1fr) !important;
+            max-width: 1600px !important;
+            gap: 18px !important;
+          }
+          
+          .menu-grid-segunda-fila {
+            grid-template-columns: repeat(4, 1fr) !important;
+            max-width: 1280px !important;
+            gap: 18px !important;
+          }
+          
+          .panel-principal {
+            max-width: 900px !important;
+            gap: 22px !important;
+          }
+        }
+        
+        @media (min-width: 1400px) and (max-width: 1599px) {
+          .menu-grid {
+            grid-template-columns: repeat(5, 1fr) !important;
+            max-width: 1400px !important;
+            gap: 16px !important;
+          }
+          
+          .menu-grid-segunda-fila {
+            grid-template-columns: repeat(4, 1fr) !important;
+            max-width: 1120px !important;
+            gap: 16px !important;
+          }
+          
+          .panel-principal {
+            max-width: 850px !important;
+            gap: 20px !important;
+          }
+        }
+        
+        @media (max-width: 1399px) {
+          .menu-grid {
+            grid-template-columns: repeat(5, 1fr) !important;
+            gap: 12px !important;
+          }
+          
+          .menu-grid-segunda-fila {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 12px !important;
+          }
+          
+          .panel-principal {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+            gap: 15px !important;
           }
         }
         
@@ -319,8 +583,18 @@ export default function PaginaPrincipal() {
           }
           
           .menu-grid {
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+            grid-template-columns: repeat(5, 1fr) !important;
             gap: 10px !important;
+          }
+          
+          .menu-grid-segunda-fila {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 10px !important;
+          }
+          
+          .panel-principal {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+            gap: 12px !important;
           }
         }
         
@@ -330,8 +604,18 @@ export default function PaginaPrincipal() {
           }
           
           .menu-grid {
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+            grid-template-columns: repeat(3, 1fr) !important;
             gap: 8px !important;
+          }
+          
+          .menu-grid-segunda-fila {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 8px !important;
+          }
+          
+          .panel-principal {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
           }
         }
         
@@ -341,18 +625,32 @@ export default function PaginaPrincipal() {
           }
           
           .menu-grid {
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+            grid-template-columns: repeat(2, 1fr) !important;
             gap: 6px !important;
+          }
+          
+          .menu-grid-segunda-fila {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 6px !important;
+          }
+          
+          .panel-principal {
+            gap: 8px !important;
           }
         }
         
         @media (max-width: 360px) {
           .pagina-principal {
-            padding: 5px !important;
+            padding: 6px !important;
           }
           
           .menu-grid {
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 5px !important;
+          }
+          
+          .menu-grid-segunda-fila {
+            grid-template-columns: repeat(2, 1fr) !important;
             gap: 5px !important;
           }
         }

@@ -4,7 +4,7 @@
 
 module.exports = {
   // URL de la API externa
-  apiUrl: 'https://visorestrategicobackendprepdd-aaejehbqgednb5fr.eastus2-01.azurewebsites.net/api/powerbi/obras',
+  apiUrl: 'https://visorestrategicobackend-gkejc4hthnace6b4.eastus2-01.azurewebsites.net/api/powerbi/obras',
   
   // Headers de autenticación - DESCOMENTA Y MODIFICA SEGÚN TU API
   headers: {
