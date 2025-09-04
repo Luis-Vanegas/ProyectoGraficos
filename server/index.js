@@ -123,6 +123,179 @@ app.get('/api/data', async (req, res) => {
   }
 });
 
+// === Nuevo: /api/limites devuelve límites desde archivo público o tu fuente ===
+const fs = require('fs');
+const limitesPathCandidates = [
+  path.join(__dirname, '..', 'public', 'medellin_comunas_corregimientos.geojson'),
+  path.join(__dirname, '..', 'public', 'comunas.geojson')
+];
+
+app.get('/api/limites', async (req, res) => {
+  try {
+    let found = null;
+    for (const p of limitesPathCandidates) {
+      if (fs.existsSync(p)) { found = p; break; }
+    }
+    if (!found) {
+      return res.status(404).json({ error: 'Archivo de límites no encontrado en public/' });
+    }
+    const raw = fs.readFileSync(found, 'utf8');
+    const gj = JSON.parse(raw);
+    res.json(gj);
+  } catch (e) {
+    console.error('Error en /api/limites:', e);
+    res.status(500).json({ error: 'Error al leer límites' });
+  }
+});
+
+// === Nuevo: /api/obras adaptado al contrato esperado por el visor ===
+// Adapta nombres de columnas existentes a { id, nombre, dependencia, direccion, estado, presupuesto, fechaEntrega, lat, lon, comunaCodigo }
+app.get('/api/obras', async (req, res) => {
+  try {
+    const data = await getData();
+    // Helper: indicador avance total (según fórmula proporcionada)
+    // Mapa de columnas basado en src/dataConfig.ts
+    const P = {
+      planeacion: 'PORCENTAJE PLANEACIÓN (MGA)',
+      estudios: 'PORCENTAJE ESTUDIOS PRELIMINARES',
+      viabilizacion: 'PORCENTAJE VIABILIZACIÓN (DAP)',
+      predial: 'PORCENTAJE GESTIÓN PREDIAL',
+      contratacion: 'PORCENTAJE CONTRATACIÓN',
+      inicio: 'PORCENTAJE INICIO',
+      disenos: 'PORCENTAJE DISEÑOS',
+      ejecucion: 'PORCENTAJE EJECUCIÓN OBRA',
+      entrega: 'PORCENTAJE DOTACIÓN Y PUESTA EN OPERACIÓN',
+      liquidacion: 'PORCENTAJE LIQUIDACIÓN',
+      presupuestoPctEjec: 'PRESUPUESTO PORCENTAJE EJECUTADO'
+    };
+    const parsePct = (val) => {
+      if (val === undefined || val === null) return null; // se redistribuye
+      if (typeof val === 'number') return Math.max(0, Math.min(100, val));
+      let s = String(val).trim();
+      const sLower = s.toLowerCase();
+      if (sLower.includes('no aplica')) return null; // se redistribuye
+      if (sLower.includes('sin información') || sLower.includes('sin informacion')) return 0; // 0% explícito
+      s = s.replace('%', '').replace(/,/g, '.');
+      if (s === '' || sLower === 'n/a') return null;
+      let n = Number(s);
+      if (!Number.isFinite(n)) return null;
+      if (n > 0 && n <= 1) n *= 100;
+      return Math.max(0, Math.min(100, n));
+    };
+    const getPct = (r, keys) => {
+      for (const k of keys) {
+        const v = parsePct(r[k]);
+        if (v !== null) return v;
+      }
+      return null;
+    };
+    const computeIndicador = (r) => {
+      // Usar los nombres EXACTOS de la API
+      const pPlaneacion = parsePct(r['PORCENTAJE PLANEACIÓN (MGA)']);
+      const pEstudios   = parsePct(r['PORCENTAJE ESTUDIOS PRELIMINARES']);
+      const pViabili    = parsePct(r['PORCENTAJE VIABILIZACIÓN (DAP)']);
+      const pPredial    = parsePct(r['PORCENTAJE GESTIÓN PREDIAL']);
+      const pContra     = parsePct(r['PORCENTAJE CONTRATACIÓN']);
+      const pInicio     = parsePct(r['PORCENTAJE INICIO']);
+      const pDisenos    = parsePct(r['PORCENTAJE DISEÑOS']);
+      let   pEjec       = parsePct(r['PORCENTAJE EJECUCIÓN OBRA']);
+      if (pEjec === null) pEjec = parsePct(r['PRESUPUESTO PORCENTAJE EJECUTADO']);
+      const pEnt        = parsePct(r['PORCENTAJE DOTACIÓN Y PUESTA EN OPERACIÓN']);
+      const pLiq        = parsePct(r['PORCENTAJE LIQUIDACIÓN']);
+
+      const wPlaneacion = 2.0, wEstudios = 1.5, wViabili = 1.5, wPredial = 1.5, wContra = 1.5,
+            wInicio = 2.0, wDisenos = 5.0, wEjecucion = 78.0, wEntrega = 5.0, wLiq = 2.0;
+
+      const aPlaneacion = pPlaneacion !== null;
+      const aEstudios = pEstudios !== null; const aViabili = pViabili !== null; const aPredial = pPredial !== null; const aContra = pContra !== null;
+      const aInicio = pInicio !== null; const aDisenos = pDisenos !== null; const aEjec = pEjec !== null; const aEnt = pEnt !== null; const aLiq = pLiq !== null;
+
+      const prepApplicable = aPlaneacion ? 1 : 0;
+      const prepNAWeight = aPlaneacion ? 0 : wPlaneacion;
+      const prepExtra = prepApplicable === 0 ? 0 : prepNAWeight / prepApplicable;
+
+      const preconApplicable = (aEstudios ? 1 : 0) + (aViabili ? 1 : 0) + (aPredial ? 1 : 0) + (aContra ? 1 : 0);
+      const preconNAWeight = (aEstudios ? 0 : wEstudios) + (aViabili ? 0 : wViabili) + (aPredial ? 0 : wPredial) + (aContra ? 0 : wContra);
+      const preconExtra = preconApplicable === 0 ? 0 : preconNAWeight / preconApplicable;
+
+      const conApplicable = (aInicio ? 1 : 0) + (aDisenos ? 1 : 0) + (aEjec ? 1 : 0) + (aEnt ? 1 : 0);
+      const conNAWeight = (aInicio ? 0 : wInicio) + (aDisenos ? 0 : wDisenos) + (aEjec ? 0 : wEjecucion) + (aEnt ? 0 : wEntrega);
+      const conExtra = conApplicable === 0 ? 0 : conNAWeight / conApplicable;
+
+      const postApplicable = aLiq ? 1 : 0;
+      const postNAWeight = aLiq ? 0 : wLiq;
+      const postExtra = postApplicable === 0 ? 0 : postNAWeight / postApplicable;
+
+      const totalApplicable = prepApplicable + preconApplicable + conApplicable + postApplicable;
+      const totalNAWeight = prepNAWeight + preconNAWeight + conNAWeight + postNAWeight;
+      const globalExtra = totalApplicable === 0 ? 0 : totalNAWeight / totalApplicable;
+
+      // Contribuciones ponderadas (traducción fiel del DAX)
+      const cPlaneacion = aPlaneacion ? ((pPlaneacion) * (wPlaneacion + prepExtra + globalExtra)) / 100.0 : 0;
+      const cEstudios   = aEstudios   ? ((pEstudios)   * (wEstudios   + preconExtra + globalExtra)) / 100.0 : 0;
+      const cViabili    = aViabili    ? ((pViabili)    * (wViabili    + preconExtra + globalExtra)) / 100.0 : 0;
+      const cPredial    = aPredial    ? ((pPredial)    * (wPredial    + preconExtra + globalExtra)) / 100.0 : 0;
+      const cContra     = aContra     ? ((pContra)     * (wContra     + preconExtra + globalExtra)) / 100.0 : 0;
+      const cInicio     = aInicio     ? ((pInicio)     * (wInicio     + conExtra   + globalExtra)) / 100.0 : 0;
+      const cDisen      = aDisenos    ? ((pDisenos)    * (wDisenos    + conExtra   + globalExtra)) / 100.0 : 0;
+      const cEjec       = aEjec       ? ((pEjec)       * (wEjecucion  + conExtra   + globalExtra)) / 100.0 : 0;
+      const cEnt        = aEnt        ? ((pEnt)        * (wEntrega    + conExtra   + globalExtra)) / 100.0 : 0;
+      const cLiq        = aLiq        ? ((pLiq)        * (wLiq        + postExtra  + globalExtra)) / 100.0 : 0;
+
+      const total = cPlaneacion + cEstudios + cViabili + cPredial + cContra + cInicio + cDisen + cEjec + cEnt + cLiq;
+      const bounded = Math.max(0, Math.min(100, total));
+      return Number.isFinite(bounded) ? Math.round(bounded * 100) / 100 : 0;
+    };
+
+    // Sanitizador simple de URL de imagen (toma el primer http/https válido)
+    const sanitizeImageUrl = (val) => {
+      if (val === undefined || val === null) return '';
+      const raw = String(val);
+      const match = raw.match(/https?:\/\/[^\s"']+/i);
+      if (match) return match[0];
+      return raw.startsWith('http') ? raw : '';
+    };
+
+    // Mapeo de filas con nombres EXACTOS de la API
+    const mapRow = (r) => ({
+      id: String(r['ID'] ?? r['id'] ?? Math.random().toString(36).slice(2)),
+      nombre: String(r['NOMBRE'] ?? r['NOMBRE DE LA OBRA'] ?? r['obra'] ?? r['nombre'] ?? ''),
+      dependencia: String(r['DEPENDENCIA'] ?? r['Dependencia'] ?? r['dependencia'] ?? ''),
+      direccion: String(r['DIRECCIÓN'] ?? r['Dirección'] ?? r['direccion'] ?? ''),
+      estado: String(r['ESTADO DE LA OBRA'] ?? r['estado'] ?? ''),
+      presupuesto: Number(r['COSTO TOTAL ACTUALIZADO'] ?? r['presupuesto'] ?? 0),
+      fechaEntrega: String(r['FECHA REAL DE ENTREGA'] ?? r['fechaEntrega'] ?? ''),
+      indicadorAvanceTotal: computeIndicador(r),
+      imagenUrl: sanitizeImageUrl(r['URL IMAGEN'] ?? r['URL Imagen'] ?? r['Imagen'] ?? r['IMAGEN'] ?? ''),
+      comunaNombre: String(r['COMUNA O CORREGIMIENTO'] ?? r['Comuna o Corregimiento'] ?? r['comuna'] ?? ''),
+      proyectoEstrategico: String(r['PROYECTO ESTRATÉGICO'] ?? r['Proyecto Estratégico'] ?? r['proyectoEstrategico'] ?? ''),
+      lat: r['LATITUD'] != null ? Number(r['LATITUD']) : (r['lat'] != null ? Number(r['lat']) : null),
+      lon: r['LONGITUD'] != null ? Number(r['LONGITUD']) : (r['lon'] != null ? Number(r['lon']) : null),
+      comunaCodigo: r['COMUNA'] != null ? String(r['COMUNA']).padStart(2, '0') : (r['comunaCodigo'] != null ? String(r['comunaCodigo']).padStart(2, '0') : null)
+    });
+
+    // Filtros básicos desde query params
+    const estado = req.query.estado ? String(req.query.estado).toLowerCase() : undefined;
+    const dependencia = req.query.dependencia ? String(req.query.dependencia).toLowerCase() : undefined;
+    const proyectoEstrategico = req.query.proyectoEstrategico ? String(req.query.proyectoEstrategico).toLowerCase() : undefined;
+    const terminada = req.query.terminada ? String(req.query.terminada) === 'true' : undefined;
+    const comunaCodigo = req.query.comunaCodigo ? String(req.query.comunaCodigo) : undefined;
+
+    let rows = data.map(mapRow);
+    if (estado) rows = rows.filter(r => r.estado.toLowerCase().includes(estado));
+    if (dependencia) rows = rows.filter(r => r.dependencia.toLowerCase().includes(dependencia));
+    if (proyectoEstrategico) rows = rows.filter(r => String(r.proyectoEstrategico || '').toLowerCase().includes(proyectoEstrategico));
+    if (terminada === true) rows = rows.filter(r => r.estado.toLowerCase().includes('termin'));
+    else if (terminada === false) rows = rows.filter(r => !r.estado.toLowerCase().includes('termin'));
+    if (comunaCodigo) rows = rows.filter(r => r.comunaCodigo === comunaCodigo);
+
+    res.json(rows);
+  } catch (e) {
+    console.error('Error en /api/obras:', e);
+    res.status(500).json({ error: 'Error al transformar obras' });
+  }
+});
+
 // Endpoint para forzar actualización del cache
 app.post('/api/refresh', async (req, res) => {
   try {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+
 import { F } from '../dataConfig';
+// import type * as GeoJSON from 'geojson';
 import {
   applyFilters,
   kpis,
@@ -17,6 +17,7 @@ import ComboBars from '../components/comboBars';
 import WorksTable from '../components/WorksTable';
 import AlertsTable from '../components/AlertsTable';
 import Navigation from '../components/Navigation';
+import MapLibreVisor from '../components/MapLibreVisor';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
@@ -33,74 +34,25 @@ const CORPORATE_COLORS = {
 };
 
 // ============================================================================
-// COLORES PARA DEPENDENCIAS - COLORS DIFERENTES PARA CADA DEPENDENCIA
+// UTILIDAD: CONVERTIR HSL A HEX PARA GENERAR COLORES DISTINTOS ILIMITADOS
 // ============================================================================
-const DEPENDENCY_COLORS = [
-  '#FF6B6B',  // Rojo coral
-  '#4ECDC4',  // Turquesa
-  '#45B7D1',  // Azul cielo
-  '#96CEB4',  // Verde menta
-  '#FFEAA7',  // Amarillo suave
-  '#DDA0DD',  // Lavanda
-  '#98D8C8',  // Verde agua
-  '#F7DC6F',  // Amarillo dorado
-  '#BB8FCE',  // Violeta
-  '#85C1E9',  // Azul claro
-  '#F8C471',  // Naranja
-  '#82E0AA',  // Verde lima
-  '#F1948A',  // Rosa salmón
-  '#D7BDE2',  // Lila claro
-  '#A9CCE3',  // Azul grisáceo
-  '#FAD7A0'   // Melocotón
-];
-
-// ============================================================================
-// FUNCIÓN PARA ASIGNAR COLORES A DEPENDENCIAS
-// ============================================================================
-const getDependencyColor = (dependencyName: string): string => {
-  if (!dependencyName) return CORPORATE_COLORS.mediumGray;
-
-  // Crear un hash único para cada dependencia para asignar colores consistentes
-  const hash = dependencyName.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-
-  return DEPENDENCY_COLORS[Math.abs(hash) % DEPENDENCY_COLORS.length];
+const hslToHex = (h: number, s: number, l: number): string => {
+  const sat = Math.max(0, Math.min(100, s)) / 100;
+  const lig = Math.max(0, Math.min(100, l)) / 100;
+  const a = sat * Math.min(lig, 1 - lig);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = lig - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
 };
 
-// ============================================================================
-// FUNCIÓN PARA OBTENER CAMPOS DE PORCENTAJE DE UNA OBRA
-// ============================================================================
-const getPercentageFields = (obra: Row) => {
-  const percentageFields = [
-    { key: 'presupuestoPorcentajeEjecutado', label: 'Presupuesto Ejecutado' },
-    { key: 'porcentajeEjecucionObra', label: 'Ejecución de Obra' },
-    { key: 'porcentajeDisenos', label: 'Diseños' },
-    { key: 'porcentajeViabilizacionDAP', label: 'Viabilización DAP' },
-    { key: 'porcentajeContratacion', label: 'Contratación' },
-    { key: 'porcentajeLiquidacion', label: 'Liquidación' },
-    { key: 'porcentajePlaneacionMGA', label: 'Planeación MGA' },
-    { key: 'porcentajeEstudiosPreliminares', label: 'Estudios Preliminares' },
-    { key: 'porcentajeInicio', label: 'Inicio' },
-    { key: 'porcentajeGestionPredial', label: 'Gestión Predial' },
-    { key: 'porcentajeDotacionYPuestaEnOperacion', label: 'Dotación y Puesta en Operación' }
-  ];
+// 
 
-  return percentageFields
-    .map(field => {
-      const value = obra[F[field.key as keyof typeof F] as keyof typeof F];
-      if (value !== undefined && value !== null && value !== '') {
-        return {
-          label: field.label,
-          value: typeof value === 'number' ? value : parseFloat(String(value)),
-          key: field.key
-        };
-      }
-      return null;
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
-};
+// 
 
 // ============================================================================
 // COMPONENTE PRINCIPAL DEL DASHBOARD
@@ -121,6 +73,10 @@ const Dashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
+  // Estado no utilizado en esta vista (selección se maneja en MapLibre)
+  // const [selectedComuna] = useState<string | null>(null);
+  // const [comunasGeo, setComunasGeo] = useState<GeoJSON.FeatureCollection | null>(null);
+  // Eliminado: referencia a Leaflet
 
 
   // ============================================================================
@@ -142,6 +98,8 @@ const Dashboard = () => {
       }
     })();
   }, []);
+
+  // (El visor de MapLibre maneja la carga de límites de comunas)
 
   // ============================================================================
   // CÁLCULOS Y FILTRADO DE DATOS
@@ -237,6 +195,50 @@ const Dashboard = () => {
     console.log('Datos del mapa agrupados:', groupedByDependency);
     return groupedByDependency;
   }, [filtered]);
+
+  // ============================================================================
+  // MAPEO DE COLORES ÚNICOS POR DEPENDENCIA (SIN REPETICIONES)
+  // ============================================================================
+  const dependencyColorMap = useMemo(() => {
+    const dependencias = Object.keys(mapData).sort();
+    const total = dependencias.length || 1;
+    const saturation = 72; // 0-100
+    const lightness = 38;  // 0-100 (más bajo = más oscuro)
+    const colorMap: Record<string, string> = {};
+    dependencias.forEach((dep, idx) => {
+      const hue = Math.round((idx * 360) / total);
+      colorMap[dep] = hslToHex(hue, saturation, lightness);
+    });
+    return colorMap;
+  }, [mapData]);
+
+  // ============================================================================
+  // (Marcadores individuales no usados en modo por comuna)
+
+  const showLegend = true;
+  // Normalizar nombre de comuna (acepta "15 - Guayabal" o "Guayabal")
+  // const normalizeComuna = (value: string): string => {
+  //   const str = String(value ?? '').trim();
+  //   const parts = str.split('-');
+  //   return (parts.length > 1 ? parts.slice(1).join('-') : str).trim().toLowerCase();
+  // };
+
+  // Indicador Avance Total (definición eliminada en este archivo)
+
+  // ============================================================================
+  // AGRUPACIÓN POR COMUNA: UN SOLO MARCADOR POR COMUNA CON EL CONTEO DE OBRAS
+  // ============================================================================
+  // type ComunaSummary = {
+  //   comuna: string;
+  //   countAll: number;
+  //   countGeo: number;
+  //   lat: number;
+  //   lng: number;
+  // };
+
+  // Eliminado: agregado en MapLibre
+
+  // Eliminado: no se usa en esta vista
 
   // ============================================================================
   // MANEJADORES DE EVENTOS
@@ -523,7 +525,9 @@ const Dashboard = () => {
              PANEL PRINCIPAL DEL MAPA - TERCERA POSICIÓN
          ======================================================================== */}
         <div className="map-main-panel">
-          {/* Leyenda del mapa con colores por dependencia */}
+          
+          {/* Leyenda del mapa con colores por dependencia (opcional) */}
+          {showLegend && (
           <div className="map-legend">
             <h4>Leyenda por Dependencia:</h4>
             <div className="legend-items">
@@ -531,137 +535,33 @@ const Dashboard = () => {
                 <div key={dependencia} className="legend-item">
                   <div 
                     className="legend-color" 
-                    style={{ backgroundColor: getDependencyColor(dependencia) }}
+                      style={{ backgroundColor: dependencyColorMap[dependencia] }}
                   ></div>
                   <span className="legend-text">{dependencia}</span>
                 </div>
               ))}
             </div>
           </div>
+          )}
           
 
           
-          {/* Contenedor del mapa corregido */}
-          <div className="map-container-expanded">
-            {Object.keys(mapData).length === 0 ? (
-              <div className="no-data-message">
-                <div>
-                  <h3>No hay datos para mostrar en el mapa</h3>
-                  <p>Esto puede deberse a:</p>
-                  <ul style={{ textAlign: 'left', display: 'inline-block' }}>
-                    <li>No hay obras con coordenadas válidas</li>
-                    <li>Los campos de latitud/longitud están vacíos</li>
-                    <li>Los filtros aplicados no tienen datos geográficos</li>
-                  </ul>
-                  <p><strong>Campos de coordenadas:</strong> {F.latitud} / {F.longitud}</p>
-                </div>
-              </div>
-            ) : (
-              <MapContainer 
-                center={[6.5, -75.5]} // Coordenadas centradas en Antioquia
-                zoom={8} // Zoom para ver toda Antioquia
-                style={{ height: '600px', width: '100%' }}
-                className="responsive-map"
-                zoomControl={true}
-                scrollWheelZoom={true}
-                dragging={true}
-                touchZoom={true}
-                doubleClickZoom={true}
-                boxZoom={true}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                
-                {/* Renderizar marcadores agrupados por dependencia */}
-                {Object.entries(mapData).map(([dependencia, obras]) => {
-                  const dependencyColor = getDependencyColor(dependencia);
-                  
-                  return obras.map((obra, obraIndex) => {
-                    const lat = F.latitud ? parseFloat(String(obra[F.latitud] ?? '')) : 0;
-                    const lng = F.longitud ? parseFloat(String(obra[F.longitud] ?? '')) : 0;
-                    const nombre = F.nombre ? String(obra[F.nombre] ?? '') : 'Obra sin nombre';
-                    const proyecto = F.proyectoEstrategico ? String(obra[F.proyectoEstrategico] ?? '') : '';
-                    const comuna = F.comunaOCorregimiento ? String(obra[F.comunaOCorregimiento] ?? '') : '';
-                    const porcentajes = getPercentageFields(obra);
-                    
-                    return (
-                      <CircleMarker
-                        key={`${dependencia}-${obraIndex}`}
-                        center={[lat, lng]}
-                        radius={8}
-                        fillColor={dependencyColor}
-                        color={dependencyColor}
-                        weight={2}
-                        opacity={0.8}
-                        fillOpacity={0.6}
-                      >
-                        {/* Popup compacto con información de la obra */}
-                        <Popup className="custom-popup">
-                          <div className="map-popup">
-                            <div className="popup-header" style={{ borderLeftColor: dependencyColor }}>
-                              <h4>{nombre.length > 30 ? nombre.substring(0, 30) + '...' : nombre}</h4>
-                              <div className="popup-dependency">{dependencia}</div>
-                            </div>
-                            
-                            <div className="popup-info">
-                              {proyecto && (
-                                <p><strong>Proyecto:</strong> {proyecto.length > 20 ? proyecto.substring(0, 20) + '...' : proyecto}</p>
-                              )}
-                              {comuna && (
-                                <p><strong>Comuna:</strong> {comuna.length > 20 ? comuna.substring(0, 20) + '...' : comuna}</p>
-                              )}
-                            </div>
-
-                            {/* Porcentajes de avance */}
-                            {porcentajes.length > 0 && (
-                              <div className="popup-percentages">
-                                <h5>Avance del Proyecto:</h5>
-                                <div className="percentage-grid">
-                                  {porcentajes.slice(0, 6).map((item, idx) => {
-                                    if (!item) return null;
-                                    return (
-                                      <div key={idx} className="percentage-item">
-                                        <div className="percentage-label">
-                                          {item.label.length > 15 ? item.label.substring(0, 15) + '...' : item.label}
-                                        </div>
-                                        <div className="percentage-bar">
-                                          <div 
-                                            className="percentage-fill" 
-                                            style={{ 
-                                              width: `${Math.min(item.value, 100)}%`,
-                                              backgroundColor: dependencyColor
-                                            }}
-                                          ></div>
-                                        </div>
-                                        <div className="percentage-value">{item.value}%</div>
-                                      </div>
-                                    );
-                                  })}
-                                  {porcentajes.length > 6 && (
-                                    <div className="percentage-item">
-                                      <div className="percentage-label">+{porcentajes.length - 6} más...</div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </Popup>
-                      </CircleMarker>
-                    );
-                  });
-                })}
-              </MapContainer>
-            )}
+          {/* Mapa principal: responsive y conectado a filtros externos */}
+          <div style={{ height: '70vh', minHeight: 420, width: '100%' }}>
+            <MapLibreVisor height={'100%'} query={new URLSearchParams({
+              ...(filters.estadoDeLaObra ? { estado: String(filters.estadoDeLaObra) } : {}),
+              ...(filters.dependencia ? { dependencia: String(filters.dependencia) } : {}),
+              ...(filters.proyecto ? { proyectoEstrategico: String(filters.proyecto) } : {}),
+              ...(filters.comuna ? { comunaCodigo: String(filters.comuna) } : {}),
+            })} />
           </div>
         </div>
 
         {/* ========================================================================
              SECCIÓN DE CONTENIDO INFERIOR - GRÁFICOS Y TABLAS
          ======================================================================== */}
-        <div className="content-section">
+        <div className="content-section" style={{ display: 'none' }}>
+          {/* Oculto la tarjeta inferior mientras el MapLibre muestra overlay propio */}
           {/* Gráfico principal de inversión */}
           {comboDataset.length > 0 && (
             <div className="chart-card">
@@ -1154,8 +1054,8 @@ const Dashboard = () => {
           height: 600px;
           border-radius: 15px;
           overflow: hidden;
-          border: 2px solid ${CORPORATE_COLORS.primary};
-          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
+          border: 1px solid rgba(0,0,0,0.08);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
           position: relative;
         }
 
@@ -1189,7 +1089,7 @@ const Dashboard = () => {
         ======================================================================== */
         .custom-popup .leaflet-popup-content-wrapper {
           border-radius: 12px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.2);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
         }
 
         .custom-popup .leaflet-popup-content {
@@ -1212,7 +1112,7 @@ const Dashboard = () => {
           border-left: 4px solid;
           background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
           border-radius: 12px 12px 0 0;
-          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.1);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
 
         .popup-header h4 {
@@ -1293,6 +1193,32 @@ const Dashboard = () => {
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
+        /* Estilos para clusters y marcadores tipo botón naranja */
+        .custom-cluster { background: transparent; }
+        .custom-cluster .cluster-count {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: #F77F26;
+          color: #fff;
+          font-weight: 700;
+          font-size: 14px;
+          border: 3px solid rgba(0,0,0,0.15);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .custom-marker { background: transparent; }
+        .custom-marker .marker-dot {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: #F77F26;
+          border: 3px solid rgba(0,0,0,0.15);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
         .percentage-value {
           font-size: 0.75rem;
           color: #00904c;
@@ -1300,6 +1226,40 @@ const Dashboard = () => {
           min-width: 30px;
           text-align: right;
         }
+
+        /* Overlay lateral dentro del mapa */
+        .comuna-overlay {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          width: min(420px, 90%);
+          max-height: calc(100% - 24px);
+          background: #ffffff;
+          border-radius: 12px;
+          border: 1px solid #E9ECEF;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          z-index: 1000;
+        }
+        .overlay-header {
+          display: flex; align-items: center; justify-content: space-between;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-bottom: 1px solid #E9ECEF; padding: 10px 12px;
+        }
+        .overlay-title { font-weight: 700; color: #2C3E50; }
+        .overlay-close { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #2C3E50; }
+        .overlay-body { padding: 12px; overflow: auto; }
+        .overlay-item { padding: 10px 0; border-bottom: 1px solid #E9ECEF; }
+        .item-title { font-weight: 700; margin-bottom: 6px; }
+        .item-ind { margin-top: 6px; color: #2C3E50; }
+        .bars { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+        .bar-row { display: grid; grid-template-columns: 130px 1fr 40px; gap: 8px; align-items: center; }
+        .bar-label { color: #6C757D; font-size: 0.85rem; }
+        .bar-bg { background: #E8F4F8; height: 8px; border-radius: 4px; overflow: hidden; }
+        .bar-fill { background: #3B8686; height: 100%; }
+        .bar-val { text-align: right; color: #00904c; font-weight: 600; }
 
         /* ========================================================================
             INDICADOR DE ESTADO
