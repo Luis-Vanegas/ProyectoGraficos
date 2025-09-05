@@ -591,3 +591,82 @@ export function buildTwoSeriesDataset(
 
   return [headers, ...data];
 }
+
+// ============================================================================
+// VIGENCIAS (AGREGADOS POR AÑO)
+// ============================================================================
+
+export type VigenciaRow = {
+  year: number;
+  estimatedCount: number;
+  estimatedInvestment: number;
+  realCount: number;
+  realInvestment: number;
+};
+
+function extractYearFrom(raw: unknown): number | null {
+  if (raw == null) return null;
+  const str = String(raw).trim();
+  if (!str || str === 'Sin información' || str === 'undefined') return null;
+  // formatos admitidos: YYYY, YYYY-MM, YYYY-MM-DD, texto que contenga año
+  const m = str.match(/\b(\d{4})\b/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  return Number.isFinite(y) ? y : null;
+}
+
+function getObraCosto(r: Row): number {
+  // Usa costo total actualizado; si es 0 o null, usa costo estimado
+  if (!F.costoTotalActualizado && !F.costoEstimadoTotal) return 0;
+  const actualizado = F.costoTotalActualizado ? toNumber(r[F.costoTotalActualizado]) : 0;
+  const estimado = F.costoEstimadoTotal ? toNumber(r[F.costoEstimadoTotal]) : 0;
+  return actualizado === 0 ? estimado : actualizado;
+}
+
+function isEntregada(r: Row): boolean {
+  if (!F.obraEntregada) return false;
+  const v = String(r[F.obraEntregada] ?? '').toLowerCase().trim();
+  return v === 'si' || v === 'sí';
+}
+
+/**
+ * Calcula los agregados por vigencia (año):
+ * - Entrega estimada (conteo)
+ * - Inversión estimada (suma)
+ * - Entrega real (conteo de entregadas con año real)
+ * - Inversión real (suma en entregadas con año real)
+ */
+export function computeVigencias(rows: Row[]): VigenciaRow[] {
+  const years = new Set<number>();
+
+  const estCount = new Map<number, number>();
+  const estInv = new Map<number, number>();
+  const realCount = new Map<number, number>();
+  const realInv = new Map<number, number>();
+
+  for (const r of rows) {
+    const yEst = F.fechaEstimadaDeEntrega ? extractYearFrom(r[F.fechaEstimadaDeEntrega]) : null;
+    const yReal = F.fechaRealDeEntrega ? extractYearFrom(r[F.fechaRealDeEntrega]) : null;
+
+    if (yEst != null) {
+      years.add(yEst);
+      estCount.set(yEst, (estCount.get(yEst) ?? 0) + 1);
+      estInv.set(yEst, (estInv.get(yEst) ?? 0) + getObraCosto(r));
+    }
+
+    if (yReal != null && isEntregada(r)) {
+      years.add(yReal);
+      realCount.set(yReal, (realCount.get(yReal) ?? 0) + 1);
+      realInv.set(yReal, (realInv.get(yReal) ?? 0) + getObraCosto(r));
+    }
+  }
+
+  const ordered = Array.from(years.values()).sort((a, b) => b - a);
+  return ordered.map((y) => ({
+    year: y,
+    estimatedCount: (estCount.get(y) ?? 0) < 1 ? 0 : (estCount.get(y) ?? 0),
+    estimatedInvestment: (estInv.get(y) ?? 0) < 1 ? 0 : (estInv.get(y) ?? 0),
+    realCount: (realCount.get(y) ?? 0) < 1 ? 0 : (realCount.get(y) ?? 0),
+    realInvestment: (realInv.get(y) ?? 0) < 1 ? 0 : (realInv.get(y) ?? 0),
+  }));
+}

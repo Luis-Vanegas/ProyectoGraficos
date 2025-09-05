@@ -201,7 +201,7 @@ h1 {
 
 /* números más contenidos para que quepan */
 .kpi-value{
-  font-size: clamp(18px, 2.3vw, 32px);
+  font-size: clamp(16px, 1.6vw, 26px);
   line-height: 1.05;
   white-space: nowrap;
   overflow: hidden;
@@ -252,9 +252,7 @@ h1 {
     padding: 20px;
   }
   
-  .kpi-value {
-    font-size: clamp(16px, 2vw, 28px);
-  }
+  .kpi-value { font-size: clamp(14px, 1.5vw, 22px); }
 }
 
 @media (max-width: 480px) {
@@ -276,9 +274,7 @@ h1 {
     padding: 18px;
   }
   
-  .kpi-value {
-    font-size: clamp(14px, 1.8vw, 24px);
-  }
+  .kpi-value { font-size: clamp(13px, 1.3vw, 20px); }
 }
 
 /* Nuevos estilos para tablas mejoradas */
@@ -821,6 +817,51 @@ h1 {
     max-width: 240px;
   }
 }
+
+/* ==========================
+   MODO COMPACTO GLOBAL
+   - Reduce paddings, gaps y tipografías
+   - Se activa añadiendo la clase 'compact' al <html>
+========================== */
+.compact body { font-size: 14px; line-height: 1.35; }
+.compact .navigation { padding: 10px 16px !important; }
+.compact .title { font-size: 18px !important; }
+
+/* Paneles y tarjetas */
+.compact .panel,
+.compact .chart-card,
+.compact .map-card,
+.compact .table-card,
+.compact .map-card-expanded { padding: 16px !important; border-radius: 14px !important; }
+.compact .status-indicator { padding: 16px !important; }
+
+/* Filtros */
+.compact .filters-section { padding: 16px !important; margin-bottom: 16px !important; border-radius: 14px !important; }
+.compact .filters-container { gap: 12px !important; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important; }
+.compact .filter-group { gap: 6px !important; }
+.compact .filter-label { font-size: 0.85rem !important; }
+.compact .filter-select, .compact .filter-input { padding: 8px 10px !important; font-size: 0.9rem !important; border-radius: 10px !important; }
+.compact .date-inputs { gap: 8px !important; }
+.compact .date-inputs .filter-select { padding: 6px 8px !important; font-size: 13px !important; }
+
+/* KPIs */
+.compact .kpis-section { padding: 16px !important; margin-bottom: 16px !important; }
+.compact .kpis-container { gap: 16px !important; }
+.compact .kpis-grid { gap: 12px !important; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important; }
+.compact .kpis-grid .kpi { padding: 16px !important; border-radius: 14px !important; }
+.compact .kpis-grid .kpi .kpi-value { font-size: 1.3rem !important; }
+.compact .kpis-row-5 { grid-template-columns: repeat(5, 1fr) !important; }
+
+/* Mapa y leyenda */
+.compact .map-main-panel { padding: 16px !important; margin-bottom: 16px !important; border-radius: 18px !important; }
+.compact .map-legend { padding: 14px !important; margin-bottom: 12px !important; }
+.compact .legend-items { gap: 10px !important; }
+.compact .legend-item { padding: 6px 10px !important; }
+
+/* Tablas */
+.compact .tables-grid { gap: 16px !important; }
+.compact .tables-section { gap: 16px !important; }
+.compact .table-container { max-height: 340px !important; }
 
 @media (max-width: 768px) {
   .dashboard-content {

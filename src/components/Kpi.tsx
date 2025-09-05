@@ -5,6 +5,8 @@ type Props = {
   value: number;
   format?: 'int' | 'money' | 'pct';
   compactMoney?: boolean;
+  // Muestra valores abreviados: 1.2K, 3.4M, 11.1B
+  abbreviate?: boolean;
   digits?: number;
   loading?: boolean;
   subtitle?: string; // Para mostrar información adicional como porcentajes
@@ -22,17 +24,41 @@ export default function Kpi({
   value,
   format = 'int',
   compactMoney = false,
+  abbreviate = false,
   digits = 0,
   subtitle,
   trend
 }: Props) {
 
-  const fmt =
-    format === 'money'
-      ? (compactMoney ? moneyCompact.format(value) : cf.format(value))
-      : format === 'pct'
-      ? `${(value * 100).toFixed(digits)} %`
-      : nf.format(value);
+  const abbreviateNumber = (num: number, d = 1): string => {
+    const abs = Math.abs(num);
+    const units = [
+      { v: 1e12, s: 'B' },   // Billones (10^12)
+      { v: 1e9,  s: 'MM' },  // Mil millones (10^9)
+      { v: 1e6,  s: 'M' },   // Millones
+      { v: 1e3,  s: 'K' },   // Miles
+    ];
+    for (const u of units) {
+      if (abs >= u.v) {
+        const val = (num / u.v).toFixed(d);
+        return `${val.replace(/\.0+$/, '')}${u.s}`;
+      }
+    }
+    return nf.format(num);
+  };
+
+  const fmt = (() => {
+    if (format === 'money') {
+      // Abreviar solo para montos grandes (>= 1 millón) y cuando se solicite
+      if (abbreviate && Math.abs(value) >= 1e6) {
+        return abbreviateNumber(value, Math.max(digits, 1));
+      }
+      return compactMoney ? moneyCompact.format(value) : cf.format(value);
+    }
+    if (format === 'pct') return `${(value * 100).toFixed(digits)} %`;
+    // Para números no monetarios, mostrar normal por defecto
+    return nf.format(value);
+  })();
 
   return (
     <div className="kpi">

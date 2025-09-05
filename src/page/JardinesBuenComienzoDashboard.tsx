@@ -20,7 +20,6 @@ import AlertsTable from '../components/AlertsTable';
 import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
-import HeaderIcons from '../components/HeaderIcons';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
@@ -53,12 +52,8 @@ const hslToHex = (h: number, s: number, l: number): string => {
   return `#${f(0)}${f(8)}${f(4)}`;
 };
 
-// 
-
-// 
-
 // ============================================================================
-// COMPONENTE PRINCIPAL DEL DASHBOARD
+// COMPONENTE PRINCIPAL DEL DASHBOARD - JARDINES BUEN COMIENZO
 // ============================================================================
 type UIFilters = Filters & {
   desdeDia?: string;
@@ -69,18 +64,13 @@ type UIFilters = Filters & {
   hastaAnio?: string;
 };
 
-const Dashboard = () => {
+const JardinesBuenComienzoDashboard = () => {
   // ============================================================================
   // ESTADOS Y VARIABLES
   // ============================================================================
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
-  // Estado no utilizado en esta vista (selección se maneja en MapLibre)
-  // const [selectedComuna] = useState<string | null>(null);
-  // const [comunasGeo, setComunasGeo] = useState<GeoJSON.FeatureCollection | null>(null);
-  // Eliminado: referencia a Leaflet
-
 
   // ============================================================================
   // EFECTOS Y CARGA DE DATOS
@@ -102,7 +92,21 @@ const Dashboard = () => {
     })();
   }, []);
 
-  // (El visor de MapLibre maneja la carga de límites de comunas)
+  // ============================================================================
+  // FILTRADO ESPECÍFICO PARA JARDINES BUEN COMIENZO
+  // ============================================================================
+  // Filtrar datos específicamente para Jardines Buen Comienzo
+  const jardinesBuenComienzoRows = useMemo(() => {
+    if (!F.proyectoEstrategico) return rows;
+    
+    return rows.filter(row => {
+      const proyectoRow = String(row[F.proyectoEstrategico] ?? '').toLowerCase();
+      return proyectoRow.includes('jardines buen comienzo') || 
+             proyectoRow.includes('jardín') ||
+             proyectoRow.includes('buen comienzo') ||
+             proyectoRow.includes('educación infantil');
+    });
+  }, [rows]);
 
   // ============================================================================
   // CÁLCULOS Y FILTRADO DE DATOS
@@ -125,9 +129,9 @@ const Dashboard = () => {
     return newFilters;
   };
 
-  const opciones = useMemo(() => getFilterOptions(rows, filters), [rows, filters]);
+  const opciones = useMemo(() => getFilterOptions(jardinesBuenComienzoRows, filters), [jardinesBuenComienzoRows, filters]);
   const combinedFilters = useMemo(() => combineDateFields(filters), [filters]);
-  const filtered = useMemo(() => applyFilters(rows, combinedFilters), [rows, combinedFilters]);
+  const filtered = useMemo(() => applyFilters(jardinesBuenComienzoRows, combinedFilters), [jardinesBuenComienzoRows, combinedFilters]);
   const k = useMemo(() => kpis(filtered), [filtered]);
   const vigencias = useMemo(() => {
     const rows = computeVigencias(filtered);
@@ -186,9 +190,8 @@ const Dashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas:', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas:', filtered.length);
-    console.log('Campos de latitud y longitud:', F.latitud, F.longitud);
+    console.log('Obras con coordenadas encontradas (Jardines Buen Comienzo):', obrasConCoordenadas.length);
+    console.log('Total de obras filtradas (Jardines Buen Comienzo):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -200,7 +203,6 @@ const Dashboard = () => {
       return acc;
     }, {} as Record<string, Row[]>);
 
-    console.log('Datos del mapa agrupados:', groupedByDependency);
     return groupedByDependency;
   }, [filtered]);
 
@@ -220,33 +222,7 @@ const Dashboard = () => {
     return colorMap;
   }, [mapData]);
 
-  // ============================================================================
-  // (Marcadores individuales no usados en modo por comuna)
-
   const showLegend = true;
-  // Normalizar nombre de comuna (acepta "15 - Guayabal" o "Guayabal")
-  // const normalizeComuna = (value: string): string => {
-  //   const str = String(value ?? '').trim();
-  //   const parts = str.split('-');
-  //   return (parts.length > 1 ? parts.slice(1).join('-') : str).trim().toLowerCase();
-  // };
-
-  // Indicador Avance Total (definición eliminada en este archivo)
-
-  // ============================================================================
-  // AGRUPACIÓN POR COMUNA: UN SOLO MARCADOR POR COMUNA CON EL CONTEO DE OBRAS
-  // ============================================================================
-  // type ComunaSummary = {
-  //   comuna: string;
-  //   countAll: number;
-  //   countGeo: number;
-  //   lat: number;
-  //   lng: number;
-  // };
-
-  // Eliminado: agregado en MapLibre
-
-  // Eliminado: no se usa en esta vista
 
   // ============================================================================
   // MANEJADORES DE EVENTOS
@@ -266,10 +242,7 @@ const Dashboard = () => {
   return (
     <div className="dashboard-container">
       {/* Navegación superior */}
-      <Navigation showBackButton={true} title="Reporte General" />
-
-      {/* Iconos de alerta y calendario */}
-      <HeaderIcons rows={rows} filtered={filtered} />
+      <Navigation showBackButton={true} title="Dashboard - Jardines Buen Comienzo" />
 
       {/* Contenedor principal del dashboard */}
       <div className="dashboard-content">
@@ -285,8 +258,8 @@ const Dashboard = () => {
               <div className="spinner-ring"></div>
             </div>
             <div className="loading-text">
-              <h3>Cargando datos del proyecto...</h3>
-              <p>Por favor espera mientras se procesan las obras</p>
+              <h3>Cargando datos de Jardines Buen Comienzo...</h3>
+              <p>Por favor espera mientras se procesan los jardines educativos</p>
             </div>
           </div>
         )}
@@ -295,23 +268,7 @@ const Dashboard = () => {
              SECCIÓN DE FILTROS - PRIMERA POSICIÓN
          ======================================================================== */}
         <div className="filters-section">
-          {/* Primera fila de filtros */}
-          <div className="filters-container filters-row-main">
-            {/* Filtro: Proyectos estratégicos */}
-            {F.proyectoEstrategico && (
-              <div className="filter-group">
-                <label className="filter-label">PROYECTOS ESTRATÉGICOS</label>
-                <select
-                  className="filter-select"
-                  value={filters.proyecto ?? ''}
-                  onChange={e => handleFilterChange('proyecto', e.target.value)}
-                >
-                  <option value="">Todos los proyectos</option>
-                  {opciones.proyectos.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-            )}
-
+          <div className="filters-container">
             {/* Filtro: Dependencia */}
             {F.dependencia && (
               <div className="filter-group">
@@ -343,10 +300,7 @@ const Dashboard = () => {
                 </select>
               </div>
             )}
-          </div>
 
-          {/* Segunda fila de filtros */}
-          <div className="filters-container filters-row-secondary">
             {/* Filtro: Tipo de Intervención */}
             {F.tipoDeIntervecion && (
               <div className="filter-group">
@@ -391,106 +345,105 @@ const Dashboard = () => {
                 {opciones.estadoDeLaObra.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
+
+            {/* Filtros de fecha */}
+            {(F.fechaRealDeEntrega || F.fechaEstimadaDeEntrega) && (
+              <>
+                <div className="filter-group date-filter-group">
+                  <label className="filter-label">Fecha desde</label>
+                  <div className="date-inputs">
+                    <select
+                      className="filter-select date-day"
+                      value={filters.desdeDia ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeDia: e.target.value || undefined }))}
+                    >
+                      <option value="">Día</option>
+                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day.toString().padStart(2, '0')}>
+                          {day.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="filter-select date-month"
+                      value={filters.desdeMes ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeMes: e.target.value || undefined }))}
+                    >
+                      <option value="">Mes</option>
+                      <option value="01">Enero</option>
+                      <option value="02">Febrero</option>
+                      <option value="03">Marzo</option>
+                      <option value="04">Abril</option>
+                      <option value="05">Mayo</option>
+                      <option value="06">Junio</option>
+                      <option value="07">Julio</option>
+                      <option value="08">Agosto</option>
+                      <option value="09">Septiembre</option>
+                      <option value="10">Octubre</option>
+                      <option value="11">Noviembre</option>
+                      <option value="12">Diciembre</option>
+                    </select>
+                    <select
+                      className="filter-select date-year"
+                      value={filters.desdeAnio ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, desdeAnio: e.target.value || undefined }))}
+                    >
+                      <option value="">Año</option>
+                      {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="filter-group date-filter-group">
+                  <label className="filter-label">Fecha hasta</label>
+                  <div className="date-inputs">
+                    <select
+                      className="filter-select date-day"
+                      value={filters.hastaDia ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaDia: e.target.value || undefined }))}
+                    >
+                      <option value="">Día</option>
+                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day.toString().padStart(2, '0')}>
+                          {day.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="filter-select date-month"
+                      value={filters.hastaMes ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaMes: e.target.value || undefined }))}
+                    >
+                      <option value="">Mes</option>
+                      <option value="01">Enero</option>
+                      <option value="02">Febrero</option>
+                      <option value="03">Marzo</option>
+                      <option value="04">Abril</option>
+                      <option value="05">Mayo</option>
+                      <option value="06">Junio</option>
+                      <option value="07">Julio</option>
+                      <option value="08">Agosto</option>
+                      <option value="09">Septiembre</option>
+                      <option value="10">Octubre</option>
+                      <option value="11">Noviembre</option>
+                      <option value="12">Diciembre</option>
+                    </select>
+                    <select
+                      className="filter-select date-year"
+                      value={filters.hastaAnio ?? ''}
+                      onChange={e => setFilters(f => ({ ...f, hastaAnio: e.target.value || undefined }))}
+                    >
+                      <option value="">Año</option>
+                      {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-
-          {/* Tercera fila - Filtros de fecha */}
-          {(F.fechaRealDeEntrega || F.fechaEstimadaDeEntrega) && (
-            <div className="filters-container filters-row-dates">
-              <div className="filter-group date-filter-group">
-                <label className="filter-label">FECHA DESDE</label>
-                <div className="date-inputs">
-                  <select
-                    className="filter-select date-select"
-                    value={filters.desdeDia ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, desdeDia: e.target.value || undefined }))}
-                  >
-                    <option value="">Día</option>
-                    {Array.from({length: 31}, (_, i) => i + 1).map(day => (
-                      <option key={day} value={day.toString().padStart(2, '0')}>
-                        {day.toString().padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="filter-select date-select"
-                    value={filters.desdeMes ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, desdeMes: e.target.value || undefined }))}
-                  >
-                    <option value="">Mes</option>
-                    <option value="01">Enero</option>
-                    <option value="02">Febrero</option>
-                    <option value="03">Marzo</option>
-                    <option value="04">Abril</option>
-                    <option value="05">Mayo</option>
-                    <option value="06">Junio</option>
-                    <option value="07">Julio</option>
-                    <option value="08">Agosto</option>
-                    <option value="09">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                  </select>
-                  <select
-                    className="filter-select date-select"
-                    value={filters.desdeAnio ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, desdeAnio: e.target.value || undefined }))}
-                  >
-                    <option value="">Año</option>
-                    {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="filter-group date-filter-group">
-                <label className="filter-label">FECHA HASTA</label>
-                <div className="date-inputs">
-                  <select
-                    className="filter-select date-select"
-                    value={filters.hastaDia ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, hastaDia: e.target.value || undefined }))}
-                  >
-                    <option value="">Día</option>
-                    {Array.from({length: 31}, (_, i) => i + 1).map(day => (
-                      <option key={day} value={day.toString().padStart(2, '0')}>
-                        {day.toString().padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="filter-select date-select"
-                    value={filters.hastaMes ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, hastaMes: e.target.value || undefined }))}
-                  >
-                    <option value="">Mes</option>
-                    <option value="01">Enero</option>
-                    <option value="02">Febrero</option>
-                    <option value="03">Marzo</option>
-                    <option value="04">Abril</option>
-                    <option value="05">Mayo</option>
-                    <option value="06">Junio</option>
-                    <option value="07">Julio</option>
-                    <option value="08">Agosto</option>
-                    <option value="09">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                  </select>
-                  <select
-                    className="filter-select date-select"
-                    value={filters.hastaAnio ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, hastaAnio: e.target.value || undefined }))}
-                  >
-                    <option value="">Año</option>
-                    {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ========================================================================
@@ -501,12 +454,12 @@ const Dashboard = () => {
             {/* Fila única: 5 KPIs compactos */}
             <div className="kpis-grid kpis-row-5">
               <Kpi 
-                label="Total obras" 
+                label="Total jardines infantiles" 
                 value={k.totalObras} 
                 trend="neutral"
               />
               <Kpi 
-                label="Inversión total" 
+                label="Inversión educación infantil" 
                 value={k.invTotal} 
                 format="money" 
                 abbreviate 
@@ -524,13 +477,13 @@ const Dashboard = () => {
                 trend="up"
               />
               <Kpi 
-                label="Obras entregadas" 
+                label="Jardines entregados" 
                 value={k.entregadas} 
                 subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
                 trend="up"
               />
               <Kpi 
-                label="Alertas" 
+                label="Alertas educativas" 
                 value={k.alertas}
                 trend={k.alertas > 0 ? 'down' : 'neutral'}
                 subtitle={k.alertas > 0 ? 'Atención requerida' : 'Sin alertas'}
@@ -547,7 +500,7 @@ const Dashboard = () => {
           {/* Leyenda del mapa con colores por dependencia (opcional) */}
           {showLegend && (
           <div className="map-legend">
-            <h4>Leyenda por Dependencia:</h4>
+            <h4>Leyenda por Dependencia - Jardines Buen Comienzo:</h4>
             <div className="legend-items">
               {Object.keys(mapData).map((dependencia) => (
                 <div key={dependencia} className="legend-item">
@@ -562,14 +515,13 @@ const Dashboard = () => {
           </div>
           )}
           
-
-          
           {/* Mapa principal: responsive y conectado a filtros externos */}
           <div style={{ height: '60vh', minHeight: 380, width: '100%' }}>
             <MapLibreVisor height={'100%'} query={new URLSearchParams({
               ...(filters.estadoDeLaObra ? { estado: String(filters.estadoDeLaObra) } : {}),
               ...(filters.dependencia ? { dependencia: String(filters.dependencia) } : {}),
-              ...(filters.proyecto ? { proyectoEstrategico: String(filters.proyecto) } : {}),
+              // Filtro específico para jardines buen comienzo
+              proyectoEstrategico: 'Jardines Buen Comienzo',
               ...(filters.comuna ? { comunaCodigo: String(filters.comuna) } : {}),
             })} />
           </div>
@@ -585,13 +537,12 @@ const Dashboard = () => {
         {/* ========================================================================
              SECCIÓN DE CONTENIDO INFERIOR - GRÁFICOS Y TABLAS
          ======================================================================== */}
-        <div className="content-section" style={{ display: 'none' }}>
-          {/* Oculto la tarjeta inferior mientras el MapLibre muestra overlay propio */}
+        <div className="content-section" style={{ display: 'block' }}>
           {/* Gráfico principal de inversión */}
           {comboDataset.length > 0 && (
             <div className="chart-card">
               <ComboBars
-                title=""
+                title="Inversión vs Presupuesto Ejecutado - Jardines Buen Comienzo"
                 dataset={comboDataset}
                 dim={F.dependencia}
                 v1={F.costoTotalActualizado}
@@ -602,27 +553,27 @@ const Dashboard = () => {
 
           {/* Tablas de información */}
           <div className="tables-grid">
-            {/* Tabla de obras entregadas */}
+            {/* Tabla de jardines entregados */}
             <div className="table-card">
               <WorksTable
-                title=""
+                title="Jardines Buen Comienzo Entregados"
                 works={entregadas}
                 type="entregadas"
                 maxRows={6}
               />
             </div>
 
-            {/* Tabla de obras por entregar */}
+            {/* Tabla de jardines por entregar */}
             <div className="table-card">
               <WorksTable
-                title=""
+                title="Jardines Buen Comienzo por Entregar"
                 works={porEntregar}
                 type="porEntregar"
                 maxRows={4}
               />
             </div>
 
-            {/* Tabla de alertas y riesgos */}
+            {/* Tabla de alertas y riesgos educativos */}
             <div className="table-card">
               <AlertsTable
                 alerts={alertas}
@@ -634,8 +585,8 @@ const Dashboard = () => {
 
         {/* Indicador de estado de carga */}
         <div className="status-indicator">
-          <span className="status-icon">📊</span>
-          {status}
+          <span className="status-icon">🌱</span>
+          {status} - Jardines Buen Comienzo
         </div>
       </div>
 
@@ -742,22 +693,9 @@ const Dashboard = () => {
 
         .filters-container {
           display: grid;
+          grid-template-columns: repeat(4, 1fr);
           gap: 20px;
           align-items: end;
-          margin-bottom: 20px;
-        }
-
-        .filters-row-main {
-          grid-template-columns: repeat(3, 1fr);
-        }
-
-        .filters-row-secondary {
-          grid-template-columns: repeat(3, 1fr);
-        }
-
-        .filters-row-dates {
-          grid-template-columns: repeat(2, 1fr);
-          gap: 30px;
         }
 
         .filter-group {
@@ -800,62 +738,6 @@ const Dashboard = () => {
           border-color: ${CORPORATE_COLORS.secondary};
           transform: translateY(-1px);
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-        }
-
-        /* Estilos específicos para móviles en filtros */
-        @media (max-width: 768px) {
-          .filters-section {
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-          }
-
-          .filters-container {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-          }
-
-          .filter-group {
-            gap: 8px;
-          }
-
-          .filter-label {
-            font-size: 0.85rem;
-            letter-spacing: 0.3px;
-          }
-
-          .filter-select, .filter-input {
-            padding: 12px 14px;
-            font-size: 0.95rem;
-            border-radius: 10px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .filters-section {
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-          }
-
-          .filters-container {
-            gap: 12px;
-          }
-
-          .filter-group {
-            gap: 6px;
-          }
-
-          .filter-label {
-            font-size: 0.8rem;
-            letter-spacing: 0.2px;
-          }
-
-          .filter-select, .filter-input {
-            padding: 10px 12px;
-            font-size: 0.9rem;
-            border-radius: 8px;
-          }
         }
 
         /* ========================================================================
@@ -948,21 +830,6 @@ const Dashboard = () => {
         }
 
         /* ========================================================================
-            LAYOUT PRINCIPAL
-        ======================================================================== */
-        .main-content {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 30px;
-        }
-
-        .left-column, .right-column {
-          display: flex;
-          flex-direction: column;
-          gap: 30px;
-        }
-
-        /* ========================================================================
             SECCIÓN DE CONTENIDO INFERIOR
         ======================================================================== */
         .content-section {
@@ -991,36 +858,6 @@ const Dashboard = () => {
         .chart-card:hover, .table-card:hover {
           transform: translateY(-5px);
           box-shadow: 0 15px 35px rgba(121, 188, 153, 0.2);
-        }
-
-        /* ========================================================================
-            LAYOUT PRINCIPAL
-        ======================================================================== */
-        .main-content {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 30px;
-        }
-
-        .left-column, .right-column {
-          display: flex;
-          flex-direction: column;
-          gap: 30px;
-        }
-
-        /* ========================================================================
-            LAYOUT PRINCIPAL
-        ======================================================================== */
-        .main-content {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 30px;
-        }
-
-        .left-column, .right-column {
-          display: flex;
-          flex-direction: column;
-          gap: 30px;
         }
 
         /* ========================================================================
@@ -1081,221 +918,6 @@ const Dashboard = () => {
         }
 
         /* ========================================================================
-            CONTENEDOR DEL MAPA
-        ======================================================================== */
-        .map-container-expanded {
-          width: 100%;
-          height: 600px;
-          border-radius: 15px;
-          overflow: hidden;
-          border: 1px solid rgba(0,0,0,0.08);
-          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-          position: relative;
-        }
-
-        .map-container-expanded .leaflet-container {
-          width: 100% !important;
-          height: 100% !important;
-          border-radius: 15px;
-        }
-
-        .map-container-expanded .responsive-map {
-          width: 100% !important;
-          height: 100% !important;
-        }
-
-        /* Mensaje cuando no hay datos */
-        .no-data-message {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          font-size: 1.2rem;
-          color: ${CORPORATE_COLORS.mediumGray};
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-radius: 15px;
-          text-align: center;
-          padding: 20px;
-        }
-
-        /* ========================================================================
-            POPUP PERSONALIZADO DEL MAPA
-        ======================================================================== */
-        .custom-popup .leaflet-popup-content-wrapper {
-          border-radius: 12px;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
-        }
-
-        .custom-popup .leaflet-popup-content {
-          margin: 0;
-          padding: 0;
-          min-width: 240px;
-          max-width: 280px;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-radius: 12px;
-        }
-
-        .map-popup {
-          padding: 0;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-radius: 12px;
-        }
-
-        .popup-header {
-          padding: 12px 16px;
-          border-left: 4px solid;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
-          border-radius: 12px 12px 0 0;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        .popup-header h4 {
-          margin: 0 0 6px 0;
-          color: ${CORPORATE_COLORS.darkGray};
-          font-size: 1rem;
-          font-weight: 600;
-          line-height: 1.3;
-        }
-
-        .popup-dependency {
-          color: #00904c;
-          font-weight: 600;
-          font-size: 0.85rem;
-        }
-
-        .popup-info {
-          padding: 10px 16px;
-          border-bottom: 1px solid ${CORPORATE_COLORS.primary};
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-        }
-
-        .popup-info p {
-          margin: 6px 0;
-          font-size: 0.85rem;
-          color: ${CORPORATE_COLORS.mediumGray};
-          line-height: 1.4;
-        }
-
-        .popup-info strong {
-          color: ${CORPORATE_COLORS.darkGray};
-        }
-
-        .popup-percentages {
-          padding: 10px 16px;
-        }
-
-        .popup-percentages h5 {
-          margin: 0 0 12px 0;
-          color: #00904c;
-          font-size: 0.9rem;
-          font-weight: 600;
-        }
-
-        .percentage-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .percentage-item {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 8px;
-          align-items: center;
-        }
-
-        .percentage-label {
-          font-size: 0.8rem;
-          color: ${CORPORATE_COLORS.mediumGray};
-          font-weight: 500;
-          line-height: 1.3;
-        }
-
-        .percentage-bar {
-          width: 70px;
-          height: 8px;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
-          border-radius: 4px;
-          overflow: hidden;
-          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .percentage-fill {
-          height: 100%;
-          border-radius: 4px;
-          transition: width 0.3s ease;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Estilos para clusters y marcadores tipo botón naranja */
-        .custom-cluster { background: transparent; }
-        .custom-cluster .cluster-count {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          background: #F77F26;
-          color: #fff;
-          font-weight: 700;
-          font-size: 14px;
-          border: 3px solid rgba(0,0,0,0.15);
-          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-        .custom-marker { background: transparent; }
-        .custom-marker .marker-dot {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background: #F77F26;
-          border: 3px solid rgba(0,0,0,0.15);
-          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-
-        .percentage-value {
-          font-size: 0.75rem;
-          color: #00904c;
-          font-weight: 600;
-          min-width: 30px;
-          text-align: right;
-        }
-
-        /* Overlay lateral dentro del mapa */
-        .comuna-overlay {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          width: min(420px, 90%);
-          max-height: calc(100% - 24px);
-          background: #ffffff;
-          border-radius: 12px;
-          border: 1px solid #E9ECEF;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.15);
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          z-index: 1000;
-        }
-        .overlay-header {
-          display: flex; align-items: center; justify-content: space-between;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-bottom: 1px solid #E9ECEF; padding: 10px 12px;
-        }
-        .overlay-title { font-weight: 700; color: #2C3E50; }
-        .overlay-close { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #2C3E50; }
-        .overlay-body { padding: 12px; overflow: auto; }
-        .overlay-item { padding: 10px 0; border-bottom: 1px solid #E9ECEF; }
-        .item-title { font-weight: 700; margin-bottom: 6px; }
-        .item-ind { margin-top: 6px; color: #2C3E50; }
-        .bars { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
-        .bar-row { display: grid; grid-template-columns: 130px 1fr 40px; gap: 8px; align-items: center; }
-        .bar-label { color: #6C757D; font-size: 0.85rem; }
-        .bar-bg { background: #E8F4F8; height: 8px; border-radius: 4px; overflow: hidden; }
-        .bar-fill { background: #3B8686; height: 100%; }
-        .bar-val { text-align: right; color: #00904c; font-weight: 600; }
-
-        /* ========================================================================
             INDICADOR DE ESTADO
         ======================================================================== */
         .status-indicator {
@@ -1320,8 +942,8 @@ const Dashboard = () => {
         ======================================================================== */
         @media (max-width: 1200px) {
           .kpis-row-5 { grid-template-columns: repeat(4, 1fr); }
-          .main-content {
-            grid-template-columns: 1fr;
+          .filters-container {
+            grid-template-columns: repeat(3, 1fr);
           }
         }
 
@@ -1377,11 +999,6 @@ const Dashboard = () => {
             font-size: 0.8rem !important;
           }
 
-          .map-main-panel {
-            padding: 20px;
-            margin-bottom: 25px;
-          }
-
           .map-legend {
             padding: 15px;
             margin-bottom: 20px;
@@ -1401,10 +1018,6 @@ const Dashboard = () => {
             padding: 6px 10px;
           }
 
-          .map-container-expanded {
-            height: 400px;
-          }
-
           .chart-card, .table-card {
             padding: 20px;
           }
@@ -1417,20 +1030,6 @@ const Dashboard = () => {
             grid-template-columns: 1fr;
             gap: 20px;
             margin-top: 20px;
-          }
-
-          .custom-popup .leaflet-popup-content {
-            min-width: 200px;
-            max-width: 240px;
-          }
-
-          .percentage-item {
-            grid-template-columns: 1fr;
-            gap: 5px;
-          }
-
-          .percentage-bar {
-            width: 100%;
           }
         }
 
@@ -1483,11 +1082,6 @@ const Dashboard = () => {
             font-size: 0.75rem !important;
           }
 
-          .map-main-panel {
-            padding: 15px;
-            margin-bottom: 20px;
-          }
-
           .map-legend {
             padding: 12px;
             margin-bottom: 15px;
@@ -1515,10 +1109,6 @@ const Dashboard = () => {
             font-size: 0.8rem;
           }
 
-          .map-container-expanded {
-            height: 350px;
-          }
-
           .chart-card, .table-card {
             padding: 15px;
           }
@@ -1531,61 +1121,6 @@ const Dashboard = () => {
             gap: 15px;
             margin-top: 15px;
           }
-
-          .custom-popup .leaflet-popup-content {
-            min-width: 180px;
-            max-width: 220px;
-          }
-
-          .popup-header h4 {
-            font-size: 0.9rem;
-          }
-
-          .popup-info p {
-            font-size: 0.8rem;
-          }
-
-          .percentage-label {
-            font-size: 0.75rem;
-          }
-
-          .percentage-value {
-            font-size: 0.7rem;
-          }
-        }
-
-        @media (max-width: 360px) {
-          .dashboard-content {
-            padding: 75px 5px 5px 5px;
-          }
-
-          .filters-section {
-            padding: 12px;
-          }
-
-          .kpis-section {
-            padding: 12px;
-          }
-
-          .map-main-panel {
-            padding: 12px;
-          }
-
-          .map-container-expanded {
-            height: 300px;
-          }
-
-          .chart-card, .table-card {
-            padding: 12px;
-          }
-
-          .kpis-grid .kpi {
-            padding: 15px !important;
-          }
-
-          .kpis-grid .kpi .kpi-value {
-            font-size: 1.4rem !important;
-          }
         }
 
         /* Estilos para los inputs de fecha tipo calendario */
@@ -1594,10 +1129,6 @@ const Dashboard = () => {
           grid-template-columns: repeat(3, 1fr);
           gap: 12px;
           align-items: end;
-        }
-
-        .date-select {
-          min-width: 0;
         }
 
         /* Contenedor específico para filtros de fecha */
@@ -1684,90 +1215,9 @@ const Dashboard = () => {
             justify-content: center;
           }
         }
-
-        /* ========================================================================
-             ESTILOS PARA FILTROS ORGANIZADOS EN FILAS
-         ======================================================================== */
-        
-        /* Contenedor de filtros organizados en filas */
-        .filters-container {
-          /* Mantener grilla definida arriba */
-          width: 100%;
-        }
-
-        /* Fila de filtros */
-        .filters-row {
-          display: grid;
-          gap: 20px;
-          width: 100%;
-        }
-
-        /* Primera fila: 4 columnas */
-        .filters-row-1 {
-          grid-template-columns: repeat(4, 1fr);
-        }
-
-        /* Segunda fila: 3 columnas */
-        .filters-row-2 {
-          grid-template-columns: repeat(3, 1fr);
-        }
-
-        /* Filtro de fechas: ocupar 1 columna en desktop, 2 en md si caben */
-        .date-filter-group {
-          grid-column: span 1;
-        }
-
-        /* Contenedor de rango de fechas */
-        .date-range-inputs {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        /* Grupo de entrada de fecha */
-        .date-input-group {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        /* Etiqueta de fecha */
-        .date-label {
-          font-size: 12px;
-          font-weight: 600;
-          color: #2c3e50;
-          min-width: 45px;
-        }
-
-        /* Responsive para tablets */
-        @media (max-width: 1200px) {
-          .filters-row-main,
-          .filters-row-secondary {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          
-          .filters-row-dates {
-            grid-template-columns: 1fr;
-            gap: 20px;
-          }
-        }
-
-        /* Responsive para móviles */
-        @media (max-width: 768px) {
-          .filters-row-main,
-          .filters-row-secondary,
-          .filters-row-dates {
-            grid-template-columns: 1fr;
-          }
-          
-          .filters-container {
-            margin-bottom: 15px;
-          }
-        }
       `}</style>
     </div>
   );
 };
 
-export default Dashboard;
-
+export default JardinesBuenComienzoDashboard;

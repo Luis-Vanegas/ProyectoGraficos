@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import maplibregl, { Map, LngLatLike, MapMouseEvent, GeoJSONSource, Expression } from 'maplibre-gl';
+import maplibregl, { Map, GeoJSONSource } from 'maplibre-gl';
+import type { LngLatLike } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as turf from '@turf/turf';
 
@@ -40,12 +42,13 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   const [selectedCodigo, setSelectedCodigo] = useState<string | null>(null);
   // Sin filtros internos: los filtros llegan por props.query o por URL externa
 
-  // Debounce helpers
-  const debounceRef = useRef<number | undefined>(undefined);
-  const debounce = useCallback((fn: () => void, ms = 300) => {
-    window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(fn, ms);
-  }, []);
+  // Control: desactivar auto-selección por zoom para evitar "rebote" de cámara
+  // Control: mostrar puntos individuales de obras (clusters) – desactivado para usar 1 punto por comuna
+  const SHOW_OBRA_POINTS = true;
+  // Control: mostrar puntos individuales al seleccionar una comuna – desactivado para evitar saturación
+  const SHOW_SELECTED_POINTS = false;
+
+  // (sin debounce local)
 
   const fetchLimites = useCallback(async () => {
     // Usar límites desde backend propio si existe; si no, fallback opcional a público
@@ -134,10 +137,13 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
 
   // Enriquecer obras: asignar comunaCodigo por PIP si falta pero tiene coords
   const obrasEnriquecidas = useMemo(() => {
-    if (!limites) return obras;
+    if (!limites) {
+      return obras.map(o => ({ ...o, comunaCodigo: o.comunaCodigo != null ? String(o.comunaCodigo).trim() : null }));
+    }
     const fc = limites;
     return obras.map(o => {
-      if (!o.comunaCodigo && o.lat != null && o.lon != null) {
+      const normalizedCodigo = o.comunaCodigo != null ? String(o.comunaCodigo).trim() : null;
+      if (!normalizedCodigo && o.lat != null && o.lon != null) {
         const pt = turf.point([o.lon, o.lat]);
         for (const f of fc.features as LimiteFeature[]) {
           if (turf.booleanPointInPolygon(pt, f)) {
@@ -145,28 +151,44 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           }
         }
       }
+      if (normalizedCodigo) return { ...o, comunaCodigo: normalizedCodigo };
       return o;
     });
   }, [obras, limites]);
 
-  // Build centroides y conteos por comuna (solo obras con coords)
+  // Build centroides y conteos por comuna (todas las obras con comuna conocida)
   const conteos = useMemo(() => {
-    if (!limites) return { centroids: [] as GeoJSON.FeatureCollection, counts: {} as Record<string, number> };
+    if (!limites) {
+      const emptyFC: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] } as GeoJSON.FeatureCollection;
+      return { centroids: emptyFC, counts: {} as Record<string, number> };
+    }
     const counts: Record<string, number> = {};
     for (const o of obrasEnriquecidas) {
-      if (o.lat != null && o.lon != null && o.comunaCodigo) {
-        counts[o.comunaCodigo] = (counts[o.comunaCodigo] ?? 0) + 1;
-      }
+      const codigo = o.comunaCodigo ? String(o.comunaCodigo).trim() : null;
+      if (codigo) counts[codigo] = (counts[codigo] ?? 0) + 1;
     }
     const centroids = {
       type: 'FeatureCollection',
       features: (limites.features as LimiteFeature[]).map((f) => {
-        const c = turf.centroid(f);
-        return { type: 'Feature', geometry: c.geometry, properties: { CODIGO: f.properties.CODIGO, NOMBRE: f.properties.NOMBRE, count: counts[f.properties.CODIGO] ?? 0 } } as GeoJSON.Feature;
+        const p = turf.pointOnFeature(f as any);
+        return { type: 'Feature', geometry: p.geometry, properties: { CODIGO: f.properties.CODIGO, NOMBRE: f.properties.NOMBRE, count: counts[f.properties.CODIGO] ?? 0 } } as GeoJSON.Feature;
       })
-    } as GeoJSON.FeatureCollection;
+    } as unknown as GeoJSON.FeatureCollection;
     return { centroids, counts };
   }, [limites, obrasEnriquecidas]);
+
+  // Mapa de código -> nombre de comuna
+  const codigoToComuna = useMemo(() => {
+    const mapCodigoNombre: Record<string, string> = {};
+    if (!limites) return mapCodigoNombre;
+    (limites.features as LimiteFeature[]).forEach((f) => {
+      mapCodigoNombre[f.properties.CODIGO] = f.properties.NOMBRE;
+    });
+    return mapCodigoNombre;
+  }, [limites]);
+
+  // Mapa de código -> nombre de comuna
+  // (definición movida más arriba)
 
   // Pintar capas cuando haya datos
   useEffect(() => {
@@ -197,88 +219,63 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     }
 
     // Click en centroides -> seleccionar comuna
-    map.off('click', centroidsLayer);
-    map.on('click', centroidsLayer, (e: MapMouseEvent) => {
+    (map as any).off('click', centroidsLayer);
+    (map as any).on('click', centroidsLayer, (e: any) => {
       const f = e.features && e.features[0];
       const codigo = f?.properties && (f.properties as any).CODIGO as string;
       setSelectedCodigo(codigo || null);
       if (onComunaChange) onComunaChange(codigo || null);
     });
 
-  }, [limites, conteos, mapLoaded]);
+  }, [limites, conteos, mapLoaded, onComunaChange]);
 
-  // Puntos de obras (clusters vista general)
+  // Puntos de obras (clusters vista general) – desactivados por defecto
   useEffect(() => {
     const map = mapRef.current; if (!map || !mapLoaded) return;
     const src = 'obras-src';
     const cl = 'obras-clusters';
     const clCnt = 'obras-clusters-count';
-    const uncluster = 'obras-uncluster';
+    const ptsLayer = 'obras-points';
     const selSrc = 'obras-sel-src';
     const selLayer = 'obras-sel';
 
+    if (SHOW_OBRA_POINTS) {
     const features: GeoJSON.Feature[] = obrasEnriquecidas.filter(o => o.lat != null && o.lon != null).map(o => ({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [o.lon as number, o.lat as number] },
       properties: { id: o.id, nombre: o.nombre, estado: o.estado, dependencia: o.dependencia, comunaCodigo: o.comunaCodigo || '' }
     }));
     const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
+      // Limpiar capas y fuente anteriores si existían (para asegurar cluster: false)
+      if (map.getLayer(cl)) map.removeLayer(cl);
+      if (map.getLayer(clCnt)) map.removeLayer(clCnt);
+      if (map.getLayer(ptsLayer)) map.removeLayer(ptsLayer);
+      if (map.getSource(src)) map.removeSource(src);
 
-    if (!map.getSource(src)) {
-      map.addSource(src, { type: 'geojson', data: fc, cluster: true, clusterRadius: 60 });
-      map.addLayer({ id: cl, type: 'circle', source: src, filter: ['has', 'point_count'], paint: { 'circle-color': '#F77F26', 'circle-radius': 16, 'circle-stroke-color': '#00000033', 'circle-stroke-width': 3 } });
-      map.addLayer({ id: clCnt, type: 'symbol', source: src, filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count'], 'text-size': 12 }, paint: { 'text-color': '#fff' } });
+      // Crear fuente sin clustering y capa de puntos individuales
+      map.addSource(src, { type: 'geojson', data: fc });
       const matchColor: any[] = ['match', ['get', 'dependencia']];
       Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColor.push(dep, color); });
       matchColor.push('#3B8686');
-      map.addLayer({ id: uncluster, type: 'circle', source: src, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': matchColor as unknown as Expression, 'circle-radius': 6, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1 } });
-    } else {
-      (map.getSource(src) as GeoJSONSource).setData(fc);
-      const matchColor: any[] = ['match', ['get', 'dependencia']];
-      Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColor.push(dep, color); });
-      matchColor.push('#3B8686');
-      map.setPaintProperty(uncluster, 'circle-color', matchColor as unknown as Expression);
-    }
+      map.addLayer({ id: ptsLayer, type: 'circle', source: src, paint: { 'circle-color': matchColor as any, 'circle-radius': 6, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1 } });
 
-    // Mostrar solo la comuna seleccionada en puntos si hay selección
-    const filter: Expression = selectedCodigo ? ['==', ['get', 'comunaCodigo'], selectedCodigo] : ['boolean', true];
-    map.setFilter(uncluster, ['all', ['!', ['has', 'point_count']], filter]);
-    map.setLayoutProperty(cl, 'visibility', selectedCodigo ? 'none' : 'visible');
-    map.setLayoutProperty(clCnt, 'visibility', selectedCodigo ? 'none' : 'visible');
-    // Ocultar también la capa uncluster si hay selección (usaremos una capa dedicada)
-    map.setLayoutProperty(uncluster, 'visibility', selectedCodigo ? 'none' : 'visible');
-    if (map.getLayer('centroids-layer')) map.setLayoutProperty('centroids-layer', 'visibility', selectedCodigo ? 'none' : 'visible');
-    if (map.getLayer('centroids-text')) map.setLayoutProperty('centroids-text', 'visibility', selectedCodigo ? 'none' : 'visible');
+      // Mostrar puntos al acercar (o si hay una comuna seleccionada) y filtrar por comuna cuando haya selección
+      const ZOOM_TO_SHOW_POINTS = 13;
+      const applyVisibilityAndFilter = () => {
+        const shouldShow = map.getZoom() >= ZOOM_TO_SHOW_POINTS || !!selectedCodigo;
+        map.setLayoutProperty(ptsLayer, 'visibility', shouldShow ? 'visible' : 'none');
+        const filter: any = selectedCodigo ? ['==', ['get', 'comunaCodigo'], selectedCodigo] : ['boolean', true];
+        (map as any).setFilter(ptsLayer, filter);
+      };
+      applyVisibilityAndFilter();
+      (map as any).off('zoomend', applyVisibilityAndFilter as any);
+      (map as any).on('zoomend', applyVisibilityAndFilter as any);
 
-    // Resaltado
-    const selFilter: Expression = ['==', ['get', 'CODIGO'], selectedCodigo || ''];
-    if (map.getLayer('limites-sel')) map.setFilter('limites-sel', selFilter);
-
-    // Capa sin clustering para la comuna seleccionada (visible a cualquier zoom)
-    const featuresSel: GeoJSON.Feature[] = obrasEnriquecidas
-      .filter(o => o.lat != null && o.lon != null && (!!selectedCodigo ? o.comunaCodigo === selectedCodigo : false))
-      .map(o => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [o.lon as number, o.lat as number] }, properties: { id: o.id, nombre: o.nombre, estado: o.estado, dependencia: o.dependencia, comunaCodigo: o.comunaCodigo || '' } }));
-    const fcSel: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: featuresSel };
-    const matchColorSel: any[] = ['match', ['get', 'dependencia']];
-    Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColorSel.push(dep, color); });
-    matchColorSel.push('#3B8686');
-
-    if (!map.getSource(selSrc)) {
-      map.addSource(selSrc, { type: 'geojson', data: fcSel });
-      map.addLayer({ id: selLayer, type: 'circle', source: selSrc, paint: { 'circle-color': matchColorSel as unknown as Expression, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 7, 13, 9, 16, 12] as unknown as Expression, 'circle-stroke-color': '#1f2937', 'circle-stroke-width': 1.5, 'circle-opacity': 1 } });
-    } else {
-      (map.getSource(selSrc) as GeoJSONSource).setData(fcSel);
-      map.setPaintProperty(selLayer, 'circle-color', matchColorSel as unknown as Expression);
-      map.setPaintProperty(selLayer, 'circle-radius', ['interpolate', ['linear'], ['zoom'], 10, 7, 13, 9, 16, 12] as unknown as Expression);
-      map.setPaintProperty(selLayer, 'circle-opacity', 1);
-    }
-    map.setLayoutProperty(selLayer, 'visibility', selectedCodigo ? 'visible' : 'none');
-    if (map.getLayer(selLayer)) { try { map.moveLayer(selLayer); } catch (e) {} }
-
-    // Tooltips sobre puntos sin cluster
-    map.off('mouseenter', uncluster);
-    map.off('mouseleave', uncluster);
-    map.on('mouseenter', uncluster, (e: MapMouseEvent) => {
+      // Interacciones sobre puntos individuales
+      (map as any).off('mouseenter', ptsLayer);
+      (map as any).off('mouseleave', ptsLayer);
+      (map as any).off('click', ptsLayer);
+      (map as any).on('mouseenter', ptsLayer, (e: any) => {
       map.getCanvas().style.cursor = 'pointer';
       const f = e.features && e.features[0];
       if (!f) return;
@@ -290,34 +287,84 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
         .addTo(map);
       hoverPopupRef.current = popup;
     });
-    map.on('mouseleave', uncluster, () => {
+      (map as any).on('mouseleave', ptsLayer, () => {
       map.getCanvas().style.cursor = '';
       if (hoverPopupRef.current) { hoverPopupRef.current.remove(); hoverPopupRef.current = null; }
     });
-
-    // Click en punto: centrar/zoom y popup persistente
-    map.off('click', uncluster);
-    map.on('click', uncluster, (e: MapMouseEvent) => {
+      (map as any).on('click', ptsLayer, (e: any) => {
       const f = e.features && e.features[0];
       if (!f) return;
       const coords = (f.geometry as any).coordinates as [number, number];
       const p = (f.properties as any) || {};
       const obra = obrasEnriquecidas.find(o => o.id === p.id) || null;
-      const { nombre, estado } = p;
+      const { nombre } = p;
       map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 15), duration: 600 });
       if (clickPopupRef.current) clickPopupRef.current.remove();
+        const imgHtml = (obra as any)?.imagenUrl ? `<div style="margin-bottom:8px"><img src="${(obra as any).imagenUrl}" alt="${nombre || ''}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb"/></div>` : '';
+        const comunaStr = (obra as any)?.comunaNombre || (obra?.comunaCodigo ? codigoToComuna[obra.comunaCodigo] : (selectedCodigo ? codigoToComuna[selectedCodigo] : '')) || '';
+      const comunaText = comunaStr ? `<div style="color:#374151;margin-bottom:6px"><strong>Comuna:</strong> ${comunaStr}</div>` : '';
+      const depText = obra?.dependencia ? `<div style="color:#374151;margin-bottom:6px"><strong>Dependencia:</strong> ${obra.dependencia}</div>` : '';
+      const pctVal = (obra as any)?.indicadorAvanceTotal;
+      const pct = (pctVal === null || pctVal === undefined) ? 's/d' : `${pctVal}%`;
       const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
         .setLngLat(coords)
-        .setHTML(`<div style="font-weight:700;margin-bottom:4px;color:#111827">${nombre || ''}</div><div style="color:#374151">${estado || ''}</div>`)
+        .setHTML(`
+          <div style="font-weight:900;margin-bottom:8px;color:#111827;font-size:15px">${nombre || ''}</div>
+          ${imgHtml}
+          ${depText}
+          ${comunaText}
+          <div style="color:#111827;margin-top:4px"><strong>Avance del proyecto:</strong> <span style="font-weight:800">${pct}</span></div>
+        `)
         .addTo(map);
       clickPopupRef.current = popup;
       if (onObraClick && obra) onObraClick(obra);
     });
+    } else {
+      // Asegurar que, si existían capas antiguas, queden ocultas
+      if (map.getLayer(cl)) map.setLayoutProperty(cl, 'visibility', 'none');
+      if (map.getLayer(clCnt)) map.setLayoutProperty(clCnt, 'visibility', 'none');
+      if (map.getLayer(ptsLayer)) map.setLayoutProperty(ptsLayer, 'visibility', 'none');
+    }
 
-    // Tooltips y clicks para capa seleccionada
-    map.off('mouseenter', selLayer);
-    map.off('mouseleave', selLayer);
-    map.on('mouseenter', selLayer, (e: MapMouseEvent) => {
+    // Mostrar/ocultar centroids según selección
+    if (map.getLayer('centroids-layer')) map.setLayoutProperty('centroids-layer', 'visibility', 'visible');
+    if (map.getLayer('centroids-text')) map.setLayoutProperty('centroids-text', 'visibility', 'visible');
+
+    // Resaltado de límites
+    if (map.getLayer('limites-sel')) {
+      const selFilter: any = ['==', ['get', 'CODIGO'], selectedCodigo || ''];
+      (map as any).setFilter('limites-sel', selFilter);
+    }
+
+    // Capa sin clustering para la comuna seleccionada (solo si está habilitado)
+    if (SHOW_SELECTED_POINTS) {
+    const featuresSel: GeoJSON.Feature[] = obrasEnriquecidas
+      .filter(o => o.lat != null && o.lon != null && (selectedCodigo ? o.comunaCodigo === selectedCodigo : false))
+      .map(o => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [o.lon as number, o.lat as number] }, properties: { id: o.id, nombre: o.nombre, estado: o.estado, dependencia: o.dependencia, comunaCodigo: o.comunaCodigo || '' } }));
+    const fcSel: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: featuresSel };
+    const matchColorSel: any[] = ['match', ['get', 'dependencia']];
+    Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColorSel.push(dep, color); });
+    matchColorSel.push('#3B8686');
+
+    if (!map.getSource(selSrc)) {
+      map.addSource(selSrc, { type: 'geojson', data: fcSel });
+      map.addLayer({ id: selLayer, type: 'circle', source: selSrc, paint: { 'circle-color': matchColorSel as any, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 7, 13, 9, 16, 12] as any, 'circle-stroke-color': '#1f2937', 'circle-stroke-width': 1.5, 'circle-opacity': 1 } });
+    } else {
+      (map.getSource(selSrc) as GeoJSONSource).setData(fcSel);
+        if (map.getLayer(selLayer)) {
+      (map as any).setPaintProperty(selLayer, 'circle-color', matchColorSel as any);
+      (map as any).setPaintProperty(selLayer, 'circle-radius', ['interpolate', ['linear'], ['zoom'], 10, 7, 13, 9, 16, 12] as any);
+      map.setPaintProperty(selLayer, 'circle-opacity', 1);
+    }
+      }
+      if (map.getLayer(selLayer)) map.setLayoutProperty(selLayer, 'visibility', selectedCodigo ? 'visible' : 'none');
+    if (map.getLayer(selLayer)) { try { map.moveLayer(selLayer); } catch { /* ignore */ } }
+
+      // Tooltips/clicks solo si la capa existe
+    (map as any).off('mouseenter', selLayer);
+    (map as any).off('mouseleave', selLayer);
+      if (map.getLayer(selLayer)) {
+    (map as any).on('mouseenter', selLayer, (e: any) => {
       map.getCanvas().style.cursor = 'pointer';
       const f = e.features && e.features[0];
       if (!f) return;
@@ -325,62 +372,18 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       if (hoverPopupRef.current) hoverPopupRef.current.remove();
       const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
         .setLngLat((f.geometry as any).coordinates)
-        .setHTML(`<div style=\"font-weight:700;color:#111827\">${nombre || ''}</div><div style=\"opacity:.9;color:#374151\">${estado || ''}</div>`)
+        .setHTML(`<div style="font-weight:700;color:#111827">${nombre || ''}</div><div style="opacity:.9;color:#374151">${estado || ''}</div>`)
         .addTo(map);
       hoverPopupRef.current = popup;
     });
-    map.on('mouseleave', selLayer, () => {
+    (map as any).on('mouseleave', selLayer, () => {
       map.getCanvas().style.cursor = '';
       if (hoverPopupRef.current) { hoverPopupRef.current.remove(); hoverPopupRef.current = null; }
     });
-    map.off('click', selLayer);
-    map.on('click', selLayer, (e: MapMouseEvent) => {
-      const f = e.features && e.features[0];
-      if (!f) return;
-      const coords = (f.geometry as any).coordinates as [number, number];
-      const p = (f.properties as any) || {};
-      const obra = obrasEnriquecidas.find(o => o.id === p.id) || null;
-      const { nombre, estado } = p;
-      map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 15), duration: 600 });
-      if (clickPopupRef.current) clickPopupRef.current.remove();
-      const imgHtml = obra?.imagenUrl ? `<div style=\"margin-bottom:8px\"><img src=\"${obra.imagenUrl}\" alt=\"${nombre || ''}\" style=\"width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb\"/></div>` : '';
-      const comunaStr = obra?.comunaNombre || (obra?.comunaCodigo ? codigoToComuna[obra.comunaCodigo] : (selectedCodigo ? codigoToComuna[selectedCodigo] : '')) || '';
-      const comunaText = comunaStr ? `<div style=\"color:#374151;margin-bottom:6px\"><strong>Comuna:</strong> ${comunaStr}</div>` : '';
-      const depText = obra?.dependencia ? `<div style=\"color:#374151;margin-bottom:6px\"><strong>Dependencia:</strong> ${obra.dependencia}</div>` : '';
-      const pctVal = (obra as any)?.indicadorAvanceTotal;
-      const pct = (pctVal === null || pctVal === undefined) ? 's/d' : `${pctVal}%`;
-      const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
-        .setLngLat(coords)
-        .setHTML(`
-          <div style=\"font-weight:900;margin-bottom:8px;color:#111827;font-size:15px\">${nombre || ''}</div>
-          ${imgHtml}
-          ${depText}
-          ${comunaText}
-          <div style=\"color:#111827;margin-top:4px\"><strong>Avance del proyecto:</strong> <span style=\"font-weight:800\">${pct}</span></div>
-        `)
-        .addTo(map);
-      clickPopupRef.current = popup;
-      if (onObraClick && obra) onObraClick(obra);
-    });
-
-  }, [obrasEnriquecidas, selectedCodigo, mapLoaded, dependencyColorMap]);
-
-  // Auto-selección al hacer zoom >= 13
-  useEffect(() => {
-    const map = mapRef.current; if (!map || !limites) return;
-    const handler = () => {
-      if (!selectedCodigo && map.getZoom() >= 13) {
-        const center = map.getCenter();
-        const pt = turf.point([center.lng, center.lat]);
-        for (const f of limites.features as LimiteFeature[]) {
-          if (turf.booleanPointInPolygon(pt, f)) { setSelectedCodigo(f.properties.CODIGO); break; }
-        }
       }
-      if (map.getZoom() < 13 && selectedCodigo) setSelectedCodigo(null);
-    };
-    map.on('zoomend', handler);
-    return () => { map.off('zoomend', handler); };
-  }, [limites, selectedCodigo]);
+    }
+  }, [obrasEnriquecidas, selectedCodigo, mapLoaded, dependencyColorMap, SHOW_OBRA_POINTS, SHOW_SELECTED_POINTS, onObraClick]);
+
 
   // ESC para limpiar
   useEffect(() => {
@@ -393,14 +396,14 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   useEffect(() => {
     const map = mapRef.current; if (!map || !mapLoaded) return;
     const limitesFill = 'limites-fill';
-    map.off('click', limitesFill);
-    map.on('click', limitesFill, (e: MapMouseEvent) => {
+    (map as any).off('click', limitesFill);
+    (map as any).on('click', limitesFill, (e: any) => {
       const f = e.features && e.features[0];
       const codigo = f?.properties && (f.properties as any).CODIGO as string;
       setSelectedCodigo(codigo || null);
       if (onComunaChange) onComunaChange(codigo || null);
     });
-  }, [mapLoaded]);
+  }, [mapLoaded, onComunaChange]);
 
   // Al seleccionar comuna, ajustar vista a su polígono y limpiar popups hover
   useEffect(() => {
@@ -419,19 +422,15 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     const f = (limites.features as LimiteFeature[]).find(ff => ff.properties.CODIGO === selectedCodigo);
     return f?.properties.NOMBRE || '';
   }, [selectedCodigo, limites]);
-  const codigoToComuna = useMemo(() => {
-    const m: Record<string, string> = {};
-    if (!limites) return m;
-    (limites.features as LimiteFeature[]).forEach(f => { m[f.properties.CODIGO] = f.properties.NOMBRE; });
-    return m;
-  }, [limites]);
 
   const obrasDeComuna = useMemo(() => {
     if (!selectedCodigo) return [] as Obra[];
-    return obrasEnriquecidas.filter(o => o.comunaCodigo === selectedCodigo);
+    const sel = String(selectedCodigo).trim();
+    return obrasEnriquecidas.filter(o => String(o.comunaCodigo ?? '').trim() === sel);
   }, [obrasEnriquecidas, selectedCodigo]);
 
   const totalConUbicacion = obrasDeComuna.filter(o => o.lat != null && o.lon != null).length;
+  const sinUbicacion = obrasDeComuna.length - totalConUbicacion;
   const indicadorPromedio = useMemo(() => {
     if (obrasDeComuna.length === 0) return 0;
     const vals = (obrasDeComuna as any[]).map(o => Number((o as any).indicadorAvanceTotal) || 0);
@@ -439,19 +438,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     return Math.round((sum / vals.length) * 100) / 100;
   }, [obrasDeComuna]);
 
-  // Filtros (placeholder UI simple)
-  const setFilterDebounced = (key: keyof typeof filters, value: string) => {
-    const next = { ...filters, [key]: value || undefined };
-    setFilters(next);
-    debounce(() => {
-      const params = new URLSearchParams();
-      if (next.estado) params.set('estado', next.estado);
-      if (next.dependencia) params.set('dependencia', next.dependencia);
-      if (next.proyectoEstrategico) params.set('proyectoEstrategico', next.proyectoEstrategico);
-      if (typeof next.terminada === 'boolean') params.set('terminada', String(next.terminada));
-      fetchObras(params).catch(console.error);
-    }, 300);
-  };
+  // (El visor no usa filtros internos; se controla por props/URL)
 
   return (
     <div style={{ position: 'relative', height }}> 
@@ -465,6 +452,12 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
             <button onClick={() => { setSelectedCodigo(null); if (onComunaChange) onComunaChange(null); }} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 8, padding: '6px 10px', fontSize: 13, cursor: 'pointer', color: '#1F2937' }}>Volver</button>
           </div>
           <div style={{ padding: 14, overflow: 'auto' }}>
+            {/* Resumen de conteos */}
+            <div style={{ background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 10, padding: '10px 12px', marginBottom: 12 }}>
+              <div style={{ fontWeight: 900, color: '#111827', marginBottom: 4 }}>Total: {obrasDeComuna.length} obras</div>
+              <div style={{ color: '#374151' }}>{totalConUbicacion} con ubicación</div>
+              <div style={{ color: '#DC2626', fontWeight: 700 }}>{sinUbicacion} sin ubicación</div>
+            </div>
             {/* Métricas resumidas */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
               <div style={{ background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
@@ -520,6 +513,9 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
                     <div>
                       <a href="#" onClick={(ev) => { ev.preventDefault(); const map = mapRef.current; if (!map) return; map.easeTo({ center: [o.lon as number, o.lat as number], zoom: 16, duration: 600 }); if (onObraClick) onObraClick(o); }} style={{ fontSize: 12, color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Con ubicación en mapa</a>
                     </div>
+                  )}
+                  {(o.lat == null || o.lon == null) && (
+                    <div style={{ fontSize: 12, color: '#DC2626', fontWeight: 600 }}>Sin coordenadas</div>
                   )}
                 </div>
               );

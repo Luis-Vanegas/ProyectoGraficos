@@ -40,14 +40,14 @@ export default function PaginaPrincipal() {
     }
   ];
 
-  // Array con los elementos del menú secundario
+  // Array con los elementos del menú secundario - Actualizadas las rutas a los dashboards específicos
   const menuItemsSecundarios: MenuItem[] = [
     {
       id: 'escenarios-deportivos',
       titulo: 'Escenarios Deportivos',
       descripcion: 'Proyectos deportivos y recreativos',
       icono: '⚽',
-      ruta: '/proyectos/escenarios-deportivos',
+      ruta: '/dashboard/escenarios-deportivos',
       color: '#FF6B35'
     },
     {
@@ -55,7 +55,7 @@ export default function PaginaPrincipal() {
       titulo: 'Jardines Buen Comienzo',
       descripcion: 'Educación y desarrollo infantil',
       icono: '🌱',
-      ruta: '/proyectos/jardines-buen-comienzo',
+      ruta: '/dashboard/jardines-buen-comienzo',
       color: '#4CAF50'
     },
     {
@@ -63,7 +63,7 @@ export default function PaginaPrincipal() {
       titulo: 'Escuelas Inteligentes',
       descripcion: 'Tecnología educativa',
       icono: '🏫',
-      ruta: '/proyectos/escuelas-inteligentes',
+      ruta: '/dashboard/escuelas-inteligentes',
       color: '#9C27B0'
     },
     {
@@ -71,7 +71,7 @@ export default function PaginaPrincipal() {
       titulo: 'Recreos',
       descripcion: 'Espacios de recreación',
       icono: '🎮',
-      ruta: '/proyectos/recreos',
+      ruta: '/dashboard/recreos',
       color: '#FF9800'
     },
     {
@@ -79,7 +79,7 @@ export default function PaginaPrincipal() {
       titulo: 'Primavera Norte',
       descripcion: 'Desarrollo urbano sostenible',
       icono: '🌸',
-      ruta: '/proyectos/primavera-norte',
+      ruta: '/dashboard/primavera-norte',
       color: '#E91E63'
     },
     {
@@ -87,7 +87,7 @@ export default function PaginaPrincipal() {
       titulo: 'C5i',
       descripcion: 'Centro de Comando, Control, Comunicaciones, Computadores, Coordinación e Inteligencia',
       icono: '👮',
-      ruta: '/proyectos/c5i',
+      ruta: '/dashboard/c5i',
       color: '#3F51B5'
     },
     {
@@ -95,7 +95,7 @@ export default function PaginaPrincipal() {
       titulo: 'Tacita de Plata',
       descripcion: 'Proyectos ambientales',
       icono: '🌍',
-      ruta: '/proyectos/tacita-de-plata',
+      ruta: '/dashboard/tacita-de-plata',
       color: '#009688'
     },
     {
@@ -103,7 +103,7 @@ export default function PaginaPrincipal() {
       titulo: 'Metro de La 80',
       descripcion: 'Sistema de transporte masivo',
       icono: '🚇',
-      ruta: '/proyectos/metro-la-80',
+      ruta: '/dashboard/metro-la-80',
       color: '#795548'
     },
     {
@@ -111,7 +111,7 @@ export default function PaginaPrincipal() {
       titulo: 'Unidad Hospitalaria Santa Cruz',
       descripcion: 'Infraestructura de salud',
       icono: '🏥',
-      ruta: '/proyectos/unidad-hospitalaria',
+      ruta: '/dashboard/unidad-hospitalaria',
       color: '#F44336'
     }
   ];
