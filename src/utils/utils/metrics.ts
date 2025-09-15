@@ -399,16 +399,21 @@ export function kpis(rows: Row[]) {
   const pctEntregadas = totalObras ? entregadas / totalObras : 0;
   const pctEjec = invTotal ? ejec / invTotal : 0;
 
+  // Alertas con descripción (campo DESCRIPCIÓN DEL RIESGO no vacío)
   const alertas = F.descripcionDelRiesgo
     ? rows.filter(r => String(r[F.descripcionDelRiesgo] ?? '').trim().length > 0).length
     : 0;
 
+  // Alertas encontradas según fórmula DAX (presencia de riesgo válida)
+  const alertasEncontradas = calcularAlertasEncontradas(rows);
+
   // Nuevas métricas personalizadas
   const porcentajePresupuestoEjecutado = calcularPorcentajePresupuestoEjecutado(rows);
   const porcentajeEntregadas = calcularPorcentajeEntregadas(rows);
-  const alertasEncontradas = calcularAlertasEncontradas(rows);
   const vigencias2024 = calcularVigencias2024(rows);
   const entregadasConfirmadas = calcularEntregadas(rows);
+  const porcentajeCuatrienio2024_2027 = calcularPorcentajeCuatrienio2024_2027(rows);
+  const valorCuatrienio2024_2027 = calcularValorCuatrienio2024_2027(rows);
 
   return { 
     totalObras, 
@@ -417,13 +422,15 @@ export function kpis(rows: Row[]) {
     entregadas, 
     pctEntregadas, 
     pctEjec, 
-    alertas,
+    alertas, // con descripción
+    alertasEncontradas,
     // Nuevas métricas
     porcentajePresupuestoEjecutado,
     porcentajeEntregadas,
-    alertasEncontradas,
     vigencias2024,
-    entregadasConfirmadas
+    entregadasConfirmadas,
+    porcentajeCuatrienio2024_2027,
+    valorCuatrienio2024_2027
   };
 }
 
@@ -488,15 +495,19 @@ export function calcularPorcentajeEntregadas(rows: Row[]): number {
  */
 export function calcularAlertasEncontradas(rows: Row[]): number {
   if (!F.presenciaDeRiesgo) return 0;
-  
+
+  // Implementación fiel a la fórmula DAX proporcionada
+  // Alertas encontradas = COUNTROWS(Obras filtradas por presencia de riesgo válida)
   const alertas = rows.filter(r => {
-    const presenciaRiesgo = String(r[F.presenciaDeRiesgo] ?? '').toLowerCase().trim();
-    return presenciaRiesgo !== 'sin información' && 
-           presenciaRiesgo !== 'no aplica' && 
-           presenciaRiesgo !== 'ninguna' &&
-           presenciaRiesgo !== '';
+    const raw = String(r[F.presenciaDeRiesgo] ?? '').trim();
+    const presencia = raw.toLowerCase();
+    return raw.length > 0 &&
+      presencia !== 'sin información' &&
+      presencia !== 'sin informacion' &&
+      presencia !== 'no aplica' &&
+      presencia !== 'ninguna';
   }).length;
-  
+
   return alertas < 1 ? 0 : alertas;
 }
 
@@ -553,6 +564,42 @@ export function calcularEntregadas(rows: Row[]): number {
   return entregadas < 1 ? 0 : entregadas;
 }
 
+/**
+ * % Presupuesto Cuatrienio 2024-2027 = [Presupuesto ejecutado administración 2024-2027] / [Inversión total]
+ * Calcula el porcentaje del presupuesto ejecutado sobre la inversión total
+ */
+export function calcularPorcentajeCuatrienio2024_2027(rows: Row[]): number {
+  if (!F.presupuestoEjecutadoAdm2024_2027 || !F.costoTotalActualizado) return 0;
+  
+  const presupuestoEjecutadoCuatrienio = rows.reduce((sum, r) => {
+    return sum + toNumber(r[F.presupuestoEjecutadoAdm2024_2027]);
+  }, 0);
+  
+  // Calcular la inversión total (costo total actualizado)
+  const inversionTotal = rows.reduce((sum, r) => {
+    const costoActualizado = toNumber(r[F.costoTotalActualizado]);
+    const costoEstimado = toNumber(r[F.costoEstimadoTotal]);
+    // Si costo total actualizado es null o 0, usar costo estimado total
+    const costoFinal = (costoActualizado === null || costoActualizado === 0) 
+      ? costoEstimado 
+      : costoActualizado;
+    return sum + costoFinal;
+  }, 0);
+  
+  return inversionTotal ? presupuestoEjecutadoCuatrienio / inversionTotal : 0;
+}
+
+/**
+ * Valor monetario del Presupuesto Cuatrienio 2024-2027
+ */
+export function calcularValorCuatrienio2024_2027(rows: Row[]): number {
+  if (!F.presupuestoEjecutadoAdm2024_2027) return 0;
+  
+  return rows.reduce((sum, r) => {
+    return sum + toNumber(r[F.presupuestoEjecutadoAdm2024_2027]);
+  }, 0);
+}
+
 // Dataset 2D con dos métricas (dim, v1, v2)
 export type TableDataset = Array<Array<string | number>>;
 
@@ -586,8 +633,15 @@ export function buildTwoSeriesDataset(
     topNWithOthers(merged.map(m => ({ name: m.name, value: m.total })), topN).map(m => m.name)
   );
 
-  const headers: [string, string, string] = [dimField, val1Field, val2Field];
-  const data = merged.filter(m => limitedNames.has(m.name)).map(m => [m.name, m.v1, m.v2]);
+  // Encabezados: usar nombres amigables para ECharts dataset
+  const headers: [string, string, string] = [
+    dimField,
+    'Inversión total',
+    'Presupuesto ejecutado'
+  ];
+  const data = merged
+    .filter(m => limitedNames.has(m.name))
+    .map(m => [m.name, m.v1, m.v2]);
 
   return [headers, ...data];
 }

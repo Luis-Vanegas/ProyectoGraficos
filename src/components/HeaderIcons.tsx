@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { F } from '../dataConfig';
-import { formatDate } from '../utils/utils/metrics';
+import { formatDate, calcularAlertasEncontradas } from '../utils/utils/metrics';
 import type { Row } from '../utils/utils/metrics';
 
 interface HeaderIconsProps {
@@ -118,16 +118,64 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
     return acc;
   }, {} as Record<number, { entregadas: ObraCalendario[], noEntregadas: ObraCalendario[] }>);
 
-  // Obtener alertas (obras con riesgos)
+  // Resumen de entregas (conteos visibles en el icono)
+  const entregaSummary = useMemo(() => {
+    const entregadas = obrasCalendario.filter(o => o.estado === 'entregada').length;
+    const noEntregadas = obrasCalendario.filter(o => o.estado === 'no-entregada').length;
+    return { entregadas, noEntregadas };
+  }, [obrasCalendario]);
+
+
+  // Helpers para validar campos y ordenar por impacto
+  const isValorValido = (val: unknown): boolean => {
+    const raw = String(val ?? '').trim();
+    if (!raw) return false;
+    const l = raw.toLowerCase();
+    return l !== 'sin información' && l !== 'sin informacion' && l !== 'no aplica' && l !== 'ninguna' && l !== 'undefined';
+  };
+
+  const impactoRank = (val: string): number => {
+    const l = val.toLowerCase();
+    if (l.includes('alto')) return 0;
+    if (l.includes('medio')) return 1;
+    if (l.includes('bajo')) return 2;
+    return 3;
+  };
+
+  const impactoClase = (val: string): string => {
+    const l = val.toLowerCase();
+    if (l.includes('alto')) return 'severity-alto';
+    if (l.includes('medio')) return 'severity-medio';
+    if (l.includes('bajo')) return 'severity-bajo';
+    return '';
+  };
+
+  // Aplicar estrictamente la fórmula de "Alertas encontradas":
+  // Presencia de riesgo distinta a Sin información/No aplica/Ninguna
   const alertas = filtered.filter(obra => {
-    const descripcionRiesgo = String(obra[F.descripcionDelRiesgo] ?? '').trim();
-    const presenciaRiesgo = String(obra[F.presenciaDeRiesgo] ?? '').toLowerCase().trim();
-    
-    return descripcionRiesgo.length > 0 || 
-           (presenciaRiesgo !== 'sin información' && 
-            presenciaRiesgo !== 'no aplica' && 
-            presenciaRiesgo !== 'ninguna' &&
-            presenciaRiesgo !== '');
+    const presencia = String(obra[F.presenciaDeRiesgo] ?? '').trim().toLowerCase();
+    return presencia.length > 0 &&
+      presencia !== 'sin información' &&
+      presencia !== 'sin informacion' &&
+      presencia !== 'no aplica' &&
+      presencia !== 'ninguna';
+  });
+
+  // Contador según la misma fórmula
+  const numeroAlertas = calcularAlertasEncontradas(filtered);
+
+  // Ordenar: impacto (alto>medio>bajo), dependencia, nombre
+  const alertasOrdenadas = [...alertas].sort((a, b) => {
+    const ia = impactoRank(String(a[F.impactoDelRiesgo] ?? ''));
+    const ib = impactoRank(String(b[F.impactoDelRiesgo] ?? ''));
+    if (ia !== ib) return ia - ib;
+    const da = String(a[F.dependencia] ?? '');
+    const db = String(b[F.dependencia] ?? '');
+    const cmpDep = da.localeCompare(db);
+    if (cmpDep !== 0) return cmpDep;
+    const na = String(a[F.nombre] ?? '');
+    const nb = String(b[F.nombre] ?? '');
+    return na.localeCompare(nb);
   });
 
   return (
@@ -161,6 +209,8 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
           </svg>
           {alertas.length > 0 && <span className="alert-indicator"></span>}
         </button>
+
+
       </div>
 
       {/* Popup del Calendario */}
@@ -266,56 +316,67 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
               <div className="alerts-summary">
                 <div className="summary-stats">
                   <div className="stat-item alerts">
-                    <span className="stat-number">{alertas.length}</span>
+                    <span className="stat-number">{numeroAlertas}</span>
                     <span className="stat-label">Alertas Encontradas</span>
                   </div>
                 </div>
               </div>
 
               <div className="alerts-container">
-                {alertas.length === 0 ? (
+                {alertasOrdenadas.length === 0 ? (
                   <div className="no-alerts">
                     <p>✅ No se encontraron alertas o riesgos activos</p>
                   </div>
                 ) : (
-                  alertas.map((obra, index) => (
-                    <div key={index} className="alert-item">
+                  alertasOrdenadas.map((obra, index) => {
+                    const impacto = String(obra[F.impactoDelRiesgo] ?? '');
+                    const presencia = String(obra[F.presenciaDeRiesgo] ?? '');
+                    const descripcion = String(obra[F.descripcionDelRiesgo] ?? '');
+                    const estadoRiesgo = String(obra[F.estadoDeRiesgo] ?? '');
+                    const claseSeveridad = impactoClase(impacto);
+                    return (
+                    <div key={index} className={`alert-item ${claseSeveridad}`}>
                       <div className="alert-header">
                         <h5 className="alert-obra-name">{String(obra[F.nombre] ?? 'Sin nombre')}</h5>
                         <span className="alert-dependencia">{String(obra[F.dependencia] ?? '')}</span>
+                        {isValorValido(impacto) && (
+                          <span className={`impact-badge ${claseSeveridad}`}>{impacto}</span>
+                        )}
                       </div>
                       
-                      {obra[F.presenciaDeRiesgo] && (
+                      {isValorValido(presencia) && (
                         <div className="alert-detail">
-                          <strong>Presencia de Riesgo:</strong> {String(obra[F.presenciaDeRiesgo])}
+                          <strong>Presencia de Riesgo:</strong> {presencia}
                         </div>
                       )}
                       
-                      {obra[F.descripcionDelRiesgo] && (
+                      {isValorValido(descripcion) && (
                         <div className="alert-detail">
-                          <strong>Descripción:</strong> {String(obra[F.descripcionDelRiesgo])}
+                          <strong>Descripción:</strong> {descripcion}
                         </div>
                       )}
                       
-                      {obra[F.impactoDelRiesgo] && (
+                      {isValorValido(impacto) && (
                         <div className="alert-detail">
-                          <strong>Impacto:</strong> {String(obra[F.impactoDelRiesgo])}
+                          <strong>Impacto:</strong> {impacto}
                         </div>
                       )}
                       
-                      {obra[F.estadoDeRiesgo] && (
+                      {isValorValido(estadoRiesgo) && (
                         <div className="alert-detail">
-                          <strong>Estado:</strong> {String(obra[F.estadoDeRiesgo])}
+                          <strong>Estado:</strong> {estadoRiesgo}
                         </div>
                       )}
                     </div>
-                  ))
+                  );
+                  })
                 )}
               </div>
             </div>
           </div>
         </div>
       )}
+
 
       {/* Estilos CSS */}
       <style>{`
@@ -374,6 +435,13 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
           height: 20px;
         }
 
+        .header-icon.gantt-icon.has-delays {
+          border: 2px solid #e67e22;
+          background: rgba(230, 126, 34, 0.06);
+          color: #e67e22;
+          box-shadow: 0 0 15px rgba(230, 126, 34, 0.25);
+        }
+
         .alert-indicator {
           position: absolute;
           top: -3px;
@@ -385,6 +453,8 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
           border: 2px solid white;
           animation: pulse 2s infinite;
         }
+
+        /* Sin badge de entregas, mantenemos diseño minimal */
 
         @keyframes pulse {
           0% { transform: scale(1); }
@@ -432,26 +502,50 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
           border: 2px solid #79BC99;
         }
 
+        .popup-container.gantt-popup {
+          max-width: 1000px;
+          width: 95%;
+          max-height: 85vh;
+        }
+
+        @media (max-width: 768px) {
+          .popup-container.gantt-popup {
+            max-width: 95%;
+            width: 98%;
+            max-height: 90vh;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .popup-container.gantt-popup {
+            max-width: 98%;
+            width: 99%;
+            max-height: 95vh;
+          }
+        }
+
         .popup-header {
           padding: 20px 25px;
-          background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%);
+          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
           border-radius: 18px 18px 0 0;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          color: white;
+          color: #000000;
+          border-bottom: 2px solid #79BC99;
         }
 
         .popup-header h3 {
           margin: 0;
           font-size: 1.3rem;
-          font-weight: 600;
+          font-weight: 700;
+          color: #000000;
         }
 
         .popup-close {
-          background: rgba(255, 255, 255, 0.2);
-          border: none;
-          color: white;
+          background: rgba(0, 0, 0, 0.1);
+          border: 1px solid #79BC99;
+          color: #000000;
           font-size: 24px;
           width: 35px;
           height: 35px;
@@ -464,7 +558,8 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
         }
 
         .popup-close:hover {
-          background: rgba(255, 255, 255, 0.3);
+          background: rgba(0, 0, 0, 0.2);
+          border-color: #4E8484;
           transform: rotate(90deg);
         }
 
@@ -636,9 +731,10 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
         .alerts-summary {
           margin-bottom: 25px;
           padding: 20px;
-          background: linear-gradient(135deg, #ffebee 0%, #fce4ec 100%);
+          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
           border-radius: 12px;
-          border: 1px solid #e74c3c;
+          border: 2px solid #dc2626;
+          box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
         }
 
         .alerts-container {
@@ -658,11 +754,12 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
 
         .alert-item {
           padding: 20px;
-          border: 1px solid #ffcdd2;
+          border: 2px solid #dc2626;
           border-radius: 12px;
-          background: #fff;
-          border-left: 4px solid #e74c3c;
+          background: #ffffff;
+          border-left: 4px solid #dc2626;
           transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
         }
 
         .alert-item:hover {
@@ -682,8 +779,8 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
         .alert-obra-name {
           margin: 0;
           font-size: 1.1rem;
-          font-weight: 600;
-          color: #2c3e50;
+          font-weight: 700;
+          color: #000000;
           flex: 1;
           min-width: 200px;
         }
@@ -700,12 +797,30 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
         .alert-detail {
           margin-bottom: 10px;
           line-height: 1.4;
+          color: #374151;
         }
 
         .alert-detail strong {
-          color: #2c3e50;
+          color: #000000;
+          font-weight: 700;
           margin-right: 8px;
         }
+
+        /* Badges y colores por severidad */
+        .impact-badge {
+          padding: 4px 10px;
+          border-radius: 14px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #fff;
+        }
+        .impact-badge.severity-alto { background: #e74c3c; }
+        .impact-badge.severity-medio { background: #f39c12; }
+        .impact-badge.severity-bajo { background: #f1c40f; color: #2c3e50; }
+
+        .alert-item.severity-alto { border-left-color: #e74c3c; }
+        .alert-item.severity-medio { border-left-color: #f39c12; }
+        .alert-item.severity-bajo { border-left-color: #f1c40f; }
 
         /* ========================================================================
             RESPONSIVE DESIGN

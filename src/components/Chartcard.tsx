@@ -1,5 +1,5 @@
 // src/components/ChartCard.tsx
-import { useMemo, type CSSProperties } from 'react';
+import { useMemo, type CSSProperties, useEffect, useState, useRef } from 'react';
 import { EChart } from '@kbox-labs/react-echarts';
 import type { EChartsOption } from 'echarts';
 
@@ -20,6 +20,26 @@ interface Props {
 export default function ChartCard({
   title, dataset, seriesType, xField, yField, style
 }: Props) {
+  const [isReady, setIsReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Verificar que el contenedor tenga dimensiones antes de renderizar ECharts
+  useEffect(() => {
+    const checkDimensions = () => {
+      if (containerRef.current) {
+        const { clientWidth, clientHeight } = containerRef.current;
+        if (clientWidth > 0 && clientHeight > 0) {
+          setIsReady(true);
+        } else {
+          // Si no tiene dimensiones, esperar un poco y volver a verificar
+          setTimeout(checkDimensions, 100);
+        }
+      }
+    };
+
+    checkDimensions();
+  }, [dataset]); // Re-verificar cuando cambien los datos
+
   const option = useMemo<EChartsOption>(() => {
     if (!dataset?.length) return { title: { text: title } };
 
@@ -59,9 +79,16 @@ export default function ChartCard({
   }, [dataset, seriesType, title, xField, yField]);
 
   return (
-    <EChart
-      option={option}
+    <div 
+      ref={containerRef}
       style={{ width: '100%', height: 380, ...style }}
-    />
+    >
+      {isReady && (
+        <EChart
+          option={option}
+          style={{ width: '100%', height: '100%' }}
+        />
+      )}
+    </div>
   );
 }

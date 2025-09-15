@@ -1,16 +1,19 @@
 // ============================================================================
-// CONFIGURACIÓN DE LA API - MODIFICA AQUÍ TUS CREDENCIALES
+// CONFIGURACIÓN DE LA API - USANDO VARIABLES DE ENTORNO
 // ============================================================================
 
+// Cargar variables de entorno desde .env si está disponible
+require('dotenv').config({ path: '../.env' });
+
 module.exports = {
-  // URL de la API externa
-  apiUrl: 'https://visorestrategicobackend-gkejc4hthnace6b4.eastus2-01.azurewebsites.net/api/powerbi/obras',
+  // URL de la API externa (desde variable de entorno o valor por defecto)
+  apiUrl: process.env.VITE_API_URL || 'https://visorestrategicobackend-gkejc4hthnace6b4.eastus2-01.azurewebsites.net/api/powerbi/obras',
   
-  // Headers de autenticación - DESCOMENTA Y MODIFICA SEGÚN TU API
+  // Headers de autenticación - CONFIGURADOS VÍA VARIABLES DE ENTORNO
   headers: {
     'Accept': 'application/json',
     'User-Agent': 'ProyectoGraficos/1.0',
-    'X-API-KEY': 'pow3rb1_visor_3str4t3g1co_2025'
+    'X-API-KEY': process.env.VITE_API_KEY || 'pow3rb1_visor_3str4t3g1co_2025'
     
     // ===== OPCIONES DE AUTENTICACIÓN =====
     
@@ -39,10 +42,11 @@ module.exports = {
     // 'Content-Type': 'application/json',
   },
   
-  // Configuración del servidor
+  // Configuración del servidor (usando variables de entorno)
   server: {
     port: process.env.PORT || 3001,
-    cacheDuration: 5 * 60 * 1000, // 5 minutos en milisegundos
-    timeout: 10000, // 10 segundos para llamadas a la API
+    cacheDuration: process.env.CACHE_DURATION || 5 * 60 * 1000, // 5 minutos por defecto
+    timeout: process.env.API_TIMEOUT || 10000, // 10 segundos por defecto
+    enableDebugLogs: process.env.ENABLE_DEBUG_LOGS === 'true' || false,
   }
 };

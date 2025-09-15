@@ -257,7 +257,9 @@ app.get('/api/obras', async (req, res) => {
     };
 
     // Mapeo de filas con nombres EXACTOS de la API
-    const mapRow = (r) => ({
+    const mapRow = (r) => {
+      
+      return {
       id: String(r['ID'] ?? r['id'] ?? Math.random().toString(36).slice(2)),
       nombre: String(r['NOMBRE'] ?? r['NOMBRE DE LA OBRA'] ?? r['obra'] ?? r['nombre'] ?? ''),
       dependencia: String(r['DEPENDENCIA'] ?? r['Dependencia'] ?? r['dependencia'] ?? ''),
@@ -269,26 +271,154 @@ app.get('/api/obras', async (req, res) => {
       imagenUrl: sanitizeImageUrl(r['URL IMAGEN'] ?? r['URL Imagen'] ?? r['Imagen'] ?? r['IMAGEN'] ?? ''),
       comunaNombre: String(r['COMUNA O CORREGIMIENTO'] ?? r['Comuna o Corregimiento'] ?? r['comuna'] ?? ''),
       proyectoEstrategico: String(r['PROYECTO ESTRATÉGICO'] ?? r['Proyecto Estratégico'] ?? r['proyectoEstrategico'] ?? ''),
+      alertaPresencia: String(r['PRESENCIA DE RIESGO'] ?? r['Presencia de riesgo'] ?? r['presenciaRiesgo'] ?? ''),
+      alertaDescripcion: String(r['DESCRIPCIÓN DEL RIESGO'] ?? r['Descripción del Riesgo'] ?? r['descripcionRiesgo'] ?? ''),
       lat: r['LATITUD'] != null ? Number(r['LATITUD']) : (r['lat'] != null ? Number(r['lat']) : null),
       lon: r['LONGITUD'] != null ? Number(r['LONGITUD']) : (r['lon'] != null ? Number(r['lon']) : null),
-      comunaCodigo: r['COMUNA'] != null ? String(r['COMUNA']).padStart(2, '0') : (r['comunaCodigo'] != null ? String(r['comunaCodigo']).padStart(2, '0') : null)
-    });
+      comunaCodigo: r['COMUNA'] != null ? String(r['COMUNA']).padStart(2, '0') : (r['comunaCodigo'] != null ? String(r['comunaCodigo']).padStart(2, '0') : null),
+      // Fechas para Gantt - usando los nombres exactos de dataConfig.ts
+      'FECHA INICIO ESTIMADA EJECUCIÓN OBRA': String(r['FECHA INICIO ESTIMADA EJECUCIÓN OBRA'] ?? ''),
+      'FECHA FIN ESTIMADA EJECUCIÓN OBRA': String(r['FECHA FIN ESTIMADA EJECUCIÓN OBRA'] ?? ''),
+      'FECHA INICIO REAL EJECUCIÓN OBRA': String(r['FECHA INICIO REAL EJECUCIÓN OBRA'] ?? ''),
+      'FECHA FIN REAL EJECUCIÓN OBRA': String(r['FECHA FIN REAL EJECUCIÓN OBRA'] ?? ''),
+      'FECHA ESTIMADA DE ENTREGA': String(r['FECHA ESTIMADA DE ENTREGA'] ?? ''),
+      'FECHA REAL DE ENTREGA': String(r['FECHA REAL DE ENTREGA'] ?? ''),
+      
+      // Fechas de todas las fases para el modo "phase"
+      'FECHA INICIO ESTIMADA PLANEACIÓN (MGA)': String(r['FECHA INICIO ESTIMADA PLANEACIÓN (MGA)'] ?? ''),
+      'FECHA FIN ESTIMADA PLANEACIÓN (MGA)': String(r['FECHA FIN ESTIMADA PLANEACIÓN (MGA)'] ?? ''),
+      'FECHA INICIO REAL PLANEACIÓN (MGA)': String(r['FECHA INICIO REAL PLANEACIÓN (MGA)'] ?? ''),
+      'FECHA FIN REAL PLANEACIÓN (MGA)': String(r['FECHA FIN REAL PLANEACIÓN (MGA)'] ?? ''),
+      
+      'FECHA INICIO ESTIMADA ESTUDIOS PRELIMINARES': String(r['FECHA INICIO ESTIMADA ESTUDIOS PRELIMINARES'] ?? ''),
+      'FECHA FIN ESTIMADA ESTUDIOS PRELIMINARES': String(r['FECHA FIN ESTIMADA ESTUDIOS PRELIMINARES'] ?? ''),
+      'FECHA INICIO REAL ESTUDIOS PRELIMINARES': String(r['FECHA INICIO REAL ESTUDIOS PRELIMINARES'] ?? ''),
+      'FECHA FIN REAL ESTUDIOS PRELIMINARES': String(r['FECHA FIN REAL ESTUDIOS PRELIMINARES'] ?? ''),
+      
+      'FECHA INICIO ESTIMADA VIABILIZACIÓN (DAP)': String(r['FECHA INICIO ESTIMADA VIABILIZACIÓN (DAP)'] ?? ''),
+      'FECHA FIN ESTIMADA VIABILIZACIÓN (DAP)': String(r['FECHA FIN ESTIMADA VIABILIZACIÓN (DAP)'] ?? ''),
+      'FECHA INICIO REAL VIABILIZACIÓN (DAP)': String(r['FECHA INICIO REAL VIABILIZACIÓN (DAP)'] ?? ''),
+      'FECHA FIN REAL VIABILIZACIÓN (DAP)': String(r['FECHA FIN REAL VIABILIZACIÓN (DAP)'] ?? ''),
+      
+      'FECHA INICIO ESTIMADA GESTIÓN PREDIAL': String(r['FECHA INICIO ESTIMADA GESTIÓN PREDIAL'] ?? ''),
+      'FECHA FIN ESTIMADA GESTIÓN PREDIAL': String(r['FECHA FIN ESTIMADA GESTIÓN PREDIAL'] ?? ''),
+      'FECHA INICIO REAL GESTIÓN PREDIAL': String(r['FECHA INICIO REAL GESTIÓN PREDIAL'] ?? ''),
+      'FECHA FIN REAL GESTIÓN PREDIAL': String(r['FECHA FIN REAL GESTIÓN PREDIAL'] ?? ''),
+      
+      'FECHA INICIO ESTIMADA CONTRATACIÓN': String(r['FECHA INICIO ESTIMADA CONTRATACIÓN'] ?? ''),
+      'FECHA FIN ESTIMADA CONTRATACIÓN': String(r['FECHA FIN ESTIMADA CONTRATACIÓN'] ?? ''),
+      'FECHA INICIO REAL CONTRATACIÓN': String(r['FECHA INICIO REAL CONTRATACIÓN'] ?? ''),
+      'FECHA FIN REAL CONTRATACIÓN': String(r['FECHA FIN REAL CONTRATACIÓN'] ?? ''),
+      
+      'FECHA INICIO ESTIMADA INICIO': String(r['FECHA INICIO ESTIMADA INICIO'] ?? ''),
+      'FECHA FIN ESTIMADA INICIO': String(r['FECHA FIN ESTIMADA INICIO'] ?? ''),
+      'FECHA INICIO REAL INICIO': String(r['FECHA INICIO REAL INICIO'] ?? ''),
+      'FECHA FIN REAL INICIO': String(r['FECHA FIN REAL INICIO'] ?? ''),
+      
+      'FECHA INICIO ESTIMADA DISEÑOS': String(r['FECHA INICIO ESTIMADA DISEÑOS'] ?? ''),
+      'FECHA FIN ESTIMADA DISEÑOS': String(r['FECHA FIN ESTIMADA DISEÑOS'] ?? ''),
+      'FECHA INICIO REAL DISEÑOS': String(r['FECHA INICIO REAL DISEÑOS'] ?? ''),
+      'FECHA FIN REAL DISEÑOS': String(r['FECHA FIN REAL DISEÑOS'] ?? ''),
+      
+      'FECHA INICIO ESTIMADA DOTACIÓN Y PUESTA EN OPERACIÓN': String(r['FECHA INICIO ESTIMADA DOTACIÓN Y PUESTA EN OPERACIÓN'] ?? ''),
+      'FECHA FIN ESTIMADA DOTACIÓN Y PUESTA EN OPERACIÓN': String(r['FECHA FIN ESTIMADA DOTACIÓN Y PUESTA EN OPERACIÓN'] ?? ''),
+      'FECHA INICIO REAL DOTACIÓN Y PUESTA EN OPERACIÓN': String(r['FECHA INICIO REAL DOTACIÓN Y PUESTA EN OPERACIÓN'] ?? ''),
+      'FECHA FIN REAL DOTACIÓN Y PUESTA EN OPERACIÓN': String(r['FECHA FIN REAL DOTACIÓN Y PUESTA EN OPERACIÓN'] ?? ''),
+      
+      'FECHA INICIO ESTIMADA LIQUIDACIÓN': String(r['FECHA INICIO ESTIMADA LIQUIDACIÓN'] ?? ''),
+      'FECHA FIN ESTIMADA LIQUIDACIÓN': String(r['FECHA FIN ESTIMADA LIQUIDACIÓN'] ?? ''),
+      'FECHA INICIO REAL LIQUIDACIÓN': String(r['FECHA INICIO REAL LIQUIDACIÓN'] ?? ''),
+      'FECHA FIN REAL LIQUIDACIÓN': String(r['FECHA FIN REAL LIQUIDACIÓN'] ?? ''),
+      
+      // También mantener los nombres camelCase para compatibilidad
+      fechaInicioEstimadaEjecucionObra: String(r['FECHA INICIO ESTIMADA EJECUCIÓN OBRA'] ?? ''),
+      fechaFinEstimadaEjecucionObra: String(r['FECHA FIN ESTIMADA EJECUCIÓN OBRA'] ?? ''),
+      fechaInicioRealEjecucionObra: String(r['FECHA INICIO REAL EJECUCIÓN OBRA'] ?? ''),
+      fechaFinRealEjecucionObra: String(r['FECHA FIN REAL EJECUCIÓN OBRA'] ?? ''),
+      fechaEstimadaDeEntrega: String(r['FECHA ESTIMADA DE ENTREGA'] ?? ''),
+      fechaRealDeEntrega: String(r['FECHA REAL DE ENTREGA'] ?? '')
+      };
+    };
 
-    // Filtros básicos desde query params
+    // Filtros desde query params (soporte extendido)
     const estado = req.query.estado ? String(req.query.estado).toLowerCase() : undefined;
     const dependencia = req.query.dependencia ? String(req.query.dependencia).toLowerCase() : undefined;
     const proyectoEstrategico = req.query.proyectoEstrategico ? String(req.query.proyectoEstrategico).toLowerCase() : undefined;
     const terminada = req.query.terminada ? String(req.query.terminada) === 'true' : undefined;
     const comunaCodigo = req.query.comunaCodigo ? String(req.query.comunaCodigo) : undefined;
+    const comunaNombre = req.query.comunaNombre ? String(req.query.comunaNombre).toLowerCase() : undefined;
+    const tipo = req.query.tipo ? String(req.query.tipo).toLowerCase() : undefined;
+    const contratista = req.query.contratista ? String(req.query.contratista).toLowerCase() : undefined;
+    const desde = req.query.desde ? String(req.query.desde) : undefined; // 'YYYY' o 'YYYY-MM'
+    const hasta = req.query.hasta ? String(req.query.hasta) : undefined;
 
-    let rows = data.map(mapRow);
-    if (estado) rows = rows.filter(r => r.estado.toLowerCase().includes(estado));
-    if (dependencia) rows = rows.filter(r => r.dependencia.toLowerCase().includes(dependencia));
-    if (proyectoEstrategico) rows = rows.filter(r => String(r.proyectoEstrategico || '').toLowerCase().includes(proyectoEstrategico));
-    if (terminada === true) rows = rows.filter(r => r.estado.toLowerCase().includes('termin'));
-    else if (terminada === false) rows = rows.filter(r => !r.estado.toLowerCase().includes('termin'));
-    if (comunaCodigo) rows = rows.filter(r => r.comunaCodigo === comunaCodigo);
+    // Función utilitaria para fecha
+    const normFecha = (raw) => {
+      const s = String(raw || '');
+      if (!s) return null;
+      if (/^\d{4}$/.test(s)) return s; // YYYY
+      if (/^\d{4}-\d{2}$/.test(s)) return s; // YYYY-MM
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(0,7); // YYYY-MM-DD -> YYYY-MM
+      const m = s.match(/\b(\d{4})\b/);
+      return m ? m[1] : null;
+    };
 
+    // Filtrar sobre datos crudos para poder usar campos originales
+    let filtered = data.filter((r) => {
+      // Estado
+      if (estado) {
+        const v = String(r['ESTADO DE LA OBRA'] ?? '').toLowerCase();
+        if (!v.includes(estado)) return false;
+      }
+      // Dependencia
+      if (dependencia) {
+        const v = String(r['DEPENDENCIA'] ?? '').toLowerCase();
+        if (!v.includes(dependencia)) return false;
+      }
+      // Proyecto estratégico
+      if (proyectoEstrategico) {
+        const v = String(r['PROYECTO ESTRATÉGICO'] ?? '').toLowerCase();
+        if (!v.includes(proyectoEstrategico)) return false;
+      }
+      // Tipo de intervención
+      if (tipo) {
+        const v = String(r['TIPO DE INTERVECIÓN'] ?? '').toLowerCase();
+        if (!v.includes(tipo)) return false;
+      }
+      // Contratista
+      if (contratista) {
+        const v = String(r['CONTRATISTA OPERADOR'] ?? '').toLowerCase();
+        if (!v.includes(contratista)) return false;
+      }
+      // Comuna por código (dos dígitos)
+      if (comunaCodigo) {
+        const code = r['COMUNA'] != null ? String(r['COMUNA']).padStart(2,'0') : null;
+        if (code !== comunaCodigo) return false;
+      }
+      // Comuna por nombre
+      if (comunaNombre) {
+        const v = String(r['COMUNA O CORREGIMIENTO'] ?? '').toLowerCase();
+        if (!v.includes(comunaNombre)) return false;
+      }
+      // Terminadas
+      if (terminada === true) {
+        const v = String(r['ESTADO DE LA OBRA'] ?? '').toLowerCase();
+        if (!v.includes('termin')) return false;
+      } else if (terminada === false) {
+        const v = String(r['ESTADO DE LA OBRA'] ?? '').toLowerCase();
+        if (v.includes('termin')) return false;
+      }
+      // Rango de fechas (usamos FECHA ESTIMADA DE ENTREGA si existe)
+      if (desde || hasta) {
+        const f = normFecha(r['FECHA ESTIMADA DE ENTREGA']);
+        if (desde && f && f < desde) return false;
+        if (hasta && f && f > hasta) return false;
+      }
+      return true;
+    });
+
+    // Mapear a contrato esperado por el visor
+    let rows = filtered.map(mapRow);
     res.json(rows);
   } catch (e) {
     console.error('Error en /api/obras:', e);

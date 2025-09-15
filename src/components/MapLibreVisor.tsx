@@ -4,6 +4,7 @@ import maplibregl, { Map, GeoJSONSource } from 'maplibre-gl';
 import type { LngLatLike } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as turf from '@turf/turf';
+import GanttChart from './GanttChart';
 
 type LimiteFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, { CODIGO: string; NOMBRE: string }>;
 type LimitesFC = GeoJSON.FeatureCollection<LimiteFeature['geometry'], LimiteFeature['properties']>;
@@ -19,6 +20,15 @@ type Obra = {
   lat: number | null;
   lon: number | null;
   comunaCodigo: string | null;
+  // Fechas para Gantt
+  fechaInicioEstimadaEjecucionObra?: string;
+  fechaFinEstimadaEjecucionObra?: string;
+  fechaInicioRealEjecucionObra?: string;
+  fechaFinRealEjecucionObra?: string;
+  fechaEstimadaDeEntrega?: string;
+  fechaRealDeEntrega?: string;
+  // Otros campos que pueda necesitar el Gantt
+  [key: string]: any;
 };
 
 type Props = {
@@ -40,7 +50,9 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   const [limites, setLimites] = useState<LimitesFC | null>(null);
   const [obras, setObras] = useState<Obra[]>([]);
   const [selectedCodigo, setSelectedCodigo] = useState<string | null>(null);
+  const [selectedObraForGantt, setSelectedObraForGantt] = useState<Obra | null>(null);
   // Sin filtros internos: los filtros llegan por props.query o por URL externa
+
 
   // Control: desactivar auto-selección por zoom para evitar "rebote" de cámara
   // Control: mostrar puntos individuales de obras (clusters) – desactivado para usar 1 punto por comuna
@@ -49,6 +61,18 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   const SHOW_SELECTED_POINTS = false;
 
   // (sin debounce local)
+
+  // Detectar si hay filtro de proyecto para mostrar puntos individuales aun sin zoom
+  const hasProyectoFilter = useMemo(() => {
+    try {
+      let params: URLSearchParams | undefined;
+      if (typeof query === 'string') params = new URLSearchParams(query);
+      else if (query instanceof URLSearchParams) params = query;
+      return !!params?.get('proyectoEstrategico');
+    } catch {
+      return false;
+    }
+  }, [query]);
 
   const fetchLimites = useCallback(async () => {
     // Usar límites desde backend propio si existe; si no, fallback opcional a público
@@ -254,18 +278,48 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
 
       // Crear fuente sin clustering y capa de puntos individuales
       map.addSource(src, { type: 'geojson', data: fc });
-      const matchColor: any[] = ['match', ['get', 'dependencia']];
-      Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColor.push(dep, color); });
-      matchColor.push('#3B8686');
-      map.addLayer({ id: ptsLayer, type: 'circle', source: src, paint: { 'circle-color': matchColor as any, 'circle-radius': 6, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1 } });
+      
+      // Crear expresión de color con validación para evitar error de MapLibre
+      let circleColor: any;
+      if (Object.keys(dependencyColorMap).length > 0) {
+        const matchColor: any[] = ['match', ['get', 'dependencia']];
+        Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColor.push(dep, color); });
+        matchColor.push('#3B8686'); // Color por defecto
+        circleColor = matchColor;
+      } else {
+        // Si no hay dependencias, usar un color fijo
+        circleColor = '#3B8686';
+      }
+      
+      map.addLayer({ 
+        id: ptsLayer, 
+        type: 'circle', 
+        source: src, 
+        paint: { 
+          'circle-color': circleColor, 
+          'circle-radius': 6, 
+          'circle-stroke-color': '#ffffff', 
+          'circle-stroke-width': 1 
+        } 
+      });
 
-      // Mostrar puntos al acercar (o si hay una comuna seleccionada) y filtrar por comuna cuando haya selección
+      // Si hay filtro de proyecto, ajustar vista a la extensión de las obras filtradas
+      try {
+        if (hasProyectoFilter && fc.features.length > 0) {
+          const bbox = turf.bbox(fc as any);
+          map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 60, duration: 600 });
+        }
+      } catch {}
+
+      // Mostrar puntos al acercar (o si hay una comuna seleccionada o un proyecto activo) y filtrar por comuna cuando haya selección
       const ZOOM_TO_SHOW_POINTS = 13;
       const applyVisibilityAndFilter = () => {
-        const shouldShow = map.getZoom() >= ZOOM_TO_SHOW_POINTS || !!selectedCodigo;
-        map.setLayoutProperty(ptsLayer, 'visibility', shouldShow ? 'visible' : 'none');
-        const filter: any = selectedCodigo ? ['==', ['get', 'comunaCodigo'], selectedCodigo] : ['boolean', true];
-        (map as any).setFilter(ptsLayer, filter);
+        const shouldShow = map.getZoom() >= ZOOM_TO_SHOW_POINTS || !!selectedCodigo || hasProyectoFilter;
+        if (map.getLayer(ptsLayer)) {
+          map.setLayoutProperty(ptsLayer, 'visibility', shouldShow ? 'visible' : 'none');
+          const filter: any = selectedCodigo ? ['==', ['get', 'comunaCodigo'], selectedCodigo] : ['boolean', true];
+          (map as any).setFilter(ptsLayer, filter);
+        }
       };
       applyVisibilityAndFilter();
       (map as any).off('zoomend', applyVisibilityAndFilter as any);
@@ -300,6 +354,9 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       const { nombre } = p;
       map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 15), duration: 600 });
       if (clickPopupRef.current) clickPopupRef.current.remove();
+      
+      // Solo crear popup si obra existe
+      if (!obra) return;
         const imgHtml = (obra as any)?.imagenUrl ? `<div style="margin-bottom:8px"><img src="${(obra as any).imagenUrl}" alt="${nombre || ''}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb"/></div>` : '';
         const comunaStr = (obra as any)?.comunaNombre || (obra?.comunaCodigo ? codigoToComuna[obra.comunaCodigo] : (selectedCodigo ? codigoToComuna[selectedCodigo] : '')) || '';
       const comunaText = comunaStr ? `<div style="color:#374151;margin-bottom:6px"><strong>Comuna:</strong> ${comunaStr}</div>` : '';
@@ -314,6 +371,14 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           ${depText}
           ${comunaText}
           <div style="color:#111827;margin-top:4px"><strong>Avance del proyecto:</strong> <span style="font-weight:800">${pct}</span></div>
+          ${(obra as any)?.alertaPresencia && (String((obra as any).alertaPresencia).toLowerCase() !== 'sin información' && String((obra as any).alertaPresencia).toLowerCase() !== 'sin informacion' && String((obra as any).alertaPresencia).toLowerCase() !== 'no aplica' && String((obra as any).alertaPresencia).toLowerCase() !== 'ninguna') ? `
+            <div style="margin-top:12px;padding:12px;border:2px solid #dc2626;border-radius:10px;background:#ffffff;box-shadow:0 2px 8px rgba(220,38,38,0.15)">
+              <div style="font-weight:900;color:#000000;margin-bottom:8px;font-size:14px;text-transform:uppercase;letter-spacing:0.5px">⚠️ Alerta y Riesgo</div>
+              <div style="color:#000000;margin-bottom:6px"><strong style="font-weight:700;color:#000000">Presencia de Riesgo:</strong> <span style="color:#374151">${(obra as any).alertaPresencia}</span></div>
+              ${(obra as any).alertaDescripcion ? `<div style="color:#000000;margin-bottom:6px"><strong style="font-weight:700;color:#000000">Descripción:</strong> <span style="color:#374151;line-height:1.4">${(obra as any).alertaDescripcion}</span></div>` : ''}
+              ${(obra as any).alertaImpacto ? `<div style="color:#000000"><strong style="font-weight:700;color:#000000">Impacto:</strong> <span style="color:#374151">${(obra as any).alertaImpacto}</span></div>` : ''}
+            </div>
+          ` : ''}
         `)
         .addTo(map);
       clickPopupRef.current = popup;
@@ -321,14 +386,24 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     });
     } else {
       // Asegurar que, si existían capas antiguas, queden ocultas
-      if (map.getLayer(cl)) map.setLayoutProperty(cl, 'visibility', 'none');
-      if (map.getLayer(clCnt)) map.setLayoutProperty(clCnt, 'visibility', 'none');
-      if (map.getLayer(ptsLayer)) map.setLayoutProperty(ptsLayer, 'visibility', 'none');
+      if (map.getLayer(cl)) {
+        map.setLayoutProperty(cl, 'visibility', 'none');
+      }
+      if (map.getLayer(clCnt)) {
+        map.setLayoutProperty(clCnt, 'visibility', 'none');
+      }
+      if (map.getLayer(ptsLayer)) {
+        map.setLayoutProperty(ptsLayer, 'visibility', 'none');
+      }
     }
 
-    // Mostrar/ocultar centroids según selección
-    if (map.getLayer('centroids-layer')) map.setLayoutProperty('centroids-layer', 'visibility', 'visible');
-    if (map.getLayer('centroids-text')) map.setLayoutProperty('centroids-text', 'visibility', 'visible');
+    // Mostrar/ocultar centroids según selección y filtro de proyecto (si hay proyecto, ocultarlos)
+    if (map.getLayer('centroids-layer')) {
+      map.setLayoutProperty('centroids-layer', 'visibility', hasProyectoFilter ? 'none' : 'visible');
+    }
+    if (map.getLayer('centroids-text')) {
+      map.setLayoutProperty('centroids-text', 'visibility', hasProyectoFilter ? 'none' : 'visible');
+    }
 
     // Resaltado de límites
     if (map.getLayer('limites-sel')) {
@@ -342,23 +417,37 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       .filter(o => o.lat != null && o.lon != null && (selectedCodigo ? o.comunaCodigo === selectedCodigo : false))
       .map(o => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [o.lon as number, o.lat as number] }, properties: { id: o.id, nombre: o.nombre, estado: o.estado, dependencia: o.dependencia, comunaCodigo: o.comunaCodigo || '' } }));
     const fcSel: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: featuresSel };
-    const matchColorSel: any[] = ['match', ['get', 'dependencia']];
-    Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColorSel.push(dep, color); });
-    matchColorSel.push('#3B8686');
+    // Crear expresión de color con validación para evitar error de MapLibre
+    let circleColorSel: any;
+    if (Object.keys(dependencyColorMap).length > 0) {
+      const matchColorSel: any[] = ['match', ['get', 'dependencia']];
+      Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColorSel.push(dep, color); });
+      matchColorSel.push('#3B8686'); // Color por defecto
+      circleColorSel = matchColorSel;
+    } else {
+      // Si no hay dependencias, usar un color fijo
+      circleColorSel = '#3B8686';
+    }
 
     if (!map.getSource(selSrc)) {
       map.addSource(selSrc, { type: 'geojson', data: fcSel });
-      map.addLayer({ id: selLayer, type: 'circle', source: selSrc, paint: { 'circle-color': matchColorSel as any, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 7, 13, 9, 16, 12] as any, 'circle-stroke-color': '#1f2937', 'circle-stroke-width': 1.5, 'circle-opacity': 1 } });
+      map.addLayer({ id: selLayer, type: 'circle', source: selSrc, paint: { 'circle-color': circleColorSel, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 7, 13, 9, 16, 12] as any, 'circle-stroke-color': '#1f2937', 'circle-stroke-width': 1.5, 'circle-opacity': 1 } });
     } else {
       (map.getSource(selSrc) as GeoJSONSource).setData(fcSel);
         if (map.getLayer(selLayer)) {
-      (map as any).setPaintProperty(selLayer, 'circle-color', matchColorSel as any);
+      (map as any).setPaintProperty(selLayer, 'circle-color', circleColorSel);
       (map as any).setPaintProperty(selLayer, 'circle-radius', ['interpolate', ['linear'], ['zoom'], 10, 7, 13, 9, 16, 12] as any);
       map.setPaintProperty(selLayer, 'circle-opacity', 1);
     }
       }
-      if (map.getLayer(selLayer)) map.setLayoutProperty(selLayer, 'visibility', selectedCodigo ? 'visible' : 'none');
-    if (map.getLayer(selLayer)) { try { map.moveLayer(selLayer); } catch { /* ignore */ } }
+      if (map.getLayer(selLayer)) {
+        map.setLayoutProperty(selLayer, 'visibility', selectedCodigo ? 'visible' : 'none');
+        try { 
+          map.moveLayer(selLayer); 
+        } catch { 
+          // Ignorar errores de moveLayer si la capa no existe
+        }
+      }
 
       // Tooltips/clicks solo si la capa existe
     (map as any).off('mouseenter', selLayer);
@@ -382,7 +471,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     });
       }
     }
-  }, [obrasEnriquecidas, selectedCodigo, mapLoaded, dependencyColorMap, SHOW_OBRA_POINTS, SHOW_SELECTED_POINTS, onObraClick]);
+  }, [obrasEnriquecidas, selectedCodigo, mapLoaded, dependencyColorMap, SHOW_OBRA_POINTS, SHOW_SELECTED_POINTS, onObraClick, hasProyectoFilter]);
 
 
   // ESC para limpiar
@@ -446,7 +535,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
 
       {/* Overlay lateral dentro del mapa */}
       {selectedCodigo && (
-        <div className="ml-overlay-panel" style={{ position: 'absolute', top: 12, right: 12, width: 440, maxWidth: '92%', maxHeight: 'calc(100% - 24px)', background: '#ffffff', color: '#111827', borderRadius: 14, border: '1px solid #E5E7EB', boxShadow: '0 14px 30px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 5 }}>
+        <div className="ml-overlay-panel" style={{ position: 'absolute', top: 12, right: 12, width: 520, maxWidth: '95%', maxHeight: 'calc(100% - 24px)', background: '#ffffff', color: '#111827', borderRadius: 14, border: '1px solid #E5E7EB', boxShadow: '0 14px 30px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 5 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)', borderBottom: '1px solid #E9ECEF', padding: '12px 14px' }}>
             <div style={{ fontWeight: 800, color: '#1F2937', fontSize: 15, letterSpacing: 0.2 }}>Obras en {comunaNombre}</div>
             <button onClick={() => { setSelectedCodigo(null); if (onComunaChange) onComunaChange(null); }} style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 8, padding: '6px 10px', fontSize: 13, cursor: 'pointer', color: '#1F2937' }}>Volver</button>
@@ -474,6 +563,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
               </div>
             </div>
 
+
             {obrasDeComuna.map((o) => {
               const estado = (o.estado || '').toLowerCase();
               const estadoColor = estado.includes('termin') ? '#16a34a' : estado.includes('ejec') ? '#2563eb' : estado.includes('suspend') ? '#f59e0b' : '#6b7280';
@@ -483,40 +573,86 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
               return (
                 <div key={o.id} style={{ padding: '12px 8px', borderBottom: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <div style={{ fontWeight: 800, color: '#111827', fontSize: 14 }}>{o.nombre}</div>
+                    <div style={{ fontWeight: 800, color: '#111827', fontSize: 12 }}>{o.nombre}</div>
                     <span style={{ background: estadoBg, color: estadoColor, border: `1px solid ${estadoColor}22`, borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, textTransform: 'capitalize' }}>{o.estado || 'sin estado'}</span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#374151', marginBottom: 4 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: depColor, display: 'inline-block' }}></span>
-                    <span style={{ fontWeight: 600 }}>Dependencia:</span>
-                    <span>{o.dependencia}</span>
-                  </div>
-                  {o.direccion && (
-                    <div style={{ fontSize: 13, color: '#374151', marginBottom: 4 }}><span style={{ fontWeight: 600 }}>Dirección:</span> {o.direccion}</div>
-                  )}
-                  {o.presupuesto != null && (
-                    <div style={{ fontSize: 13, color: '#374151', marginBottom: 4 }}><span style={{ fontWeight: 600 }}>Presupuesto:</span> {o.presupuesto.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div>
-                  )}
-                  {o.fechaEntrega && (
-                    <div style={{ fontSize: 13, color: '#374151', marginBottom: 6 }}><span style={{ fontWeight: 600 }}>Fecha entrega:</span> {new Date(o.fechaEntrega).toLocaleDateString('es-CO')}</div>
-                  )}
-
-                  {/* Avance */}
-                  <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 4 }}>Avance: {avance}%</div>
-                  <div style={{ height: 6, background: '#E5E7EB', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-                    <div style={{ width: `${Math.max(0, Math.min(100, avance))}%`, height: '100%', background: '#2563eb' }} />
-                  </div>
-
-                  {/* Enlace ubicación */}
-                  {(o.lat != null && o.lon != null) && (
-                    <div>
-                      <a href="#" onClick={(ev) => { ev.preventDefault(); const map = mapRef.current; if (!map) return; map.easeTo({ center: [o.lon as number, o.lat as number], zoom: 16, duration: 600 }); if (onObraClick) onObraClick(o); }} style={{ fontSize: 12, color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Con ubicación en mapa</a>
+                  {/* Información básica con bordes */}
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#374151', marginBottom: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: depColor, display: 'inline-block' }}></span>
+                      <span style={{ fontWeight: 600 }}>Dependencia:</span>
+                      <span>{o.dependencia}</span>
                     </div>
-                  )}
-                  {(o.lat == null || o.lon == null) && (
-                    <div style={{ fontSize: 12, color: '#DC2626', fontWeight: 600 }}>Sin coordenadas</div>
-                  )}
+                    {o.direccion && (
+                      <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}><span style={{ fontWeight: 600 }}>Dirección:</span> {o.direccion}</div>
+                    )}
+                    {o.presupuesto != null && (
+                      <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}><span style={{ fontWeight: 600 }}>Presupuesto:</span> {o.presupuesto.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div>
+                    )}
+                    {o.fechaEntrega && (
+                      <div style={{ fontSize: 11, color: '#374151' }}><span style={{ fontWeight: 600 }}>Fecha entrega:</span> {new Date(o.fechaEntrega).toLocaleDateString('es-CO')}</div>
+                    )}
+                  </div>
+
+                  {/* Avance con borde */}
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB' }}>
+                    <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4 }}>Avance: {avance}%</div>
+                    <div style={{ height: 6, background: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.max(0, Math.min(100, avance))}%`, height: '100%', background: '#2563eb' }} />
+                    </div>
+                  </div>
+
+                  {/* Ubicación con borde */}
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB' }}>
+                    {(o.lat != null && o.lon != null) && (
+                      <a href="#" onClick={(ev) => { ev.preventDefault(); const map = mapRef.current; if (!map) return; map.easeTo({ center: [o.lon as number, o.lat as number], zoom: 16, duration: 600 }); if (onObraClick) onObraClick(o); }} style={{ fontSize: 10, color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Con ubicación en mapa</a>
+                    )}
+                    {(o.lat == null || o.lon == null) && (
+                      <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 600 }}>Sin coordenadas</div>
+                    )}
+                  </div>
+
+                  {/* Botón de Gantt */}
+                  <div style={{ marginTop: 8 }}>
+                    <button 
+                      onClick={() => setSelectedObraForGantt(o)}
+                      style={{
+                        background: 'linear-gradient(135deg, #79BC99 0%, #4E8484 100%)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.3s ease',
+                        boxShadow: '0 2px 6px rgba(121, 188, 153, 0.3)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(121, 188, 153, 0.5)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(121, 188, 153, 0.3)';
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="4" y1="6" x2="10" y2="6" />
+                        <line x1="4" y1="12" x2="14" y2="12" />
+                        <line x1="4" y1="18" x2="18" y2="18" />
+                        <circle cx="10" cy="6" r="2" fill="currentColor" />
+                        <circle cx="14" cy="12" r="2" fill="currentColor" />
+                        <circle cx="18" cy="18" r="2" fill="currentColor" />
+                      </svg>
+                      Ver Etapa
+                    </button>
+                  </div>
+
                 </div>
               );
             })}
@@ -525,6 +661,109 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       )}
 
       {/* Sin filtros internos: este visor se controla por props/URL */}
+
+      {/* Modal de Gantt - FUERA del mapa */}
+      {selectedObraForGantt && (
+        <div 
+          className="gantt-modal-overlay" 
+          onClick={() => setSelectedObraForGantt(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            backdropFilter: 'blur(8px)'
+          }}
+        >
+          <div 
+            className="gantt-modal-container"
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '20px',
+              maxWidth: '1400px',
+              width: '98%',
+              maxHeight: '95vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.4)',
+              border: '3px solid #79BC99',
+              overflow: 'hidden'
+            }}
+          >
+            <div 
+              className="gantt-modal-header"
+              style={{
+                padding: '25px 30px',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                borderBottom: '3px solid #79BC99',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <h3 style={{
+                margin: 0,
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                color: '#000000'
+              }}>
+                📊 Diagrama de Gantt - {selectedObraForGantt.nombre}
+              </h3>
+              <button 
+                onClick={() => setSelectedObraForGantt(null)}
+                style={{
+                  background: 'rgba(0, 0, 0, 0.1)',
+                  border: '2px solid #79BC99',
+                  color: '#000000',
+                  fontSize: '28px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)';
+                  e.currentTarget.style.borderColor = '#4E8484';
+                  e.currentTarget.style.transform = 'rotate(90deg)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.borderColor = '#79BC99';
+                  e.currentTarget.style.transform = 'rotate(0deg)';
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div 
+              className="gantt-modal-content"
+              style={{
+                padding: '20px',
+                overflowY: 'auto',
+                flex: 1,
+                background: '#fafafa'
+              }}
+            >
+              <GanttChart 
+                rows={[selectedObraForGantt as any]} 
+                limit={50} 
+                mode="phase" 
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Estilos responsive del panel overlay */}
       <style>{`
@@ -548,6 +787,42 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           .ml-overlay-panel .metrics { grid-template-columns: repeat(3, 1fr); gap: 4px; }
           .ml-overlay-panel .item { padding: 8px 6px; }
         }
+
+        /* Estilos responsive para el modal de Gantt */
+        @media (max-width: 768px) {
+          .gantt-modal-container {
+            max-width: 98% !important;
+            width: 98% !important;
+            max-height: 95vh !important;
+          }
+          .gantt-modal-header {
+            padding: 20px 25px !important;
+          }
+          .gantt-modal-header h3 {
+            font-size: 1.2rem !important;
+          }
+          .gantt-modal-content {
+            padding: 20px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .gantt-modal-container {
+            max-width: 99% !important;
+            width: 99% !important;
+            max-height: 98vh !important;
+          }
+          .gantt-modal-header {
+            padding: 15px 20px !important;
+          }
+          .gantt-modal-header h3 {
+            font-size: 1rem !important;
+          }
+          .gantt-modal-content {
+            padding: 15px !important;
+          }
+        }
+
       `}</style>
     </div>
   );

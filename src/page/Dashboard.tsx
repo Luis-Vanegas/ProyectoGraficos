@@ -15,12 +15,15 @@ import {
 
 import Kpi from '../components/Kpi';
 import ComboBars from '../components/comboBars';
+import SimpleBarChart from '../components/SimpleBarChart';
 import WorksTable from '../components/WorksTable';
 import AlertsTable from '../components/AlertsTable';
 import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
 import HeaderIcons from '../components/HeaderIcons';
+// import Chatbot from '../components/Chatbot';
+// import ChatbotLearningPanel from '../components/ChatbotLearningPanel';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
@@ -76,6 +79,8 @@ const Dashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
+  const [isMobileStack, setIsMobileStack] = useState(false);
+  // const [showLearningPanel, setShowLearningPanel] = useState(false);
   // Estado no utilizado en esta vista (selección se maneja en MapLibre)
   // const [selectedComuna] = useState<string | null>(null);
   // const [comunasGeo, setComunasGeo] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -100,6 +105,16 @@ const Dashboard = () => {
         setStatus('Error: No se pudieron cargar los datos');
       }
     })();
+  }, []);
+
+  // Detecta móvil para forzar KPIs en columna
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 480px)');
+    const apply = () => setIsMobileStack(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
   }, []);
 
   // (El visor de MapLibre maneja la carga de límites de comunas)
@@ -138,8 +153,32 @@ const Dashboard = () => {
   // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
   const comboDataset = useMemo(() => {
     if (!F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
-    return buildTwoSeriesDataset(filtered, F.dependencia, F.costoTotalActualizado, F.presupuestoEjecutado, 12);
+    // Dataset por nombre de la obra
+    return buildTwoSeriesDataset(
+      filtered,
+      F.nombre,
+      F.costoTotalActualizado,
+      F.presupuestoEjecutado,
+      15
+    );
   }, [filtered]);
+
+  // Datos para el nuevo gráfico SimpleBarChart
+  const simpleChartData = useMemo(() => {
+    if (!comboDataset || comboDataset.length <= 1) return [];
+    
+    // Convertir el dataset de ECharts al formato del nuevo componente
+    return comboDataset.slice(1).map((row: (string | number)[]) => {
+      const [label, value1, value2] = row;
+      return {
+        label: String(label).substring(0, 20) + (String(label).length > 20 ? '...' : ''), // Truncar etiquetas largas
+        value1: Number(value1) || 0,
+        value2: Number(value2) || 0,
+        color1: '#2E8B57', // Verde esmeralda para Inversión Total
+        color2: '#FF6B35'  // Naranja coral para Presupuesto Ejecutado
+      };
+    });
+  }, [comboDataset]);
 
   // ============================================================================
   // CLASIFICACIÓN DE OBRAS
@@ -269,7 +308,11 @@ const Dashboard = () => {
       <Navigation showBackButton={true} title="Reporte General" />
 
       {/* Iconos de alerta y calendario */}
-      <HeaderIcons rows={rows} filtered={filtered} />
+      <HeaderIcons 
+        rows={rows} 
+        filtered={filtered} 
+        // onShowLearningPanel={() => setShowLearningPanel(true)}
+      />
 
       {/* Contenedor principal del dashboard */}
       <div className="dashboard-content">
@@ -295,6 +338,30 @@ const Dashboard = () => {
              SECCIÓN DE FILTROS - PRIMERA POSICIÓN
          ======================================================================== */}
         <div className="filters-section">
+          <div className="filters-actions">
+            <div className="filters-status">
+              {Object.keys(filters).length > 0 ? (
+                <span className="filters-active">
+                  <span className="status-icon">🔍</span>
+                  Filtros activos ({Object.keys(filters).length})
+                </span>
+              ) : (
+                <span className="filters-all">
+                  <span className="status-icon">📊</span>
+                  Mostrando todos los datos
+                </span>
+              )}
+            </div>
+            <button
+              className="clear-filters-btn"
+              onClick={() => setFilters({})}
+              title="Borrar todos los filtros"
+              disabled={Object.keys(filters).length === 0}
+            >
+              <span className="btn-icon" aria-hidden>✖</span>
+              Borrar filtros
+            </button>
+          </div>
           {/* Primera fila de filtros */}
           <div className="filters-container filters-row-main">
             {/* Filtro: Proyectos estratégicos */}
@@ -498,12 +565,11 @@ const Dashboard = () => {
          ======================================================================== */}
         <div className="kpis-section">
           <div className="kpis-container">
-            {/* Fila única: 5 KPIs compactos */}
-            <div className="kpis-grid kpis-row-5">
+            {/* Fila única: 6 KPIs organizados */}
+            <div className="kpis-grid kpis-row-6" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined}>
               <Kpi 
                 label="Total obras" 
-                value={k.totalObras} 
-                trend="neutral"
+                value={k.totalObras}
               />
               <Kpi 
                 label="Inversión total" 
@@ -512,7 +578,6 @@ const Dashboard = () => {
                 abbreviate 
                 digits={1}
                 subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
-                trend="up"
               />
               <Kpi 
                 label="Presupuesto ejecutado" 
@@ -521,19 +586,23 @@ const Dashboard = () => {
                 abbreviate
                 digits={1}
                 subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
-                trend="up"
+              />
+              <Kpi 
+                label="Presupuesto ejecutado administración actual 2024-2027" 
+                value={k.valorCuatrienio2024_2027} 
+                format="money"
+                abbreviate
+                digits={1}
+                subtitle={`${Math.round(k.porcentajeCuatrienio2024_2027 * 100)}% de la inversión total`}
               />
               <Kpi 
                 label="Obras entregadas" 
                 value={k.entregadas} 
                 subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
-                trend="up"
               />
               <Kpi 
                 label="Alertas" 
-                value={k.alertas}
-                trend={k.alertas > 0 ? 'down' : 'neutral'}
-                subtitle={k.alertas > 0 ? 'Atención requerida' : 'Sin alertas'}
+                value={k.alertasEncontradas}
               />
             </div>
           </div>
@@ -544,18 +613,17 @@ const Dashboard = () => {
          ======================================================================== */}
         <div className="map-main-panel">
           
-          {/* Leyenda del mapa con colores por dependencia (opcional) */}
+          {/* Leyenda compacta (chips) sin título para ahorrar espacio */}
           {showLegend && (
-          <div className="map-legend">
-            <h4>Leyenda por Dependencia:</h4>
-            <div className="legend-items">
+          <div className="map-legend map-legend-compact">
+            <div className="legend-chips">
               {Object.keys(mapData).map((dependencia) => (
-                <div key={dependencia} className="legend-item">
-                  <div 
-                    className="legend-color" 
-                      style={{ backgroundColor: dependencyColorMap[dependencia] }}
-                  ></div>
-                  <span className="legend-text">{dependencia}</span>
+                <div key={dependencia} className="legend-chip" title={dependencia}>
+                  <span
+                    className="legend-dot"
+                    style={{ backgroundColor: dependencyColorMap[dependencia] }}
+                  />
+                  <span className="legend-label">{dependencia}</span>
                 </div>
               ))}
             </div>
@@ -567,10 +635,15 @@ const Dashboard = () => {
           {/* Mapa principal: responsive y conectado a filtros externos */}
           <div style={{ height: '60vh', minHeight: 380, width: '100%' }}>
             <MapLibreVisor height={'100%'} query={new URLSearchParams({
-              ...(filters.estadoDeLaObra ? { estado: String(filters.estadoDeLaObra) } : {}),
-              ...(filters.dependencia ? { dependencia: String(filters.dependencia) } : {}),
-              ...(filters.proyecto ? { proyectoEstrategico: String(filters.proyecto) } : {}),
-              ...(filters.comuna ? { comunaCodigo: String(filters.comuna) } : {}),
+              ...(combinedFilters.estadoDeLaObra ? { estado: String(combinedFilters.estadoDeLaObra) } : {}),
+              ...(combinedFilters.dependencia ? { dependencia: String(combinedFilters.dependencia) } : {}),
+              ...(combinedFilters.proyecto ? { proyectoEstrategico: String(combinedFilters.proyecto) } : {}),
+              // Comuna puede venir como nombre; el backend acepta comunaNombre
+              ...(combinedFilters.comuna ? { comunaNombre: String(combinedFilters.comuna) } : {}),
+              ...(combinedFilters.tipo ? { tipo: String(combinedFilters.tipo) } : {}),
+              ...(combinedFilters.contratista ? { contratista: String(combinedFilters.contratista) } : {}),
+              ...(combinedFilters.desde ? { desde: String(combinedFilters.desde) } : {}),
+              ...(combinedFilters.hasta ? { hasta: String(combinedFilters.hasta) } : {}),
             })} />
           </div>
         </div>
@@ -578,9 +651,26 @@ const Dashboard = () => {
         {/* ========================================================================
              TABLA DE VIGENCIAS - CUARTA POSICIÓN
          ======================================================================== */}
-        <div className="table-card" style={{ marginBottom: 30 }}>
+        <div className="table-card" style={{ marginBottom: 20 }}>
           <VigenciasTable data={vigencias} />
         </div>
+
+        {/* ========================================================================
+             GRÁFICO PRINCIPAL - Inversión vs Presupuesto Ejecutado
+         ======================================================================== */}
+        {simpleChartData.length > 0 && (
+          <div className="main-chart-section">
+            <SimpleBarChart
+              title="Inversión Total vs Presupuesto Ejecutado"
+              data={simpleChartData}
+              seriesNames={['Inversión Total', 'Presupuesto Ejecutado']}
+              width={1200}
+              height={500}
+              showLegend={true}
+              formatValue={(value) => `$${(value / 1000000).toFixed(1)}M`}
+            />
+          </div>
+        )}
 
         {/* ========================================================================
              SECCIÓN DE CONTENIDO INFERIOR - GRÁFICOS Y TABLAS
@@ -639,6 +729,18 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Chatbot y Panel de Aprendizaje - DESHABILITADO */}
+      {/* <Chatbot 
+        data={rows} 
+        filters={combinedFilters}
+        onFiltersChange={(newFilters) => setFilters(newFilters)}
+      />
+      
+      <ChatbotLearningPanel 
+        isOpen={showLearningPanel}
+        onClose={() => setShowLearningPanel(false)}
+      /> */}
+
       {/* ========================================================================
            ESTILOS CSS - DISEÑO MODERNO CON COLORES CORPORATIVOS
        ======================================================================== */}
@@ -653,8 +755,8 @@ const Dashboard = () => {
         }
 
         .dashboard-content {
-          padding: 120px 20px 20px 20px;
-          max-width: 1600px;
+          padding: 100px 16px 16px 16px;
+          max-width: 1400px;
           margin: 0 auto;
         }
 
@@ -733,18 +835,105 @@ const Dashboard = () => {
         ======================================================================== */
         .filters-section {
           background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 18px;
+          box-shadow: 0 6px 18px rgba(121, 188, 153, 0.12);
+          border: 1px solid ${CORPORATE_COLORS.primary};
+        }
+
+        .filters-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .filters-status {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .filters-active {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: linear-gradient(135deg, #FFE4E1 0%, #FFB6C1 100%);
+          border: 1px solid #FF6B6B;
           border-radius: 20px;
-          padding: 30px;
-          margin-bottom: 30px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
-          border: 2px solid ${CORPORATE_COLORS.primary};
+          color: #D63031;
+          font-size: 0.85rem;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(255, 107, 107, 0.15);
+        }
+
+        .filters-all {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%);
+          border: 1px solid #4CAF50;
+          border-radius: 20px;
+          color: #2E7D32;
+          font-size: 0.85rem;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
+        }
+
+        .filters-status .status-icon {
+          font-size: 1rem;
+        }
+
+        .clear-filters-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1px solid ${CORPORATE_COLORS.primary};
+          background: #ffffff;
+          color: ${CORPORATE_COLORS.accent};
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 6px rgba(121, 188, 153, 0.08);
+        }
+
+        .clear-filters-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          border-color: ${CORPORATE_COLORS.secondary};
+          box-shadow: 0 6px 16px rgba(121, 188, 153, 0.18);
+        }
+
+        .clear-filters-btn:disabled {
+          background: #F8F9FA;
+          color: ${CORPORATE_COLORS.mediumGray};
+          border-color: #E9ECEF;
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .clear-filters-btn:disabled:hover {
+          transform: none;
+          box-shadow: 0 1px 6px rgba(121, 188, 153, 0.08);
+        }
+
+        .clear-filters-btn .btn-icon {
+          display: inline-flex;
+          width: 18px;
+          height: 18px;
+          align-items: center;
+          justify-content: center;
         }
 
         .filters-container {
           display: grid;
-          gap: 20px;
+          gap: 14px;
           align-items: end;
-          margin-bottom: 20px;
+          margin-bottom: 12px;
         }
 
         .filters-row-main {
@@ -770,22 +959,49 @@ const Dashboard = () => {
         .filter-label {
           font-weight: 600;
           color: ${CORPORATE_COLORS.primary};
-          font-size: 0.95rem;
+          font-size: 0.9rem;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.4px;
         }
 
         .filter-select, .filter-input {
-          padding: 14px 16px;
-          border: 2px solid ${CORPORATE_COLORS.primary};
-          border-radius: 12px;
-          font-size: 1rem;
-          transition: all 0.3s ease;
+          padding: 12px 14px;
+          border: 1px solid ${CORPORATE_COLORS.primary};
+          border-radius: 10px;
+          font-size: 0.95rem;
+          transition: all 0.25s ease;
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
           color: ${CORPORATE_COLORS.darkGray};
-          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.1);
+          box-shadow: 0 1px 6px rgba(121, 188, 153, 0.08);
           width: 100%;
           box-sizing: border-box;
+          min-height: 48px;
+          display: flex;
+          align-items: center;
+        }
+
+        /* Estilo especial para cuando el filtro está en "Todos" */
+        .filter-select:has(option[value=""]:checked),
+        .filter-select[value=""] {
+          background: linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%);
+          border-color: ${CORPORATE_COLORS.mediumGray};
+          color: ${CORPORATE_COLORS.mediumGray};
+          font-style: italic;
+        }
+
+        /* Estilo para opciones seleccionadas */
+        .filter-select option:checked {
+          background: ${CORPORATE_COLORS.primary};
+          color: white;
+          font-weight: 600;
+        }
+
+        /* Estilo para la opción "Todos" */
+        .filter-select option[value=""] {
+          background: #F8F9FA;
+          color: ${CORPORATE_COLORS.mediumGray};
+          font-style: italic;
+          font-weight: 500;
         }
 
         .filter-select:focus, .filter-input:focus {
@@ -808,6 +1024,21 @@ const Dashboard = () => {
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
+          }
+
+          .filters-actions {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+          }
+
+          .filters-status {
+            justify-content: center;
+          }
+
+          .filters-active, .filters-all {
+            font-size: 0.8rem;
+            padding: 5px 10px;
           }
 
           .filters-container {
@@ -838,6 +1069,15 @@ const Dashboard = () => {
             margin-bottom: 15px;
           }
 
+          .filters-actions {
+            gap: 10px;
+          }
+
+          .filters-active, .filters-all {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+          }
+
           .filters-container {
             gap: 12px;
           }
@@ -862,34 +1102,35 @@ const Dashboard = () => {
             SECCIÓN DE KPIs - DISEÑO MEJORADO
         ======================================================================== */
         .kpis-section {
-          margin-bottom: 40px;
-          padding: 30px;
-          background: linear-gradient(135deg, rgba(212, 230, 241, 0.3) 0%, rgba(232, 244, 248, 0.3) 100%);
-          border-radius: 25px;
-          border: 1px solid rgba(121, 188, 153, 0.2);
+          margin-bottom: 22px;
+          padding: 20px;
+          background: linear-gradient(135deg, rgba(212, 230, 241, 0.35) 0%, rgba(232, 244, 248, 0.35) 100%);
+          border-radius: 18px;
+          border: 1px solid rgba(121, 188, 153, 0.25);
         }
 
         .kpis-container {
           display: flex;
           flex-direction: column;
-          gap: 30px;
+          gap: 16px;
         }
 
         .kpis-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 18px;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 14px;
+          align-items: stretch;
         }
 
         /* Estilos para las tarjetas de KPI - Colores corporativos */
         .kpis-grid .kpi {
           background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%) !important;
           color: white !important;
-          border-radius: 20px !important;
-          padding: 25px !important;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.25) !important;
-          border: 2px solid rgba(255, 255, 255, 0.2) !important;
-          transition: all 0.3s ease !important;
+          border-radius: 16px !important;
+          padding: 16px !important;
+          box-shadow: 0 6px 18px rgba(121, 188, 153, 0.22) !important;
+          border: 1px solid rgba(255, 255, 255, 0.18) !important;
+          transition: all 0.25s ease !important;
           position: relative !important;
           overflow: hidden !important;
         }
@@ -912,7 +1153,7 @@ const Dashboard = () => {
 
         /* Estilos para el contenido de los KPIs */
         .kpis-grid .kpi .kpi-label {
-          font-size: 0.9rem !important;
+          font-size: 0.85rem !important;
           font-weight: 600 !important;
           color: rgba(255, 255, 255, 0.9) !important;
           text-transform: uppercase !important;
@@ -921,7 +1162,7 @@ const Dashboard = () => {
         }
 
         .kpis-grid .kpi .kpi-value {
-          font-size: 1.6rem !important;
+          font-size: 1.4rem !important;
           font-weight: 700 !important;
           color: #FFFFFF !important;
           margin-bottom: 5px !important;
@@ -934,12 +1175,20 @@ const Dashboard = () => {
           font-size: 0.85rem !important;
           color: rgba(255, 255, 255, 0.8) !important;
           font-weight: 500 !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
         }
 
         /* Estilos específicos para cada fila de KPIs */
-        .kpis-row-1 { grid-template-columns: repeat(2, 1fr); }
+        .kpis-row-1 { 
+          grid-template-columns: repeat(1, 1fr);
+          max-width: 500px;
+          margin: 0 auto;
+        }
         .kpis-row-2 { grid-template-columns: repeat(2, 1fr); }
         .kpis-row-5 { grid-template-columns: repeat(5, 1fr); }
+        .kpis-row-6 { grid-template-columns: repeat(6, 1fr); }
 
         .kpis-row-3 {
           grid-template-columns: repeat(1, 1fr);
@@ -1078,6 +1327,61 @@ const Dashboard = () => {
           font-size: 0.9rem;
           color: ${CORPORATE_COLORS.darkGray};
           font-weight: 500;
+        }
+
+        /* =====================
+           Leyenda compacta (chips)
+           ===================== */
+        .map-legend-compact {
+          padding: 10px 12px;
+          border-radius: 12px;
+          margin-bottom: 12px;
+        }
+        .legend-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+        }
+        .legend-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: #ffffff;
+          border: 1px solid ${CORPORATE_COLORS.primary};
+          color: ${CORPORATE_COLORS.darkGray};
+          font-size: 12px;
+          line-height: 1;
+          white-space: nowrap;
+          max-width: 100%;
+        }
+        .legend-chip .legend-label {
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .legend-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          border: 2px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          flex: 0 0 auto;
+        }
+        @media (max-width: 1200px) {
+          .legend-chip { font-size: 11px; padding: 5px 8px; }
+          .legend-dot { width: 9px; height: 9px; }
+        }
+        @media (max-width: 768px) {
+          .map-legend-compact { padding: 8px 10px; }
+          .legend-chips { gap: 6px; }
+          .legend-chip { font-size: 10px; padding: 4px 7px; }
+          .legend-dot { width: 8px; height: 8px; }
+        }
+        @media (max-width: 480px) {
+          .legend-chip { font-size: 9.5px; padding: 4px 6px; }
+          .legend-dot { width: 7px; height: 7px; }
         }
 
         /* ========================================================================
@@ -1316,12 +1620,60 @@ const Dashboard = () => {
         }
 
         /* ========================================================================
+            SECCIÓN DEL GRÁFICO PRINCIPAL
+        ======================================================================== */
+        .main-chart-section {
+          margin-bottom: 30px;
+          padding: 20px;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 20px;
+          border: 1px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+          overflow: hidden;
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .main-chart-section .simple-chart-container {
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          padding: 0;
+          width: 100%;
+          max-width: 100%;
+        }
+
+        /* Hacer que el gráfico ocupe todo el ancho disponible */
+        .main-chart-section .simple-chart-container .chart-svg {
+          width: 100%;
+          max-width: 100%;
+        }
+
+        /* ========================================================================
+            SCROLL SUAVE Y ORGANIZACIÓN
+        ======================================================================== */
+        .dashboard-content {
+          scroll-behavior: smooth;
+          overflow-x: hidden;
+        }
+
+        .dashboard-content > * {
+          scroll-margin-top: 100px;
+        }
+
+        /* ========================================================================
             DISEÑO RESPONSIVE
         ======================================================================== */
         @media (max-width: 1200px) {
           .kpis-row-5 { grid-template-columns: repeat(4, 1fr); }
+          .kpis-row-6 { grid-template-columns: repeat(4, 1fr); }
           .main-content {
             grid-template-columns: 1fr;
+          }
+          
+          .main-chart-section {
+            padding: 15px;
+            margin-bottom: 25px;
           }
         }
 
@@ -1334,6 +1686,8 @@ const Dashboard = () => {
             padding: 20px;
             margin-bottom: 20px;
           }
+
+          .filters-actions { margin-bottom: 10px; }
 
           .filters-container {
             grid-template-columns: 1fr;
@@ -1355,26 +1709,24 @@ const Dashboard = () => {
             border-radius: 10px;
           }
 
-          .kpis-section {
-            padding: 20px;
-            margin-bottom: 25px;
-          }
+          .kpis-section { padding: 16px; margin-bottom: 18px; }
 
           .kpis-container {
-            gap: 20px;
+            gap: 12px;
           }
 
-          .kpis-grid { grid-template-columns: 1fr; gap: 15px; }
+          .kpis-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
           .kpis-row-5 { grid-template-columns: repeat(2, 1fr); }
+          .kpis-row-6 { grid-template-columns: repeat(2, 1fr); }
 
           .kpis-grid .kpi {
-            padding: 20px !important;
+            padding: 14px !important;
           }
 
-          .kpis-grid .kpi .kpi-value { font-size: 1.4rem !important; }
+          .kpis-grid .kpi .kpi-value { font-size: 1.25rem !important; }
 
           .kpis-grid .kpi .kpi-label {
-            font-size: 0.8rem !important;
+            font-size: 0.78rem !important;
           }
 
           .map-main-panel {
@@ -1432,6 +1784,13 @@ const Dashboard = () => {
           .percentage-bar {
             width: 100%;
           }
+
+          /* Estilos específicos para el gráfico principal en móviles */
+          .main-chart-section {
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+          }
         }
 
         @media (max-width: 480px) {
@@ -1443,6 +1802,8 @@ const Dashboard = () => {
             padding: 15px;
             margin-bottom: 15px;
           }
+
+          .filters-actions { margin-bottom: 10px; }
 
           .filters-container {
             gap: 12px;
@@ -1463,25 +1824,26 @@ const Dashboard = () => {
             border-radius: 8px;
           }
 
-          .kpis-section {
-            padding: 15px;
-            margin-bottom: 20px;
-          }
+          .kpis-section { padding: 12px; margin-bottom: 14px; }
 
-          .kpis-container { gap: 15px; }
+          .kpis-container { gap: 10px; }
 
-          .kpis-grid { gap: 12px; }
-          .kpis-row-5 { grid-template-columns: 1fr; }
+          .kpis-grid { gap: 14px; grid-template-columns: 1fr !important; }
+          .kpis-row-5 { grid-template-columns: 1fr !important; }
+          .kpis-row-6 { grid-template-columns: 1fr !important; }
 
           .kpis-grid .kpi {
-            padding: 18px !important;
+            padding: 12px !important;
           }
 
-          .kpis-grid .kpi .kpi-value { font-size: 1.3rem !important; }
+          .kpis-grid .kpi .kpi-value { font-size: 1.15rem !important; }
 
           .kpis-grid .kpi .kpi-label {
-            font-size: 0.75rem !important;
+            font-size: 0.72rem !important;
           }
+
+          /* Ocultar subtítulos en móviles pequeños para ahorrar espacio */
+          .kpis-grid .kpi .kpi-subtitle { display: none !important; }
 
           .map-main-panel {
             padding: 15px;
@@ -1552,6 +1914,13 @@ const Dashboard = () => {
           .percentage-value {
             font-size: 0.7rem;
           }
+
+          /* Estilos específicos para el gráfico principal en móviles pequeños */
+          .main-chart-section {
+            padding: 8px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+          }
         }
 
         @media (max-width: 360px) {
@@ -1585,6 +1954,13 @@ const Dashboard = () => {
 
           .kpis-grid .kpi .kpi-value {
             font-size: 1.4rem !important;
+          }
+
+          /* Estilos específicos para el gráfico principal en pantallas muy pequeñas */
+          .main-chart-section {
+            padding: 6px;
+            margin-bottom: 12px;
+            border-radius: 10px;
           }
         }
 

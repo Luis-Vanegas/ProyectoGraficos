@@ -1,5 +1,6 @@
 import { EChart } from '@kbox-labs/react-echarts';
 import type { EChartsOption } from 'echarts';
+import { useEffect, useRef, useState } from 'react';
 
 export default function ComboBars({
   title, dataset, dim, v1, v2
@@ -8,6 +9,25 @@ export default function ComboBars({
   dataset: Array<Array<string|number>>; // [ [dim,v1,v2], ... ] con headers en la primera fila
   dim: string; v1: string; v2: string;
 }) {
+  const [isReady, setIsReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Verificar que el contenedor tenga dimensiones antes de renderizar ECharts
+  useEffect(() => {
+    const checkDimensions = () => {
+      if (containerRef.current) {
+        const { clientWidth, clientHeight } = containerRef.current;
+        if (clientWidth > 0 && clientHeight > 0) {
+          setIsReady(true);
+        } else {
+          // Si no tiene dimensiones, esperar un poco y volver a verificar
+          setTimeout(checkDimensions, 100);
+        }
+      }
+    };
+
+    checkDimensions();
+  }, [dataset]); // Re-verificar cuando cambien los datos
   const option: EChartsOption = {
     color: ['#2aa198', '#268bd2'],
     title: { 
@@ -81,11 +101,18 @@ export default function ComboBars({
   // ⬅️ ocupa 100% del alto del contenedor .chart
   return (
     <div className="combo-chart-container">
-      <EChart 
-        option={option} 
-        style={{ width: '100%', height: '100%' }} 
-        className="combo-chart"
-      />
+      <div 
+        ref={containerRef}
+        style={{ width: '100%', height: '100%' }}
+      >
+        {isReady && (
+          <EChart 
+            option={option} 
+            style={{ width: '100%', height: '100%' }} 
+            className="combo-chart"
+          />
+        )}
+      </div>
       
       {/* Estilos CSS con responsive design */}
       <style>{`

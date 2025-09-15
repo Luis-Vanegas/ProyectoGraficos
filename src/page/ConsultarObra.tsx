@@ -1,20 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { F } from '../dataConfig';
 import { 
-  applyFilters, 
   getFilterOptions,
-  cleanDependentFilters,
-  type Row, 
-  type Filters
+  type Row
 } from '../utils/utils/metrics';
 import Navigation from '../components/Navigation';
-import WorksTable from '../components/WorksTable';
+import GanttChart from '../components/GanttChart';
 
 export default function ConsultarObra() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [status, setStatus] = useState('Cargando...');
-  const [filters, setFilters] = useState<Filters>({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [selectedWork, setSelectedWork] = useState<string>('');
 
   // Carga inicial
   useEffect(() => {
@@ -26,755 +22,1538 @@ export default function ConsultarObra() {
         const dres = await fetch(`/api/data?sheet=${encodeURIComponent(hoja)}`);
         const { rows } = await dres.json();
         setRows(rows);
-        setStatus(`${rows.length} obras cargadas`);
       } catch (e) {
         console.error(e);
-        setStatus('No se pudieron cargar los datos');
       }
     })();
   }, []);
 
-  // Función para combinar los campos de fecha en formato YYYY-MM-DD
-  const combineDateFields = (filters: any) => {
-    const newFilters = { ...filters };
-    
-    // Combinar fecha desde
-    if (filters.desdeDia && filters.desdeMes && filters.desdeAnio) {
-      newFilters.desde = `${filters.desdeAnio}-${filters.desdeMes}-${filters.desdeDia}`;
-    }
-    
-    // Combinar fecha hasta
-    if (filters.hastaDia && filters.hastaMes && filters.hastaAnio) {
-      newFilters.hasta = `${filters.hastaAnio}-${filters.hastaMes}-${filters.hastaDia}`;
-    }
-    
-    return newFilters;
-  };
-
   // Opciones de filtros dinámicas
-  const opciones = useMemo(() => getFilterOptions(rows, filters), [rows, filters]);
-  const combinedFilters = useMemo(() => combineDateFields(filters), [filters]);
+  const opciones = useMemo(() => getFilterOptions(rows, {}), [rows]);
 
-  // Aplica filtros y búsqueda
-  const filtered = useMemo(() => {
-    let filteredRows = applyFilters(rows, combinedFilters);
-    
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filteredRows = filteredRows.filter(row => {
-        // Buscar en campos relevantes
-        const campos = [
-          F.nombre,
-          F.descripcion,
-          F.proyectoEstrategico,
-          F.dependencia,
-          F.comunaOCorregimiento,
-          F.tipoDeIntervecion
-        ].filter(Boolean);
-        
-        return campos.some(campo => {
-          const valor = String(row[campo] ?? '').toLowerCase();
-          return valor.includes(term);
-        });
-      });
-    }
-    
-    return filteredRows;
-  }, [rows, filters, searchTerm]);
+  // Obtener datos del proyecto seleccionado
+  const selectedProjectData = useMemo(() => {
+    if (!selectedProject) return null;
+    return rows.find(row => String(row[F.proyectoEstrategico] ?? '') === selectedProject);
+  }, [rows, selectedProject]);
 
-  // Función para manejar cambios en filtros
-  const handleFilterChange = (filterKey: keyof Filters, value: string) => {
-    const newValue = value || undefined;
-    const newFilters = { ...filters, [filterKey]: newValue };
-    const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    setFilters(cleanedFilters);
+  // Obtener datos de la obra seleccionada
+  const selectedWorkData = useMemo(() => {
+    if (!selectedWork) return selectedProjectData;
+    return rows.find(row => String(row[F.nombre] ?? '') === selectedWork);
+  }, [rows, selectedWork, selectedProjectData]);
+
+  // Datos actuales para mostrar (obra seleccionada o proyecto)
+  const currentData = selectedWorkData || selectedProjectData;
+
+
+  // Datos para gráficos de etapas (donas)
+  const stagesData = useMemo(() => {
+    if (!currentData) return [];
+    
+    const stages = [
+      {
+        name: 'Estudios preliminares',
+        value: 28.63,
+        color: '#79BC99'
+      },
+      {
+        name: 'Viabilización(DAP)',
+        value: 4.92,
+        color: '#4E8484'
+      },
+      {
+        name: 'Gestión Predial',
+        value: 1.96,
+        color: '#3B8686'
+      },
+      {
+        name: 'Diseños',
+        value: 7.22,
+        color: '#2E8B57'
+      },
+      {
+        name: 'Ejecución de Obra',
+        value: 53.58,
+        color: '#228B22'
+      }
+    ];
+    
+    return stages;
+  }, [currentData]);
+
+  // Componente de medidor semicircular
+  const SemicircularGauge = ({ percentage, title }: { percentage: number; title: string }) => {
+    const radius = 60;
+    const strokeWidth = 8;
+    const normalizedRadius = radius - strokeWidth * 2;
+    const circumference = normalizedRadius * Math.PI;
+    const strokeDasharray = `${circumference} ${circumference}`;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+      <div className="gauge-container">
+        <div className="gauge-title">{title}</div>
+        <div className="gauge-wrapper">
+          <svg
+            className="gauge-svg"
+            height={radius * 2}
+            width={radius * 2}
+          >
+            {/* Fondo del gauge */}
+            <circle
+              stroke="#E9ECEF"
+              fill="transparent"
+              strokeWidth={strokeWidth}
+              r={normalizedRadius}
+              cx={radius}
+              cy={radius}
+              className="gauge-background"
+            />
+            {/* Progreso del gauge */}
+            <circle
+              stroke="#79BC99"
+              fill="transparent"
+              strokeWidth={strokeWidth}
+              strokeDasharray={strokeDasharray}
+              style={{ strokeDashoffset }}
+              strokeLinecap="round"
+              r={normalizedRadius}
+              cx={radius}
+              cy={radius}
+              className="gauge-progress"
+              transform={`rotate(-90 ${radius} ${radius})`}
+            />
+          </svg>
+          <div className="gauge-percentage">{percentage.toFixed(2)}%</div>
+          </div>
+        <div className="gauge-labels">
+          <span className="gauge-label-start">0.00%</span>
+          <span className="gauge-label-end">100.00%</span>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="shell">
+    <div 
+      className="consultar-obra-container"
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%)',
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+      }}
+    >
       <Navigation showBackButton={true} title="Consultar Obra" />
-      <div className="container" style={{ paddingTop: '80px' }}>
-        
-        {/* Barra de búsqueda */}
-        <div className="panel">
-          <div className="search-section">
-            <label className="search-label">
-              🔍 Buscar obra
-            </label>
-            <input
-              type="text"
-              placeholder="Buscar por nombre, descripción, proyecto, dependencia..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-
-          {/* Filtros */}
-          <div className="filters-grid">
-            {/* Proyectos estratégicos */}
-            {F.proyectoEstrategico && (
-              <label className="filter-item">
-                <span className="filter-label">Proyectos estratégicos</span>
+      
+      <div className="main-content">
+        {/* Sección de selección de proyectos */}
+        <div 
+          className="project-selection-section"
+          style={{
+            background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+            borderRadius: '15px',
+            padding: '25px',
+            boxShadow: '0 8px 25px rgba(121, 188, 153, 0.12)',
+            border: '1px solid #79BC99'
+          }}
+        >
+          <div className="selection-row">
+            <div className="selection-item">
+              <label className="selection-label" style={{color: '#000000', fontWeight: '600'}}>Proyectos estratégicos</label>
                 <select
-                  className="filter-select"
-                  value={filters.proyecto ?? ''}
-                  onChange={e => handleFilterChange('proyecto', e.target.value)}
-                >
-                  <option value="">Todos</option>
-                  {opciones.proyectos.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </label>
-            )}
-
-            {/* Dependencia */}
-            {F.dependencia && (
-              <label className="filter-item">
-                <span className="filter-label">Dependencia</span>
-                <select
-                  className="filter-select"
-                  value={filters.dependencia ?? ''}
-                  onChange={e => handleFilterChange('dependencia', e.target.value)}
-                  disabled={opciones.dependencias.length === 0}
+                className="selection-select"
+                value={selectedProject}
+                onChange={(e) => {
+                  setSelectedProject(e.target.value);
+                  setSelectedWork('');
+                }}
                 >
                   <option value="">Todas</option>
-                  {opciones.dependencias.map(v => <option key={v} value={v}>{v}</option>)}
+                {opciones.proyectos.map(project => (
+                  <option key={project} value={project}>{project}</option>
+                ))}
                 </select>
-              </label>
-            )}
-
-            {/* Comuna / Corregimiento */}
-            {F.comunaOCorregimiento && (
-              <label className="filter-item">
-                <span className="filter-label">Comuna / Corregimiento</span>
+            </div>
+            
+            <div className="selection-item">
+              <label className="selection-label" style={{color: '#000000', fontWeight: '600'}}>Nombre de la obra</label>
                 <select
-                  className="filter-select"
-                  value={filters.comuna ?? ''}
-                  onChange={e => handleFilterChange('comuna', e.target.value)}
-                  disabled={opciones.comunas.length === 0}
+                className="selection-select"
+                value={selectedWork}
+                onChange={(e) => setSelectedWork(e.target.value)}
+                disabled={!selectedProject}
                 >
                   <option value="">Todas</option>
-                  {opciones.comunas.map(v => <option key={v} value={v}>{v}</option>)}
+                {selectedProject && rows
+                  .filter(row => String(row[F.proyectoEstrategico] ?? '') === selectedProject)
+                  .map(row => (
+                    <option key={String(row[F.nombre] ?? '')} value={String(row[F.nombre] ?? '')}>
+                      {String(row[F.nombre] ?? '')}
+                    </option>
+                  ))
+                }
                 </select>
-              </label>
-            )}
-
-            {/* Tipo de Intervención */}
-            {F.tipoDeIntervecion && (
-              <label className="filter-item">
-                <span className="filter-label">Tipo de Intervención</span>
-                <select
-                  className="filter-select"
-                  value={filters.tipo ?? ''}
-                  onChange={e => handleFilterChange('tipo', e.target.value)}
-                  disabled={opciones.tipos.length === 0}
-                >
-                  <option value="">Todos</option>
-                  {opciones.tipos.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </label>
-            )}
-
-            {/* Contratista */}
-            {F.contratistaOperador && (
-              <label className="filter-item">
-                <span className="filter-label">Contratista</span>
-                <select
-                  className="filter-select"
-                  value={filters.contratista ?? ''}
-                  onChange={e => handleFilterChange('contratista', e.target.value)}
-                  disabled={opciones.contratistas?.length === 0}
-                >
-                  <option value="">Todos</option>
-                  {opciones.contratistas?.map(v => <option key={v} value={v}>{v}</option>) || []}
-                </select>
-              </label>
-            )}
-
-            {/* Estado de la Obra */}
-            <label className="filter-item">
-              <span className="filter-label">Estado de la Obra</span>
-              <select
-                className="filter-select"
-                value={filters.estadoDeLaObra ?? ''}
-                onChange={e => handleFilterChange('estadoDeLaObra', e.target.value)}
-              >
-                <option value="">Todos los estados</option>
-                <option value="entregada">Obra Entregada</option>
-                <option value="en-ejecucion">En Ejecución</option>
-                <option value="en-planeacion">En Planeación</option>
-                <option value="suspendida">Suspendida</option>
-                <option value="cancelada">Cancelada</option>
-              </select>
-            </label>
-
-            {/* Filtros de fecha */}
-            {(F.fechaRealDeEntrega || F.fechaEstimadaDeEntrega) && (
-              <>
-                <div className="filter-group">
-                  <label className="filter-label">Fecha desde</label>
-                  <div className="date-inputs">
-                    <select
-                      className="filter-select date-day"
-                      value={filters.desdeDia ?? ''}
-                      onChange={e => setFilters(f => ({ ...f, desdeDia: e.target.value || undefined }))}
-                    >
-                      <option value="">Día</option>
-                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
-                        <option key={day} value={day.toString().padStart(2, '0')}>
-                          {day.toString().padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className="filter-select date-month"
-                      value={filters.desdeMes ?? ''}
-                      onChange={e => setFilters(f => ({ ...f, desdeMes: e.target.value || undefined }))}
-                    >
-                      <option value="">Mes</option>
-                      <option value="01">Enero</option>
-                      <option value="02">Febrero</option>
-                      <option value="03">Marzo</option>
-                      <option value="04">Abril</option>
-                      <option value="05">Mayo</option>
-                      <option value="06">Junio</option>
-                      <option value="07">Julio</option>
-                      <option value="08">Agosto</option>
-                      <option value="09">Septiembre</option>
-                      <option value="10">Octubre</option>
-                      <option value="11">Noviembre</option>
-                      <option value="12">Diciembre</option>
-                    </select>
-                    <select
-                      className="filter-select date-year"
-                      value={filters.desdeAnio ?? ''}
-                      onChange={e => setFilters(f => ({ ...f, desdeAnio: e.target.value || undefined }))}
-                    >
-                      <option value="">Año</option>
-                      {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
                   </div>
                 </div>
-                <div className="filter-group">
-                  <label className="filter-label">Fecha hasta</label>
-                  <div className="date-inputs">
-                    <select
-                      className="filter-select date-day"
-                      value={filters.hastaDia ?? ''}
-                      onChange={e => setFilters(f => ({ ...f, hastaDia: e.target.value || undefined }))}
-                    >
-                      <option value="">Día</option>
-                      {Array.from({length: 31}, (_, i) => i + 1).map(day => (
-                        <option key={day} value={day.toString().padStart(2, '0')}>
-                          {day.toString().padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className="filter-select date-month"
-                      value={filters.hastaMes ?? ''}
-                      onChange={e => setFilters(f => ({ ...f, hastaMes: e.target.value || undefined }))}
-                    >
-                      <option value="">Mes</option>
-                      <option value="01">Enero</option>
-                      <option value="02">Febrero</option>
-                      <option value="03">Marzo</option>
-                      <option value="04">Abril</option>
-                      <option value="05">Mayo</option>
-                      <option value="06">Junio</option>
-                      <option value="07">Julio</option>
-                      <option value="08">Agosto</option>
-                      <option value="09">Septiembre</option>
-                      <option value="10">Octubre</option>
-                      <option value="11">Noviembre</option>
-                      <option value="12">Diciembre</option>
-                    </select>
-                    <select
-                      className="filter-select date-year"
-                      value={filters.hastaAnio ?? ''}
-                      onChange={e => setFilters(f => ({ ...f, hastaAnio: e.target.value || undefined }))}
-                    >
-                      <option value="">Año</option>
-                      {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
+          
+          {/* Descripción del proyecto */}
+          <div className="description-section">
+            <label className="description-label">Descripción</label>
+            <div className="description-content">
+              {currentData ? (
+                <p>
+                  {String(currentData[F.descripcion] ?? 'Construcción de piscina semiolímpica recreativa (125 x 25 m. 312.5 m² de lámina de agua), que incluye: Movimiento de tierras y excavación. Cimentación y estructur...')}
+                </p>
+              ) : (
+                <p>Selecciona un proyecto estratégico para ver su descripción</p>
+              )}
+            </div>
                   </div>
                 </div>
-              </>
-            )}
+
+        {/* Sección de detalles del proyecto */}
+        <div 
+          className="project-details-section"
+          style={{
+            background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+            borderRadius: '15px',
+            padding: '25px',
+            boxShadow: '0 8px 25px rgba(121, 188, 153, 0.12)',
+            border: '1px solid #79BC99'
+          }}
+        >
+          <div className="details-grid">
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Comuna / Corregimiento</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.comunaOCorregimiento] ?? '01 - Popular') : '01 - Popular'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '85%'}}></div>
+              </div>
+            </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Empleos generados</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.empleosGenerados] ?? '6298') : '6298'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '75%'}}></div>
+              </div>
+            </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Área Construida m2</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.areaConstruida] ?? '498573') : '498573'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '90%'}}></div>
+                  </div>
+                </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Tipo de intervención</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.tipoDeIntervecion] ?? 'Restitución') : 'Restitución'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '60%'}}></div>
+                  </div>
+                </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Área espacio público m2</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.areaEspacioPublico] ?? '272517') : '272517'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '80%'}}></div>
+                  </div>
+                </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Contratista</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.contratistaOperador] ?? 'No especificado') : 'No especificado'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '70%'}}></div>
+                  </div>
+                </div>
+
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Dependencia</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.dependencia] ?? 'Agencia de Educación Superior de Medell...') : 'Agencia de Educación Superior de Medell...'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '95%'}}></div>
+                  </div>
+                </div>
+
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Alerta</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.descripcionDelRiesgo] ?? 'Sin alertas') : 'Sin alertas'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '30%'}}></div>
+              </div>
+            </div>
+
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Criterio técnico</span>
+              <span className="detail-value">
+                No especificado
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '50%'}}></div>
+                  </div>
+                </div>
           </div>
         </div>
 
-        {/* Resultados */}
-        <div className="panel">
-          <div className="results-header">
-            <h3>Resultados de la búsqueda</h3>
-            <div className="results-count">
-              {filtered.length} obras encontradas
+        {/* Sección de resumen financiero */}
+        <div 
+          className="financial-overview-section"
+          style={{
+            background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+            borderRadius: '15px',
+            padding: '25px',
+            boxShadow: '0 8px 25px rgba(121, 188, 153, 0.12)',
+            border: '1px solid #79BC99'
+          }}
+        >
+          <div className="financial-cards">
+            <div className="financial-card total-investment">
+              <div className="financial-label">INVERSIÓN TOTAL</div>
+              <div className="financial-value">
+                {currentData ? 
+                  `$${((Number(currentData[F.costoTotalActualizado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
+                  '$10,69 bill.'
+                }
             </div>
           </div>
 
-          {filtered.length > 0 ? (
-            <WorksTable
-              title=""
-              works={filtered}
-              type="entregadas"
-              maxRows={20}
-            />
-          ) : (
-            <div className="no-results">
-              {searchTerm || Object.keys(filters).some(k => filters[k as keyof Filters]) 
-                ? 'No se encontraron obras con los criterios especificados'
-                : 'Ingresa un término de búsqueda o selecciona filtros para encontrar obras'
-              }
+            <div className="financial-card budget-executed">
+              <div className="financial-label">PRESUPUESTO EJECUTADO</div>
+              <div className="financial-value">
+                {currentData ? 
+                  `$${((Number(currentData[F.presupuestoEjecutado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
+                  '$2.29 bill.'
+                }
+              </div>
             </div>
-          )}
+            </div>
+          </div>
+
+        {/* Sección de etapas con gráficos de dona */}
+        <div 
+          className="stages-section"
+          style={{
+            background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+            borderRadius: '15px',
+            padding: '25px',
+            boxShadow: '0 8px 25px rgba(121, 188, 153, 0.12)',
+            border: '1px solid #79BC99'
+          }}
+        >
+          <h3 className="stages-title" style={{color: '#000000', fontWeight: '600'}}>Etapas</h3>
+          <div className="stages-grid">
+            {stagesData.map((stage, index) => (
+              <div key={index} className="stage-card">
+                <SemicircularGauge 
+                  percentage={stage.value} 
+                  title={stage.name} 
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Estado de carga */}
-        <div className="status-indicator">{status}</div>
+        {/* Gráfico de Gantt */}
+        <div 
+          className="gantt-section"
+          style={{
+            background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+            borderRadius: '15px',
+            padding: '25px',
+            boxShadow: '0 8px 25px rgba(121, 188, 153, 0.12)',
+            border: '1px solid #79BC99'
+          }}
+        >
+          <h3 className="gantt-title" style={{color: '#000000', fontWeight: '600'}}>Cronograma del Proyecto</h3>
+          <div className="gantt-container">
+            <GanttChart 
+              rows={currentData ? [currentData] : []} 
+              limit={10}
+              mode="phase"
+            />
+            </div>
+        </div>
       </div>
 
-      {/* Estilos CSS con responsive design */}
+      {/* Estilos CSS profesionales y responsive */}
       <style>{`
-        .shell {
-          min-height: 100vh;
-          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        .consultar-obra-container {
+          min-height: 100vh !important;
+          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%) !important;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
 
-        .container {
+        .main-content {
           max-width: 1400px;
           margin: 0 auto;
-          padding: 0 20px;
-        }
-
-        .panel {
-          background: white;
-          border-radius: 15px;
-          padding: 25px;
-          margin-bottom: 25px;
-          box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-          border: 1px solid #e0e0e0;
-        }
-
-        .search-section {
-          margin-bottom: 25px;
-        }
-
-        .search-label {
-          display: block;
-          margin-bottom: 12px;
-          font-weight: 600;
-          font-size: 1.1rem;
-          color: #333;
-        }
-
-        .search-input {
-          width: 100%;
-          padding: 15px;
-          font-size: 16px;
-          border: 2px solid #ddd;
-          border-radius: 10px;
-          outline: none;
-          transition: all 0.3s ease;
-          box-sizing: border-box;
-        }
-
-        .search-input:focus {
-          border-color: #00904c;
-          box-shadow: 0 0 0 3px rgba(0, 144, 76, 0.1);
-        }
-
-        .filters-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 20px;
-        }
-
-        .filter-item {
+          padding: 100px 20px 20px 20px;
           display: flex;
           flex-direction: column;
-          gap: 8px;
-        }
-
-        .filter-label {
-          font-weight: 600;
-          color: #555;
-          font-size: 0.95rem;
-        }
-
-        .filter-select {
-          padding: 12px;
-          border: 2px solid #ddd;
-          border-radius: 8px;
-          font-size: 14px;
-          background: white;
-          transition: all 0.3s ease;
-        }
-
-        .filter-select:focus {
-          outline: none;
-          border-color: #00904c;
-          box-shadow: 0 0 0 3px rgba(0, 144, 76, 0.1);
-        }
-
-        .results-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-          flex-wrap: wrap;
-          gap: 15px;
-        }
-
-        .results-header h3 {
-          margin: 0;
-          color: #333;
-          font-size: 1.3rem;
-        }
-
-        .results-count {
-          background: #00904c;
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: 600;
-        }
-
-        .no-results {
-          text-align: center;
-          padding: 40px;
-          color: #666;
-          font-size: 18px;
-          background: #f8f9fa;
-          border-radius: 10px;
-          border: 2px dashed #ddd;
-        }
-
-        .status-indicator {
-          opacity: 0.7;
-          text-align: center;
-          padding: 20px;
-          color: #666;
-          font-style: italic;
+          gap: 30px;
         }
 
         /* ========================================================================
-            DISEÑO RESPONSIVE COMPLETO
+            SECCIÓN DE SELECCIÓN DE PROYECTOS
+        ======================================================================== */
+        .project-selection-section {
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%) !important;
+          border-radius: 15px !important;
+          padding: 25px !important;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12) !important;
+          border: 1px solid #79BC99 !important;
+        }
+
+        .selection-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 30px;
+          margin-bottom: 25px;
+        }
+
+        .selection-item {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .selection-label {
+          font-weight: 600 !important;
+          color: #000000 !important;
+          font-size: 1rem !important;
+        }
+
+        .selection-select {
+          padding: 12px 15px !important;
+          border: 2px solid #79BC99 !important;
+          border-radius: 10px !important;
+          font-size: 16px !important;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%) !important;
+          color: #000000 !important;
+          transition: all 0.3s ease !important;
+          cursor: pointer !important;
+        }
+
+        .selection-select:focus {
+          outline: none;
+          border-color: #3B8686;
+          box-shadow: 0 0 0 3px rgba(59, 134, 134, 0.25);
+        }
+
+        .selection-select:disabled {
+          background: #F8F9FA;
+          color: #6C757D;
+          cursor: not-allowed;
+        }
+
+        .description-section {
+          margin-top: 20px;
+        }
+
+        .description-label {
+          display: block;
+          font-weight: 600;
+          color: #2C3E50;
+          font-size: 1rem;
+          margin-bottom: 10px;
+        }
+
+        .description-content {
+          background: #F8F9FA;
+          border: 1px solid #E9ECEF;
+          border-radius: 10px;
+          padding: 15px;
+          min-height: 80px;
+        }
+
+        .description-content p {
+          margin: 0;
+          color: #6C757D;
+          line-height: 1.5;
+        }
+
+        /* ========================================================================
+            SECCIÓN DE DETALLES DEL PROYECTO
+        ======================================================================== */
+        .project-details-section {
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 15px;
+          padding: 25px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+          border: 1px solid #79BC99;
+        }
+
+        .details-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+        }
+
+        .detail-item {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 15px;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%) !important;
+          border-radius: 10px;
+          border: 1px solid #79BC99 !important;
+          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1) !important;
+        }
+
+        .detail-label {
+          font-weight: 600 !important;
+          color: #000000 !important;
+          font-size: 0.9rem !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+        }
+
+        .detail-value {
+          font-weight: 500 !important;
+          color: #000000 !important;
+          font-size: 1rem !important;
+        }
+
+        .progress-bar {
+          width: 100%;
+          height: 8px;
+          background: rgba(121, 188, 153, 0.2);
+          border-radius: 4px;
+          overflow: hidden;
+          margin-top: 8px;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #79BC99 0%, #4E8484 100%);
+          border-radius: 4px;
+          transition: width 0.3s ease;
+        }
+
+        /* ========================================================================
+            MEDIDORES SEMICIRCULARES (GAUGES)
+        ======================================================================== */
+        .gauge-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 20px;
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 15px;
+          border: 1px solid #79BC99;
+          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
+          min-height: 200px;
+          justify-content: center;
+        }
+
+        .gauge-title {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #000000;
+          text-align: center;
+          margin-bottom: 15px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .gauge-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 10px;
+        }
+
+        .gauge-svg {
+          transform: rotate(-90deg);
+        }
+
+        .gauge-background {
+          opacity: 0.3;
+        }
+
+        .gauge-progress {
+          transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+
+        .gauge-percentage {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #000000;
+          text-align: center;
+        }
+
+        .gauge-labels {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+          max-width: 120px;
+          font-size: 0.7rem;
+          color: #6C757D;
+        }
+
+        .gauge-label-start,
+        .gauge-label-end {
+          font-size: 0.7rem;
+          color: #6C757D;
+        }
+
+        /* ========================================================================
+            SECCIÓN DE RESUMEN FINANCIERO
+        ======================================================================== */
+        .financial-overview-section {
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 15px;
+          padding: 25px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+          border: 1px solid #79BC99;
+        }
+
+        .financial-cards {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 30px;
+        }
+
+        .financial-card {
+          text-align: center;
+          padding: 30px;
+          border-radius: 15px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+          transition: transform 0.3s ease;
+        }
+
+        .financial-card:hover {
+          transform: translateY(-5px);
+        }
+
+        .total-investment {
+          background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%) !important;
+          color: white !important;
+        }
+
+        .budget-executed {
+          background: linear-gradient(135deg, #3B8686 0%, #2E8B57 100%) !important;
+          color: white !important;
+        }
+
+        .financial-label {
+          font-size: 0.9rem !important;
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 1px !important;
+          margin-bottom: 10px !important;
+          color: white !important;
+          opacity: 0.9 !important;
+        }
+
+        .financial-value {
+          font-size: 2.5rem !important;
+          font-weight: 700 !important;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+          color: white !important;
+        }
+
+        /* ========================================================================
+            SECCIÓN DE ETAPAS
+        ======================================================================== */
+        .stages-section {
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 15px;
+          padding: 25px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+          border: 1px solid #79BC99;
+        }
+
+        .stages-title {
+          margin: 0 0 25px 0 !important;
+          color: #000000 !important;
+          font-size: 1.5rem !important;
+          font-weight: 600 !important;
+          text-align: center !important;
+        }
+
+        .stages-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 20px;
+        }
+
+        .stage-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 20px;
+          background: #F8F9FA;
+          border-radius: 15px;
+          border: 1px solid #E9ECEF;
+          transition: transform 0.3s ease;
+        }
+
+        .stage-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.2);
+        }
+
+        .stage-chart {
+          width: 100%;
+          height: 120px;
+          margin-bottom: 15px;
+        }
+
+        .stage-info {
+          text-align: center;
+        }
+
+        .stage-name {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #2C3E50;
+          margin-bottom: 5px;
+        }
+
+        .stage-progress {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #79BC99;
+        }
+
+        /* ========================================================================
+            SECCIÓN DE GANTT
+        ======================================================================== */
+        .gantt-section {
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 15px;
+          padding: 25px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+          border: 1px solid #79BC99;
+        }
+
+        .gantt-title {
+          margin: 0 0 25px 0 !important;
+          color: #000000 !important;
+          font-size: 1.5rem !important;
+          font-weight: 600 !important;
+          text-align: center !important;
+        }
+
+        .gantt-container {
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        /* ========================================================================
+            DISEÑO RESPONSIVE COMPLETO Y OPTIMIZADO
         ======================================================================== */
         
+        /* ========================================================================
+            TABLETS LANDSCAPE (1024px - 1200px)
+        ======================================================================== */
         @media (max-width: 1200px) {
-          .container {
-            padding: 0 15px;
+          .main-content {
+            padding: 90px 15px 15px 15px;
+            gap: 25px;
           }
           
-          .filters-grid {
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          .project-selection-section,
+          .project-details-section,
+          .financial-overview-section,
+          .stages-section,
+          .gantt-section {
+            padding: 22px;
+          }
+          
+          .selection-row {
+            gap: 20px;
+          }
+          
+          .selection-select {
+            padding: 11px 14px;
+            font-size: 15px;
+          }
+          
+          .details-grid {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 18px;
           }
-        }
-        
-        @media (max-width: 768px) {
-          .container {
-            padding: 0 12px;
+          
+          .detail-item {
+            padding: 14px;
           }
           
-          .panel {
+          .financial-cards {
+            gap: 25px;
+          }
+          
+          .financial-card {
+            padding: 25px;
+          }
+          
+          .financial-value {
+            font-size: 2.2rem;
+          }
+          
+          .stages-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+          }
+          
+          .stage-card {
+            padding: 18px;
+          }
+          
+          .stage-chart {
+            height: 110px;
+          }
+        }
+
+        /* ========================================================================
+            TABLETS PORTRAIT (768px - 1024px)
+        ======================================================================== */
+        @media (max-width: 1024px) {
+          .main-content {
+            padding: 85px 12px 12px 12px;
+            gap: 22px;
+          }
+          
+          .project-selection-section,
+          .project-details-section,
+          .financial-overview-section,
+          .stages-section,
+          .gantt-section {
             padding: 20px;
-            margin-bottom: 20px;
             border-radius: 12px;
           }
           
-          .search-section {
-            margin-bottom: 20px;
+          .selection-row {
+            gap: 18px;
+            margin-bottom: 18px;
           }
           
-          .search-label {
-            font-size: 1rem;
-            margin-bottom: 10px;
+          .selection-select {
+            padding: 10px 12px;
+            font-size: 14px;
           }
           
-          .search-input {
+          .description-content {
+            padding: 14px;
+            min-height: 70px;
+          }
+          
+          .details-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+          }
+          
+          .detail-item {
+            padding: 13px;
+          }
+          
+          .detail-label {
+            font-size: 0.85rem;
+          }
+          
+          .detail-value {
+            font-size: 0.95rem;
+          }
+          
+          .financial-cards {
+            gap: 20px;
+          }
+          
+          .financial-card {
+            padding: 22px;
+          }
+          
+          .financial-value {
+            font-size: 2rem;
+          }
+          
+          .stages-grid {
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+          }
+          
+          .stage-card {
+            padding: 16px;
+          }
+          
+          .stage-chart {
+            height: 100px;
+            margin-bottom: 12px;
+          }
+          
+          .stage-name {
+            font-size: 0.85rem;
+          }
+          
+          .stage-progress {
+            font-size: 1.1rem;
+          }
+        }
+
+        /* ========================================================================
+            MÓVILES LANDSCAPE (480px - 768px)
+        ======================================================================== */
+        @media (max-width: 768px) {
+          .main-content {
+            padding: 80px 10px 10px 10px;
+            gap: 20px;
+          }
+          
+          .project-selection-section,
+          .project-details-section,
+          .financial-overview-section,
+          .stages-section,
+          .gantt-section {
+            padding: 18px;
+            border-radius: 12px;
+          }
+          
+          .selection-row {
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 18px;
+          }
+          
+          .selection-label {
+            font-size: 0.95rem;
+          }
+          
+          .selection-select {
+            padding: 10px 12px;
+            font-size: 14px;
+          }
+          
+          .description-section {
+            margin-top: 15px;
+          }
+          
+          .description-content {
             padding: 12px;
-            font-size: 15px;
-            border-radius: 8px;
+            min-height: 65px;
           }
           
-          .filters-grid {
+          .description-content p {
+            font-size: 0.9rem;
+            line-height: 1.4;
+          }
+          
+          .details-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+          
+          .detail-item {
+            padding: 12px;
+          }
+          
+          .detail-label {
+            font-size: 0.8rem;
+          }
+          
+          .detail-value {
+            font-size: 0.9rem;
+          }
+          
+          .financial-cards {
             grid-template-columns: 1fr;
             gap: 15px;
           }
           
-          .filter-select {
-            padding: 10px;
-            font-size: 14px;
+          .financial-card {
+            padding: 20px;
           }
           
-          .results-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
+          .financial-label {
+            font-size: 0.85rem;
           }
           
-          .results-header h3 {
-            font-size: 1.2rem;
+          .financial-value {
+            font-size: 1.8rem;
           }
           
-          .no-results {
-            padding: 30px 20px;
-            font-size: 16px;
+          .stages-title,
+          .gantt-title {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+          }
+          
+          .stages-grid {
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+          }
+          
+          .stage-card {
+            padding: 14px;
+          }
+          
+          .stage-chart {
+            height: 90px;
+            margin-bottom: 10px;
+          }
+          
+          .stage-name {
+            font-size: 0.8rem;
+          }
+          
+          .stage-progress {
+            font-size: 1rem;
           }
         }
-        
+
+        /* ========================================================================
+            MÓVILES PORTRAIT (360px - 480px)
+        ======================================================================== */
         @media (max-width: 480px) {
-          .container {
-            padding: 0 10px;
+          .main-content {
+            padding: 75px 8px 8px 8px;
+            gap: 15px;
           }
           
-          .panel {
+          .project-selection-section,
+          .project-details-section,
+          .financial-overview-section,
+          .stages-section,
+          .gantt-section {
             padding: 15px;
-            margin-bottom: 15px;
             border-radius: 10px;
           }
           
-          .search-section {
+          .selection-row {
+            gap: 12px;
             margin-bottom: 15px;
           }
           
-          .search-label {
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-          }
-          
-          .search-input {
-            padding: 10px;
-            font-size: 14px;
-            border-radius: 6px;
-          }
-          
-          .filters-grid {
-            gap: 12px;
-          }
-          
-          .filter-select {
-            padding: 8px;
-            font-size: 13px;
-            border-radius: 6px;
-          }
-          
-          .results-header h3 {
-            font-size: 1.1rem;
-          }
-          
-          .no-results {
-            padding: 25px 15px;
-            font-size: 15px;
-          }
-        }
-
-        /* Estilos para los inputs de fecha tipo calendario */
-        .date-inputs {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-          flex-wrap: wrap;
-          justify-content: flex-start;
-        }
-
-        .date-inputs .filter-select {
-          border: 2px solid #79BC99;
-          border-radius: 8px;
-          padding: 8px 12px;
-          font-size: 14px;
-          background: white;
-          color: #2c3e50;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .date-inputs .filter-select:hover {
-          border-color: #4E8484;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-
-        .date-inputs .filter-select:focus {
-          outline: none;
-          border-color: #3B8686;
-          box-shadow: 0 0 0 3px rgba(121, 188, 153, 0.2);
-        }
-
-        .date-inputs .date-day {
-          flex: 0 0 70px;
-          min-width: 70px;
-        }
-
-        .date-inputs .date-month {
-          flex: 0 0 120px;
-          min-width: 120px;
-        }
-
-        .date-inputs .date-year {
-          flex: 0 0 90px;
-          min-width: 90px;
-        }
-
-        /* Responsive para tablets */
-        @media (max-width: 1024px) {
-          .date-inputs {
-            gap: 8px;
-          }
-          
-          .date-inputs .date-day {
-            flex: 0 0 65px;
-            min-width: 65px;
-          }
-          
-          .date-inputs .date-month {
-            flex: 0 0 110px;
-            min-width: 110px;
-          }
-          
-          .date-inputs .date-year {
-            flex: 0 0 85px;
-            min-width: 85px;
-          }
-        }
-
-        /* Responsive para móviles */
-        @media (max-width: 768px) {
-          .date-inputs {
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
-          }
-          
-          .date-inputs .filter-select {
-            width: 100%;
-            max-width: 200px;
-            margin: 0 auto;
-          }
-          
-          .date-inputs .date-day,
-          .date-inputs .date-month,
-          .date-inputs .date-year {
-            flex: none;
-            min-width: auto;
-          }
-        }
-
-        /* Responsive para móviles pequeños */
-        @media (max-width: 480px) {
-          .date-inputs {
-            gap: 6px;
-          }
-          
-          .date-inputs .filter-select {
-            padding: 6px 10px;
-            font-size: 13px;
-            max-width: 180px;
-          }
-        }
-
-        /* Mejorar la apariencia de los filtros de fecha */
-        .filter-group:has(.date-inputs) .filter-label {
-          margin-bottom: 6px;
-          color: #2c3e50;
-          font-weight: 600;
-        }
-
-        /* Ajustar el grid de filtros para fechas */
-        @media (max-width: 1200px) {
-          .filter-group:has(.date-inputs) {
-            min-width: 260px;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .filter-group:has(.date-inputs) {
-            min-width: auto;
-            width: 100%;
-          }
-          
-          .date-inputs {
-            justify-content: center;
-          }
-        }
-            font-size: 0.95rem;
-            margin-bottom: 8px;
-          }
-          
-          .search-input {
-            padding: 10px;
-            font-size: 14px;
-            border-radius: 6px;
-          }
-          
-          .filters-grid {
-            gap: 12px;
-          }
-          
-          .filter-label {
+          .selection-label {
             font-size: 0.9rem;
           }
           
-          .filter-select {
-            padding: 8px;
-            font-size: 13px;
-            border-radius: 6px;
-          }
-          
-          .results-header h3 {
-            font-size: 1.1rem;
-          }
-          
-          .results-count {
-            padding: 6px 12px;
+          .selection-select {
+            padding: 8px 10px;
             font-size: 13px;
           }
           
-          .no-results {
-            padding: 25px 15px;
-            font-size: 15px;
+          .description-section {
+            margin-top: 12px;
           }
           
-          .status-indicator {
+          .description-content {
+            padding: 10px;
+            min-height: 55px;
+          }
+          
+          .description-content p {
+            font-size: 0.85rem;
+            line-height: 1.3;
+          }
+          
+          .details-grid {
+            gap: 10px;
+          }
+          
+          .detail-item {
+            padding: 10px;
+          }
+          
+          .detail-label {
+            font-size: 0.75rem;
+          }
+          
+          .detail-value {
+            font-size: 0.85rem;
+          }
+          
+          .financial-card {
             padding: 15px;
-            font-size: 14px;
-          }
-        }
-        
-        @media (max-width: 360px) {
-          .container {
-            padding: 0 8px;
           }
           
-          .panel {
+          .financial-label {
+            font-size: 0.8rem;
+          }
+          
+          .financial-value {
+            font-size: 1.6rem;
+          }
+          
+          .stages-title,
+          .gantt-title {
+            font-size: 1.2rem;
+            margin-bottom: 18px;
+          }
+          
+          .stages-grid {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+          }
+          
+          .stage-card {
             padding: 12px;
+          }
+          
+          .stage-chart {
+            height: 80px;
+            margin-bottom: 8px;
+          }
+          
+          .stage-name {
+            font-size: 0.75rem;
+          }
+          
+          .stage-progress {
+            font-size: 0.9rem;
+          }
+        }
+
+        /* ========================================================================
+            MÓVILES PEQUEÑOS (320px - 360px)
+        ======================================================================== */
+        @media (max-width: 360px) {
+          .main-content {
+            padding: 70px 6px 6px 6px;
+          gap: 12px;
+          }
+          
+          .project-selection-section,
+          .project-details-section,
+          .financial-overview-section,
+          .stages-section,
+          .gantt-section {
+            padding: 12px;
+          border-radius: 8px;
+          }
+          
+          .selection-row {
+            gap: 10px;
             margin-bottom: 12px;
           }
           
-          .search-input {
-            padding: 8px;
-            font-size: 13px;
+          .selection-label {
+            font-size: 0.85rem;
           }
           
-          .filter-select {
-            padding: 6px;
+          .selection-select {
+            padding: 6px 8px;
             font-size: 12px;
           }
           
-          .results-header h3 {
-            font-size: 1rem;
+          .description-content {
+            padding: 8px;
+            min-height: 50px;
           }
           
-          .no-results {
-            padding: 20px 12px;
-            font-size: 14px;
+          .description-content p {
+            font-size: 0.8rem;
+            line-height: 1.2;
+          }
+          
+          .details-grid {
+            gap: 8px;
+          }
+          
+          .detail-item {
+            padding: 8px;
+          }
+          
+          .detail-label {
+            font-size: 0.7rem;
+          }
+          
+          .detail-value {
+            font-size: 0.8rem;
+          }
+          
+          .financial-card {
+            padding: 12px;
+          }
+          
+          .financial-label {
+            font-size: 0.75rem;
+          }
+          
+          .financial-value {
+            font-size: 1.4rem;
+          }
+          
+          .stages-title,
+          .gantt-title {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+          }
+          
+          .stages-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+          
+          .stage-card {
+            padding: 10px;
+          }
+          
+          .stage-chart {
+            height: 70px;
+            margin-bottom: 6px;
+          }
+          
+          .stage-name {
+            font-size: 0.7rem;
+          }
+          
+          .stage-progress {
+            font-size: 0.85rem;
+          }
+        }
+
+        /* ========================================================================
+            MÓVILES MUY PEQUEÑOS (hasta 320px)
+        ======================================================================== */
+        @media (max-width: 320px) {
+          .main-content {
+            padding: 65px 4px 4px 4px;
+            gap: 10px;
+          }
+          
+          .project-selection-section,
+          .project-details-section,
+          .financial-overview-section,
+          .stages-section,
+          .gantt-section {
+            padding: 10px;
+            border-radius: 6px;
+          }
+          
+          .selection-select {
+            padding: 5px 6px;
+            font-size: 11px;
+          }
+          
+          .description-content {
+            padding: 6px;
+            min-height: 45px;
+          }
+          
+          .description-content p {
+            font-size: 0.75rem;
+          }
+          
+          .detail-item {
+            padding: 6px;
+          }
+          
+          .detail-label {
+            font-size: 0.65rem;
+          }
+          
+          .detail-value {
+            font-size: 0.75rem;
+          }
+          
+          .financial-card {
+            padding: 10px;
+          }
+          
+          .financial-label {
+            font-size: 0.7rem;
+          }
+          
+          .financial-value {
+            font-size: 1.2rem;
+          }
+          
+          .stages-title,
+          .gantt-title {
+            font-size: 1rem;
+            margin-bottom: 12px;
+          }
+          
+          .stages-grid {
+            gap: 6px;
+          }
+          
+          .stage-card {
+            padding: 8px;
+          }
+          
+          .stage-chart {
+            height: 60px;
+            margin-bottom: 4px;
+          }
+          
+          .stage-name {
+            font-size: 0.65rem;
+          }
+          
+          .stage-progress {
+            font-size: 0.8rem;
+          }
+        }
+
+        /* ========================================================================
+            ORIENTACIÓN LANDSCAPE EN MÓVILES
+        ======================================================================== */
+        @media (max-height: 500px) and (orientation: landscape) {
+          .main-content {
+            padding: 60px 10px 10px 10px;
+            gap: 15px;
+          }
+          
+          .project-selection-section,
+          .project-details-section,
+          .financial-overview-section,
+          .stages-section,
+          .gantt-section {
+            padding: 12px;
+          }
+          
+          .selection-row {
+            margin-bottom: 10px;
+          }
+          
+          .description-content {
+            min-height: 40px;
+            padding: 8px;
+          }
+          
+          .details-grid {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+          }
+          
+          .detail-item {
+            padding: 8px;
+          }
+          
+          .financial-cards {
+            gap: 10px;
+          }
+          
+          .financial-card {
+            padding: 12px;
+          }
+          
+          .financial-value {
+            font-size: 1.5rem;
+          }
+          
+          .stages-grid {
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+          }
+          
+          .stage-card {
+            padding: 8px;
+          }
+          
+          .stage-chart {
+            height: 60px;
+            margin-bottom: 4px;
+          }
+          
+          .stages-title,
+          .gantt-title {
+            font-size: 1rem;
+            margin-bottom: 10px;
+          }
+        }
+
+        /* ========================================================================
+            MEJORAS DE ACCESIBILIDAD Y USABILIDAD
+        ======================================================================== */
+        
+        /* Mejorar el contraste en modo oscuro */
+        @media (prefers-color-scheme: dark) {
+          .consultar-obra-container {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+          }
+          
+          .project-selection-section,
+          .project-details-section,
+          .financial-overview-section,
+          .stages-section,
+          .gantt-section {
+            background: #2d2d2d;
+            border-color: #404040;
+          }
+          
+          .selection-label,
+          .description-label,
+          .stages-title,
+          .gantt-title {
+            color: #ffffff;
+          }
+          
+          .selection-select {
+            background: #3d3d3d;
+            border-color: #555;
+            color: #ffffff;
+          }
+          
+          .description-content {
+            background: #3d3d3d;
+            border-color: #555;
+          }
+          
+          .description-content p {
+            color: #cccccc;
+          }
+          
+          .detail-item {
+            background: #3d3d3d;
+            border-color: #555;
+          }
+          
+          .detail-label {
+            color: #aaaaaa;
+          }
+          
+          .detail-value {
+            color: #ffffff;
+          }
+          
+          .stage-card {
+            background: #3d3d3d;
+            border-color: #555;
+          }
+          
+          .stage-name {
+            color: #ffffff;
+          }
+        }
+
+        /* Mejorar la legibilidad para usuarios con problemas de visión */
+        @media (prefers-reduced-motion: no-preference) {
+          .financial-card:hover,
+          .stage-card:hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .financial-card:hover,
+          .stage-card:hover {
+            transform: none;
+            transition: none;
+          }
+        }
+
+        /* Mejorar el enfoque para navegación por teclado */
+        .selection-select:focus,
+        .financial-card:focus,
+        .stage-card:focus {
+          outline: 3px solid #79BC99;
+          outline-offset: 2px;
+        }
+
+        /* Optimizar para pantallas de alta densidad */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+          .financial-value,
+          .stage-progress {
+            font-weight: 600;
           }
         }
       `}</style>
