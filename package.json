@@ -4,10 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host --port 5173",
+    "dev:clean": "rm -rf .vite dist && vite --host --port 5173",
     "build": "tsc -b && vite build",
+    "build:clean": "rm -rf dist .vite && tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rm -rf node_modules package-lock.json .vite dist",
+    "fresh-install": "npm run clean && npm install",
+    "check-ports": "node check-ports.js"
   },
   "dependencies": {
     "@kbox-labs/react-echarts": "^1.4.2",
