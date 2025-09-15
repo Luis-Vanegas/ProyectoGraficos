@@ -303,7 +303,16 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
         <div className="popup-overlay" onClick={() => setShowAlertsPopup(false)}>
           <div className="popup-container alerts-popup" onClick={e => e.stopPropagation()}>
             <div className="popup-header">
-              <h3>⚠️ Alertas y Riesgos</h3>
+              <div className="header-title-section">
+                <div className="header-icon-wrapper">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>
+                <h3>Alertas y Riesgos</h3>
+              </div>
               <button 
                 className="popup-close"
                 onClick={() => setShowAlertsPopup(false)}
@@ -314,62 +323,82 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
             
             <div className="popup-content">
               <div className="alerts-summary">
-                <div className="summary-stats">
-                  <div className="stat-item alerts">
-                    <span className="stat-number">{numeroAlertas}</span>
-                    <span className="stat-label">Alertas Encontradas</span>
+                <div className="summary-card">
+                  <div className="summary-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="m9 12 2 2 4-4"/>
+                    </svg>
+                  </div>
+                  <div className="summary-content">
+                    <div className="summary-number">{numeroAlertas}</div>
+                    <div className="summary-label">Alertas Encontradas</div>
                   </div>
                 </div>
               </div>
 
               <div className="alerts-container">
                 {alertasOrdenadas.length === 0 ? (
-                  <div className="no-alerts">
-                    <p>✅ No se encontraron alertas o riesgos activos</p>
+                  <div className="no-alerts-state">
+                    <div className="no-alerts-icon">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="m9 12 2 2 4-4"/>
+                      </svg>
+                    </div>
+                    <h4>No hay alertas activas</h4>
+                    <p>Todas las obras están funcionando sin riesgos identificados</p>
                   </div>
                 ) : (
-                  alertasOrdenadas.map((obra, index) => {
-                    const impacto = String(obra[F.impactoDelRiesgo] ?? '');
-                    const presencia = String(obra[F.presenciaDeRiesgo] ?? '');
-                    const descripcion = String(obra[F.descripcionDelRiesgo] ?? '');
-                    const estadoRiesgo = String(obra[F.estadoDeRiesgo] ?? '');
-                    const claseSeveridad = impactoClase(impacto);
-                    return (
-                    <div key={index} className={`alert-item ${claseSeveridad}`}>
-                      <div className="alert-header">
-                        <h5 className="alert-obra-name">{String(obra[F.nombre] ?? 'Sin nombre')}</h5>
-                        <span className="alert-dependencia">{String(obra[F.dependencia] ?? '')}</span>
-                        {isValorValido(impacto) && (
-                          <span className={`impact-badge ${claseSeveridad}`}>{impacto}</span>
-                        )}
-                      </div>
-                      
-                      {isValorValido(presencia) && (
-                        <div className="alert-detail">
-                          <strong>Presencia de Riesgo:</strong> {presencia}
+                  <div className="alerts-list">
+                    {alertasOrdenadas.map((obra, index) => {
+                      const impacto = String(obra[F.impactoDelRiesgo] ?? '');
+                      const presencia = String(obra[F.presenciaDeRiesgo] ?? '');
+                      const descripcion = String(obra[F.descripcionDelRiesgo] ?? '');
+                      const estadoRiesgo = String(obra[F.estadoDeRiesgo] ?? '');
+                      const claseSeveridad = impactoClase(impacto);
+                      return (
+                        <div key={index} className={`alert-card ${claseSeveridad}`}>
+                          <div className="alert-card-header">
+                            <div className="alert-title-section">
+                              <h4 className="alert-obra-name">{String(obra[F.nombre] ?? 'Sin nombre')}</h4>
+                              <div className="alert-meta">
+                                <span className="alert-dependencia">{String(obra[F.dependencia] ?? '')}</span>
+                                {isValorValido(impacto) && (
+                                  <span className={`severity-badge ${claseSeveridad}`}>
+                                    {impacto}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="alert-card-content">
+                            {isValorValido(presencia) && (
+                              <div className="alert-field">
+                                <div className="field-label">Presencia de Riesgo</div>
+                                <div className="field-value">{presencia}</div>
+                              </div>
+                            )}
+                            
+                            {isValorValido(descripcion) && (
+                              <div className="alert-field">
+                                <div className="field-label">Descripción</div>
+                                <div className="field-value description-text">{descripcion}</div>
+                              </div>
+                            )}
+                            
+                            {isValorValido(estadoRiesgo) && (
+                              <div className="alert-field">
+                                <div className="field-label">Estado del Riesgo</div>
+                                <div className="field-value">{estadoRiesgo}</div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      
-                      {isValorValido(descripcion) && (
-                        <div className="alert-detail">
-                          <strong>Descripción:</strong> {descripcion}
-                        </div>
-                      )}
-                      
-                      {isValorValido(impacto) && (
-                        <div className="alert-detail">
-                          <strong>Impacto:</strong> {impacto}
-                        </div>
-                      )}
-                      
-                      {isValorValido(estadoRiesgo) && (
-                        <div className="alert-detail">
-                          <strong>Estado:</strong> {estadoRiesgo}
-                        </div>
-                      )}
-                    </div>
-                  );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </div>
@@ -726,101 +755,247 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
         }
 
         /* ========================================================================
-            POPUP DE ALERTAS
+            POPUP DE ALERTAS - DISEÑO MEJORADO
         ======================================================================== */
+        .popup-header .header-title-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .popup-header .header-icon-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+          border-radius: 10px;
+          color: #dc2626;
+          border: 1px solid #fca5a5;
+        }
+
         .alerts-summary {
-          margin-bottom: 25px;
-          padding: 20px;
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-          border-radius: 12px;
-          border: 2px solid #dc2626;
-          box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
+          margin-bottom: 30px;
+        }
+
+        .summary-card {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          padding: 24px;
+          background: linear-gradient(135deg, #fef7f7 0%, #fdf2f2 100%);
+          border-radius: 16px;
+          border: 1px solid #fecaca;
+          box-shadow: 0 4px 12px rgba(220, 38, 38, 0.08);
+        }
+
+        .summary-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 60px;
+          height: 60px;
+          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          border-radius: 16px;
+          color: white;
+          box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+        }
+
+        .summary-content {
+          flex: 1;
+        }
+
+        .summary-number {
+          font-size: 2.5rem;
+          font-weight: 800;
+          color: #dc2626;
+          line-height: 1;
+          margin-bottom: 4px;
+        }
+
+        .summary-label {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #7f1d1d;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .alerts-container {
           display: flex;
           flex-direction: column;
-          gap: 15px;
+          gap: 20px;
         }
 
-        .no-alerts {
+        .no-alerts-state {
           text-align: center;
-          padding: 40px;
-          color: #27ae60;
-          font-size: 1.1rem;
-          background: rgba(39, 174, 96, 0.1);
-          border-radius: 12px;
+          padding: 60px 20px;
+          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+          border-radius: 16px;
+          border: 1px solid #bbf7d0;
         }
 
-        .alert-item {
-          padding: 20px;
-          border: 2px solid #dc2626;
-          border-radius: 12px;
-          background: #ffffff;
-          border-left: 4px solid #dc2626;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
-        }
-
-        .alert-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 15px rgba(231, 76, 60, 0.2);
-        }
-
-        .alert-header {
+        .no-alerts-icon {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 15px;
-          flex-wrap: wrap;
-          gap: 10px;
+          align-items: center;
+          justify-content: center;
+          width: 80px;
+          height: 80px;
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+          border-radius: 20px;
+          color: white;
+          margin: 0 auto 20px;
+          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.25);
+        }
+
+        .no-alerts-state h4 {
+          margin: 0 0 12px 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #166534;
+        }
+
+        .no-alerts-state p {
+          margin: 0;
+          font-size: 1rem;
+          color: #16a34a;
+          line-height: 1.5;
+        }
+
+        .alerts-list {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .alert-card {
+          background: white;
+          border-radius: 16px;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          overflow: hidden;
+          transition: all 0.3s ease;
+        }
+
+        .alert-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+          border-color: #d1d5db;
+        }
+
+        .alert-card.severity-alto {
+          border-left: 4px solid #dc2626;
+        }
+
+        .alert-card.severity-medio {
+          border-left: 4px solid #d97706;
+        }
+
+        .alert-card.severity-bajo {
+          border-left: 4px solid #ca8a04;
+        }
+
+        .alert-card-header {
+          padding: 20px 24px 16px;
+          background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .alert-title-section {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
         }
 
         .alert-obra-name {
           margin: 0;
-          font-size: 1.1rem;
+          font-size: 1.125rem;
           font-weight: 700;
-          color: #000000;
-          flex: 1;
-          min-width: 200px;
+          color: #111827;
+          line-height: 1.4;
+        }
+
+        .alert-meta {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
         }
 
         .alert-dependencia {
-          padding: 4px 12px;
-          background: #e3f2fd;
-          color: #1976d2;
-          border-radius: 15px;
-          font-size: 0.85rem;
+          padding: 6px 12px;
+          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+          color: #1e40af;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          border: 1px solid #93c5fd;
+        }
+
+        .severity-badge {
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .severity-badge.severity-alto {
+          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          color: white;
+          box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+        }
+
+        .severity-badge.severity-medio {
+          background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+          color: white;
+          box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
+        }
+
+        .severity-badge.severity-bajo {
+          background: linear-gradient(135deg, #ca8a04 0%, #a16207 100%);
+          color: white;
+          box-shadow: 0 2px 8px rgba(202, 138, 4, 0.25);
+        }
+
+        .alert-card-content {
+          padding: 20px 24px 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .alert-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .field-label {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .field-value {
+          font-size: 1rem;
+          color: #374151;
+          line-height: 1.5;
           font-weight: 500;
         }
 
-        .alert-detail {
-          margin-bottom: 10px;
-          line-height: 1.4;
-          color: #374151;
+        .field-value.description-text {
+          background: #f9fafb;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          font-weight: 400;
+          line-height: 1.6;
         }
-
-        .alert-detail strong {
-          color: #000000;
-          font-weight: 700;
-          margin-right: 8px;
-        }
-
-        /* Badges y colores por severidad */
-        .impact-badge {
-          padding: 4px 10px;
-          border-radius: 14px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: #fff;
-        }
-        .impact-badge.severity-alto { background: #e74c3c; }
-        .impact-badge.severity-medio { background: #f39c12; }
-        .impact-badge.severity-bajo { background: #f1c40f; color: #2c3e50; }
-
-        .alert-item.severity-alto { border-left-color: #e74c3c; }
-        .alert-item.severity-medio { border-left-color: #f39c12; }
-        .alert-item.severity-bajo { border-left-color: #f1c40f; }
 
         /* ========================================================================
             RESPONSIVE DESIGN
@@ -885,14 +1060,43 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
             gap: 5px;
           }
 
-          .alert-header {
-            flex-direction: column;
-            gap: 8px;
+          .alert-title-section {
+            gap: 10px;
           }
 
           .alert-obra-name {
-            min-width: auto;
             font-size: 1rem;
+          }
+
+          .alert-meta {
+            gap: 8px;
+          }
+
+          .summary-card {
+            padding: 20px;
+            gap: 16px;
+          }
+
+          .summary-icon {
+            width: 50px;
+            height: 50px;
+          }
+
+          .summary-number {
+            font-size: 2rem;
+          }
+
+          .alert-card-header {
+            padding: 16px 20px 12px;
+          }
+
+          .alert-card-content {
+            padding: 16px 20px 20px;
+            gap: 12px;
+          }
+
+          .field-value.description-text {
+            padding: 10px;
           }
         }
 
@@ -942,8 +1146,76 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
             font-size: 0.95rem;
           }
 
-          .alert-item {
-            padding: 15px;
+          .summary-card {
+            padding: 16px;
+            gap: 12px;
+          }
+
+          .summary-icon {
+            width: 45px;
+            height: 45px;
+          }
+
+          .summary-number {
+            font-size: 1.75rem;
+          }
+
+          .summary-label {
+            font-size: 0.875rem;
+          }
+
+          .no-alerts-state {
+            padding: 40px 15px;
+          }
+
+          .no-alerts-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 16px;
+          }
+
+          .no-alerts-state h4 {
+            font-size: 1.125rem;
+          }
+
+          .no-alerts-state p {
+            font-size: 0.875rem;
+          }
+
+          .alert-card-header {
+            padding: 14px 16px 10px;
+          }
+
+          .alert-card-content {
+            padding: 14px 16px 16px;
+            gap: 10px;
+          }
+
+          .alert-obra-name {
+            font-size: 0.95rem;
+          }
+
+          .alert-dependencia {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+          }
+
+          .severity-badge {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+          }
+
+          .field-label {
+            font-size: 0.75rem;
+          }
+
+          .field-value {
+            font-size: 0.875rem;
+          }
+
+          .field-value.description-text {
+            padding: 8px;
+            font-size: 0.875rem;
           }
         }
       `}</style>
