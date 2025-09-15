@@ -26,7 +26,7 @@ export default defineConfig({
     target: 'es2015',
     minify: 'esbuild'
   },
-  base: './',
+  base: '/',
   optimizeDeps: {
     include: ['react', 'react-dom']
   }
