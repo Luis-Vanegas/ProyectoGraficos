@@ -46,6 +46,37 @@ export default function ConsultarObra() {
   // Datos actuales para mostrar (obra seleccionada o proyecto)
   const currentData = selectedWorkData || selectedProjectData;
 
+  // Función para calcular la fecha de entrega real corregida
+  const calcularEntregaRealCorregida = (data: Row | null): Date | null => {
+    if (!data) return null;
+    
+    const fechaRealEntrega = data[F.fechaRealDeEntrega];
+    const fechaFinRealEjecucion = data[F.fechaFinRealEjecucionObra];
+    
+    // Convertir fechas a objetos Date si son strings
+    const fechaRealEntregaDate = fechaRealEntrega ? new Date(fechaRealEntrega) : null;
+    const fechaFinRealEjecucionDate = fechaFinRealEjecucion ? new Date(fechaFinRealEjecucion) : null;
+    
+    // Fecha de referencia: 1 de enero de 2000
+    const fechaReferencia = new Date(2000, 0, 1);
+    
+    // Lógica: si FECHA REAL DE ENTREGA es 2000-01-01 y fecha_fin_real_ejecucion_obra no es 2000-01-01,
+    // entonces usar fecha_fin_real_ejecucion_obra, sino usar FECHA REAL DE ENTREGA
+    if (fechaRealEntregaDate && 
+        fechaRealEntregaDate.getTime() === fechaReferencia.getTime() && 
+        fechaFinRealEjecucionDate && 
+        fechaFinRealEjecucionDate.getTime() !== fechaReferencia.getTime()) {
+      return fechaFinRealEjecucionDate;
+    }
+    
+    return fechaRealEntregaDate;
+  };
+
+  // Calcular la fecha de entrega real corregida para los datos actuales
+  const entregaRealCorregida = useMemo(() => {
+    return calcularEntregaRealCorregida(currentData || null);
+  }, [currentData]);
+
 
   // Datos para gráficos de etapas (donas)
   const stagesData = useMemo(() => {
@@ -55,27 +86,27 @@ export default function ConsultarObra() {
       {
         name: 'Estudios preliminares',
         value: 28.63,
-        color: '#79BC99'
+        color: '#4CAF50'
       },
       {
         name: 'Viabilización(DAP)',
         value: 4.92,
-        color: '#4E8484'
+        color: '#00BCD4'
       },
       {
         name: 'Gestión Predial',
         value: 1.96,
-        color: '#3B8686'
+        color: '#009688'
       },
       {
         name: 'Diseños',
         value: 7.22,
-        color: '#2E8B57'
+        color: '#8BC34A'
       },
       {
         name: 'Ejecución de Obra',
         value: 53.58,
-        color: '#228B22'
+        color: '#4CAF50'
       }
     ];
     
@@ -83,9 +114,9 @@ export default function ConsultarObra() {
   }, [currentData]);
 
   // Componente de medidor semicircular
-  const SemicircularGauge = ({ percentage, title }: { percentage: number; title: string }) => {
-    const radius = 60;
-    const strokeWidth = 8;
+  const SemicircularGauge = ({ percentage, title, color }: { percentage: number; title: string; color: string }) => {
+    const radius = 40;
+    const strokeWidth = 5;
     const normalizedRadius = radius - strokeWidth * 2;
     const circumference = normalizedRadius * Math.PI;
     const strokeDasharray = `${circumference} ${circumference}`;
@@ -112,7 +143,7 @@ export default function ConsultarObra() {
             />
             {/* Progreso del gauge */}
             <circle
-              stroke="#79BC99"
+              stroke={color}
               fill="transparent"
               strokeWidth={strokeWidth}
               strokeDasharray={strokeDasharray}
@@ -160,7 +191,7 @@ export default function ConsultarObra() {
         >
           <div className="selection-row">
             <div className="selection-item">
-              <label className="selection-label" style={{color: '#000000', fontWeight: '600'}}>Proyectos estratégicos</label>
+              <label className="selection-label" style={{color: '#2d3748', fontWeight: '600'}}>Proyectos estratégicos</label>
                 <select
                 className="selection-select"
                 value={selectedProject}
@@ -177,7 +208,7 @@ export default function ConsultarObra() {
             </div>
             
             <div className="selection-item">
-              <label className="selection-label" style={{color: '#000000', fontWeight: '600'}}>Nombre de la obra</label>
+              <label className="selection-label" style={{color: '#2d3748', fontWeight: '600'}}>Nombre de la obra</label>
                 <select
                 className="selection-select"
                 value={selectedWork}
@@ -234,7 +265,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Comuna / Corregimiento</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Comuna / Corregimiento</span>
               <span className="detail-value">
                 {currentData ? String(currentData[F.comunaOCorregimiento] ?? '01 - Popular') : '01 - Popular'}
               </span>
@@ -253,7 +284,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Empleos generados</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Empleos generados</span>
               <span className="detail-value">
                 {currentData ? String(currentData[F.empleosGenerados] ?? '6298') : '6298'}
               </span>
@@ -272,7 +303,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Área Construida m2</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Área Construida m2</span>
               <span className="detail-value">
                 {currentData ? String(currentData[F.areaConstruida] ?? '498573') : '498573'}
               </span>
@@ -291,7 +322,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Tipo de intervención</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Tipo de intervención</span>
               <span className="detail-value">
                 {currentData ? String(currentData[F.tipoDeIntervecion] ?? 'Restitución') : 'Restitución'}
               </span>
@@ -310,7 +341,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Área espacio público m2</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Área espacio público m2</span>
               <span className="detail-value">
                 {currentData ? String(currentData[F.areaEspacioPublico] ?? '272517') : '272517'}
               </span>
@@ -329,7 +360,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Contratista</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Contratista</span>
               <span className="detail-value">
                 {currentData ? String(currentData[F.contratistaOperador] ?? 'No especificado') : 'No especificado'}
               </span>
@@ -348,7 +379,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Dependencia</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Dependencia</span>
               <span className="detail-value">
                 {currentData ? String(currentData[F.dependencia] ?? 'Agencia de Educación Superior de Medell...') : 'Agencia de Educación Superior de Medell...'}
               </span>
@@ -367,7 +398,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Alerta</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Alerta</span>
               <span className="detail-value">
                 {currentData ? String(currentData[F.descripcionDelRiesgo] ?? 'Sin alertas') : 'Sin alertas'}
               </span>
@@ -386,7 +417,7 @@ export default function ConsultarObra() {
                 boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
               }}
             >
-              <span className="detail-label" style={{color: '#000000', fontWeight: '600'}}>Criterio técnico</span>
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Criterio técnico</span>
               <span className="detail-value">
                 No especificado
               </span>
@@ -431,6 +462,70 @@ export default function ConsultarObra() {
             </div>
           </div>
 
+        {/* Sección de fechas de entrega */}
+        <div 
+          className="delivery-dates-section"
+          style={{
+            background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+            borderRadius: '15px',
+            padding: '25px',
+            boxShadow: '0 8px 25px rgba(121, 188, 153, 0.12)',
+            border: '1px solid #79BC99'
+          }}
+        >
+          <h3 className="delivery-dates-title" style={{color: '#2d3748', fontWeight: '600'}}>Fechas de Entrega</h3>
+          <div className="delivery-dates-grid">
+            <div className="delivery-date-card estimated">
+              <div className="delivery-date-label">FECHA ESTIMADA DE ENTREGA</div>
+              <div className="delivery-date-value">
+                {currentData && currentData[F.fechaEstimadaDeEntrega] ? 
+                  new Date(currentData[F.fechaEstimadaDeEntrega] as string).toLocaleDateString('es-CO', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }) : 
+                  'No especificada'
+                }
+              </div>
+            </div>
+            
+            <div className="delivery-date-card real">
+              <div className="delivery-date-label">FECHA REAL DE ENTREGA</div>
+              <div className="delivery-date-value">
+                {currentData && currentData[F.fechaRealDeEntrega] ? 
+                  new Date(currentData[F.fechaRealDeEntrega] as string).toLocaleDateString('es-CO', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }) : 
+                  'No especificada'
+                }
+              </div>
+            </div>
+            
+            <div className="delivery-date-card corrected">
+              <div className="delivery-date-label">ENTREGA REAL</div>
+              <div className="delivery-date-value">
+                {entregaRealCorregida ? 
+                  entregaRealCorregida.toLocaleDateString('es-CO', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }) : 
+                  'No disponible'
+                }
+              </div>
+              <div className="delivery-date-note">
+                {entregaRealCorregida && currentData && currentData[F.fechaRealDeEntrega] && 
+                 new Date(currentData[F.fechaRealDeEntrega] as string).getTime() === new Date(2000, 0, 1).getTime() ? 
+                  'Calculada automáticamente' : 
+                  'Fecha original'
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Sección de etapas con gráficos de dona */}
         <div 
           className="stages-section"
@@ -442,13 +537,14 @@ export default function ConsultarObra() {
             border: '1px solid #79BC99'
           }}
         >
-          <h3 className="stages-title" style={{color: '#000000', fontWeight: '600'}}>Etapas</h3>
+          <h3 className="stages-title" style={{color: '#2d3748', fontWeight: '600'}}>Etapas</h3>
           <div className="stages-grid">
             {stagesData.map((stage, index) => (
               <div key={index} className="stage-card">
                 <SemicircularGauge 
                   percentage={stage.value} 
-                  title={stage.name} 
+                  title={stage.name}
+                  color={stage.color}
                 />
               </div>
             ))}
@@ -466,7 +562,7 @@ export default function ConsultarObra() {
             border: '1px solid #79BC99'
           }}
         >
-          <h3 className="gantt-title" style={{color: '#000000', fontWeight: '600'}}>Cronograma del Proyecto</h3>
+          <h3 className="gantt-title" style={{color: '#2d3748', fontWeight: '600'}}>Cronograma del Proyecto</h3>
           <div className="gantt-container">
             <GanttChart 
               rows={currentData ? [currentData] : []} 
@@ -520,7 +616,7 @@ export default function ConsultarObra() {
 
         .selection-label {
           font-weight: 600 !important;
-          color: #000000 !important;
+          color: #2d3748 !important;
           font-size: 1rem !important;
         }
 
@@ -530,7 +626,7 @@ export default function ConsultarObra() {
           border-radius: 10px !important;
           font-size: 16px !important;
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%) !important;
-          color: #000000 !important;
+          color: #2d3748 !important;
           transition: all 0.3s ease !important;
           cursor: pointer !important;
         }
@@ -603,7 +699,7 @@ export default function ConsultarObra() {
 
         .detail-label {
           font-weight: 600 !important;
-          color: #000000 !important;
+          color: #2d3748 !important;
           font-size: 0.9rem !important;
           text-transform: uppercase !important;
           letter-spacing: 0.5px !important;
@@ -611,7 +707,7 @@ export default function ConsultarObra() {
 
         .detail-value {
           font-weight: 500 !important;
-          color: #000000 !important;
+          color: #2d3748 !important;
           font-size: 1rem !important;
         }
 
@@ -638,23 +734,26 @@ export default function ConsultarObra() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 20px;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-radius: 15px;
-          border: 1px solid #79BC99;
-          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
-          min-height: 200px;
+          padding: 0;
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          min-height: 140px;
           justify-content: center;
+          width: 100%;
         }
 
         .gauge-title {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: #000000;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #4a5568;
           text-align: center;
           margin-bottom: 15px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          line-height: 1.2;
+          max-width: 100%;
+          word-wrap: break-word;
         }
 
         .gauge-wrapper {
@@ -663,18 +762,23 @@ export default function ConsultarObra() {
           align-items: center;
           justify-content: center;
           margin-bottom: 10px;
+          width: 80px;
+          height: 80px;
         }
 
         .gauge-svg {
           transform: rotate(-90deg);
+          filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
         }
 
         .gauge-background {
-          opacity: 0.3;
+          opacity: 0.2;
+          stroke: #e9ecef;
         }
 
         .gauge-progress {
-          transition: stroke-dashoffset 0.5s ease-in-out;
+          transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
         }
 
         .gauge-percentage {
@@ -682,25 +786,28 @@ export default function ConsultarObra() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          font-size: 1.2rem;
-          font-weight: 700;
-          color: #000000;
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: #2d3748;
           text-align: center;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
         .gauge-labels {
           display: flex;
           justify-content: space-between;
           width: 100%;
-          max-width: 120px;
-          font-size: 0.7rem;
-          color: #6C757D;
+          max-width: 100px;
+          font-size: 0.6rem;
+          color: #718096;
+          font-weight: 500;
         }
 
         .gauge-label-start,
         .gauge-label-end {
-          font-size: 0.7rem;
-          color: #6C757D;
+          font-size: 0.6rem;
+          color: #718096;
+          font-weight: 500;
         }
 
         /* ========================================================================
@@ -760,6 +867,86 @@ export default function ConsultarObra() {
         }
 
         /* ========================================================================
+            SECCIÓN DE FECHAS DE ENTREGA
+        ======================================================================== */
+        .delivery-dates-section {
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 6px 20px rgba(121, 188, 153, 0.1);
+          border: 1px solid #79BC99;
+        }
+
+        .delivery-dates-title {
+          margin: 0 0 18px 0 !important;
+          color: #2d3748 !important;
+          font-size: 1.2rem !important;
+          font-weight: 600 !important;
+          text-align: center !important;
+        }
+
+        .delivery-dates-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 15px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+
+        .delivery-date-card {
+          text-align: center;
+          padding: 18px 15px;
+          border-radius: 12px;
+          box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+          transition: transform 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .delivery-date-card:hover {
+          transform: translateY(-5px);
+        }
+
+        .delivery-date-card.estimated {
+          background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+          border: 2px solid #2196F3;
+        }
+
+        .delivery-date-card.real {
+          background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+          border: 2px solid #FF9800;
+        }
+
+        .delivery-date-card.corrected {
+          background: linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%);
+          border: 2px solid #4CAF50;
+        }
+
+        .delivery-date-label {
+          font-size: 0.75rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 10px;
+          color: #2d3748;
+        }
+
+        .delivery-date-value {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #2d3748;
+          margin-bottom: 8px;
+          line-height: 1.3;
+        }
+
+        .delivery-date-note {
+          font-size: 0.65rem;
+          color: #718096;
+          font-style: italic;
+          margin-top: 5px;
+        }
+
+        /* ========================================================================
             SECCIÓN DE ETAPAS
         ======================================================================== */
         .stages-section {
@@ -772,7 +959,7 @@ export default function ConsultarObra() {
 
         .stages-title {
           margin: 0 0 25px 0 !important;
-          color: #000000 !important;
+          color: #2d3748 !important;
           font-size: 1.5rem !important;
           font-weight: 600 !important;
           text-align: center !important;
@@ -780,24 +967,60 @@ export default function ConsultarObra() {
 
         .stages-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 15px;
+          max-width: 1000px;
+          margin: 0 auto;
         }
 
         .stage-card {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 20px;
-          background: #F8F9FA;
+          padding: 20px 15px;
+          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
           border-radius: 15px;
-          border: 1px solid #E9ECEF;
-          transition: transform 0.3s ease;
+          border: 2px solid #e9ecef;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .stage-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: #4CAF50;
         }
 
         .stage-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.2);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+          border-color: #4CAF50;
+        }
+
+        .stage-card:nth-child(1)::before {
+          background: #4CAF50;
+        }
+
+        .stage-card:nth-child(2)::before {
+          background: #00BCD4;
+        }
+
+        .stage-card:nth-child(3)::before {
+          background: #009688;
+        }
+
+        .stage-card:nth-child(4)::before {
+          background: #8BC34A;
+        }
+
+        .stage-card:nth-child(5)::before {
+          background: #4CAF50;
         }
 
         .stage-chart {
@@ -836,7 +1059,7 @@ export default function ConsultarObra() {
 
         .gantt-title {
           margin: 0 0 25px 0 !important;
-          color: #000000 !important;
+          color: #2d3748 !important;
           font-size: 1.5rem !important;
           font-weight: 600 !important;
           text-align: center !important;
@@ -863,6 +1086,7 @@ export default function ConsultarObra() {
           .project-selection-section,
           .project-details-section,
           .financial-overview-section,
+          .delivery-dates-section,
           .stages-section,
           .gantt-section {
             padding: 22px;
@@ -898,13 +1122,28 @@ export default function ConsultarObra() {
             font-size: 2.2rem;
           }
           
+          .delivery-dates-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 700px;
+          }
+          
+          .delivery-date-card {
+            padding: 16px 12px;
+          }
+          
+          .delivery-date-value {
+            font-size: 0.95rem;
+          }
+          
           .stages-grid {
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            max-width: 900px;
           }
           
           .stage-card {
-            padding: 18px;
+            padding: 18px 12px;
           }
           
           .stage-chart {
@@ -974,13 +1213,28 @@ export default function ConsultarObra() {
             font-size: 2rem;
           }
           
+          .delivery-dates-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+            max-width: 100%;
+          }
+          
+          .delivery-date-card {
+            padding: 15px 12px;
+          }
+          
+          .delivery-date-value {
+            font-size: 0.9rem;
+          }
+          
           .stages-grid {
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            max-width: 800px;
           }
           
           .stage-card {
-            padding: 16px;
+            padding: 16px 10px;
           }
           
           .stage-chart {
@@ -1085,12 +1339,13 @@ export default function ConsultarObra() {
           }
           
           .stages-grid {
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
+            max-width: 100%;
           }
           
           .stage-card {
-            padding: 14px;
+            padding: 16px 10px;
           }
           
           .stage-chart {
@@ -1188,12 +1443,13 @@ export default function ConsultarObra() {
           }
           
           .stages-grid {
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
+            max-width: 100%;
           }
           
           .stage-card {
-            padding: 12px;
+            padding: 14px 8px;
           }
           
           .stage-chart {
@@ -1287,12 +1543,13 @@ export default function ConsultarObra() {
           }
           
           .stages-grid {
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 8px;
+            max-width: 100%;
           }
           
           .stage-card {
-            padding: 10px;
+            padding: 12px 6px;
           }
           
           .stage-chart {
@@ -1372,11 +1629,13 @@ export default function ConsultarObra() {
           }
           
           .stages-grid {
+            grid-template-columns: repeat(2, 1fr);
             gap: 6px;
+            max-width: 100%;
           }
           
           .stage-card {
-            padding: 8px;
+            padding: 10px 4px;
           }
           
           .stage-chart {
@@ -1441,12 +1700,36 @@ export default function ConsultarObra() {
           }
           
           .stages-grid {
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            grid-template-columns: 1fr;
             gap: 8px;
+            max-width: 100%;
           }
           
           .stage-card {
-            padding: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+          }
+          
+          .stage-card .gauge-container {
+            flex-direction: row;
+            min-height: auto;
+            width: auto;
+            gap: 15px;
+          }
+          
+          .stage-card .gauge-title {
+            margin-bottom: 0;
+            text-align: left;
+            flex: 1;
+          }
+          
+          .stage-card .gauge-wrapper {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 0;
           }
           
           .stage-chart {
@@ -1468,7 +1751,7 @@ export default function ConsultarObra() {
         /* Mejorar el contraste en modo oscuro */
         @media (prefers-color-scheme: dark) {
           .consultar-obra-container {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%);
           }
           
           .project-selection-section,
@@ -1476,52 +1759,52 @@ export default function ConsultarObra() {
           .financial-overview-section,
           .stages-section,
           .gantt-section {
-            background: #2d2d2d;
-            border-color: #404040;
+            background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+            border-color: #79BC99;
           }
           
           .selection-label,
           .description-label,
           .stages-title,
           .gantt-title {
-            color: #ffffff;
+            color: #2d3748;
           }
           
           .selection-select {
-            background: #3d3d3d;
-            border-color: #555;
-            color: #ffffff;
+            background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+            border-color: #79BC99;
+            color: #2d3748;
           }
           
           .description-content {
-            background: #3d3d3d;
-            border-color: #555;
+            background: #F8F9FA;
+            border-color: #E9ECEF;
           }
           
           .description-content p {
-            color: #cccccc;
+            color: #4a5568;
           }
           
           .detail-item {
-            background: #3d3d3d;
-            border-color: #555;
+            background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+            border-color: #79BC99;
           }
           
           .detail-label {
-            color: #aaaaaa;
+            color: #2d3748;
           }
           
           .detail-value {
-            color: #ffffff;
+            color: #2d3748;
           }
           
           .stage-card {
-            background: #3d3d3d;
-            border-color: #555;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-color: #e9ecef;
           }
           
           .stage-name {
-            color: #ffffff;
+            color: #2d3748;
           }
         }
 
