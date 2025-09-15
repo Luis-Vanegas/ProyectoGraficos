@@ -56,7 +56,7 @@ export function useErrorHandler(): ErrorHandlerReturn {
     setIsLoading(false);
 
     // En desarrollo, mostrar error en consola
-    if (process.env.NODE_ENV === 'development') {
+    if (typeof window !== 'undefined' && (window as unknown as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV === 'development') {
       console.group('🚨 Error Details');
       console.error('Original error:', error);
       console.error('Error code:', code);

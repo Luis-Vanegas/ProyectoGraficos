@@ -193,8 +193,8 @@ export function useThrottle<T extends (...args: unknown[]) => void>(
   callback: T,
   delay: number
 ): T {
-  const throttledCallback = useRef<T>();
-  const lastRan = useRef<number>();
+  const throttledCallback = useRef<T | undefined>(undefined);
+  const lastRan = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     throttledCallback.current = callback;
@@ -212,7 +212,7 @@ export function useThrottle<T extends (...args: unknown[]) => void>(
             throttledCallback.current?.(...args);
             lastRan.current = Date.now();
           }
-        }, delay - (Date.now() - lastRan.current));
+        }, delay - (Date.now() - (lastRan.current || 0)));
       }
     },
     [delay]
@@ -229,8 +229,8 @@ export function useExpensiveMemo<T>(
   deps: React.DependencyList,
   shouldRecalculate?: (prevDeps: React.DependencyList, nextDeps: React.DependencyList) => boolean
 ): T {
-  const memoizedValue = useRef<T>();
-  const prevDeps = useRef<React.DependencyList>();
+  const memoizedValue = useRef<T | undefined>(undefined);
+  const prevDeps = useRef<React.DependencyList | undefined>(undefined);
 
   const hasChanged = shouldRecalculate
     ? prevDeps.current ? shouldRecalculate(prevDeps.current, deps) : true
@@ -248,7 +248,7 @@ export function useExpensiveMemo<T>(
  * Hook para cancelar operaciones asíncronas al desmontar componente
  */
 export function useAbortController() {
-  const abortControllerRef = useRef<AbortController>();
+  const abortControllerRef = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
     abortControllerRef.current = new AbortController();

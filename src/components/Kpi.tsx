@@ -26,8 +26,8 @@ export default function Kpi({
   compactMoney = false,
   abbreviate = false,
   digits = 0,
-  subtitle,
-  trend
+  subtitle
+  // trend
 }: Props) {
 
   const abbreviateNumber = (num: number, d = 1): string => {

@@ -1,4 +1,3 @@
-import React from 'react';
 import SimpleBarChart from './SimpleBarChart';
 
 // Ejemplos de datos para diferentes tipos de gráficos

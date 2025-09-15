@@ -22,8 +22,6 @@ import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
 import HeaderIcons from '../components/HeaderIcons';
-// import Chatbot from '../components/Chatbot';
-// import ChatbotLearningPanel from '../components/ChatbotLearningPanel';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
@@ -80,7 +78,6 @@ const Dashboard = () => {
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
   const [isMobileStack, setIsMobileStack] = useState(false);
-  // const [showLearningPanel, setShowLearningPanel] = useState(false);
   // Estado no utilizado en esta vista (selección se maneja en MapLibre)
   // const [selectedComuna] = useState<string | null>(null);
   // const [comunasGeo, setComunasGeo] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -729,17 +726,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Chatbot y Panel de Aprendizaje - DESHABILITADO */}
-      {/* <Chatbot 
-        data={rows} 
-        filters={combinedFilters}
-        onFiltersChange={(newFilters) => setFilters(newFilters)}
-      />
-      
-      <ChatbotLearningPanel 
-        isOpen={showLearningPanel}
-        onClose={() => setShowLearningPanel(false)}
-      /> */}
 
       {/* ========================================================================
            ESTILOS CSS - DISEÑO MODERNO CON COLORES CORPORATIVOS

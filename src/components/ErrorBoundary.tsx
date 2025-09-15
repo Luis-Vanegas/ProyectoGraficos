@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -80,7 +80,7 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Mostrar detalles del error en desarrollo */}
-            {process.env.NODE_ENV === 'development' && (
+            {typeof window !== 'undefined' && (window as unknown as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV === 'development' && (
               <details className="error-details">
                 <summary>Detalles técnicos (solo en desarrollo)</summary>
                 <div className="error-stack">

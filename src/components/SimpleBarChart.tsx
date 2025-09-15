@@ -167,7 +167,7 @@ export default function SimpleBarChart({
     );
   }
 
-  const { maxValue, padding, chartWidth, chartHeight, barWidth, barSpacing } = chartData;
+  const { maxValue, padding, chartHeight, barWidth, barSpacing } = chartData;
 
   // Generar escalas del eje Y
   const yTicks = [];

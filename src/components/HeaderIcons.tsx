@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { F } from '../dataConfig';
 import { formatDate, calcularAlertasEncontradas } from '../utils/utils/metrics';
 import type { Row } from '../utils/utils/metrics';
@@ -18,7 +18,7 @@ interface ObraCalendario {
   comuna?: string;
 }
 
-export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
+export default function HeaderIcons({ filtered }: HeaderIconsProps) {
   const [showCalendarPopup, setShowCalendarPopup] = useState(false);
   const [showAlertsPopup, setShowAlertsPopup] = useState(false);
 
@@ -92,11 +92,11 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
       const año = parseInt(fechaFinal.slice(0, 4)) || new Date().getFullYear();
       
       return {
-        id: obra[F.id] || Math.random(),
+        id: String(obra[F.id] || Math.random()),
         nombre: String(obra[F.nombre] ?? 'Sin nombre'),
         fechaEntrega: fechaFinal,
         año,
-        estado: entregada ? 'entregada' : 'no-entregada',
+        estado: (entregada ? 'entregada' : 'no-entregada') as 'entregada' | 'no-entregada',
         dependencia: String(obra[F.dependencia] ?? ''),
         comuna: String(obra[F.comunaOCorregimiento] ?? '')
       };
@@ -119,11 +119,11 @@ export default function HeaderIcons({ rows, filtered }: HeaderIconsProps) {
   }, {} as Record<number, { entregadas: ObraCalendario[], noEntregadas: ObraCalendario[] }>);
 
   // Resumen de entregas (conteos visibles en el icono)
-  const entregaSummary = useMemo(() => {
-    const entregadas = obrasCalendario.filter(o => o.estado === 'entregada').length;
-    const noEntregadas = obrasCalendario.filter(o => o.estado === 'no-entregada').length;
-    return { entregadas, noEntregadas };
-  }, [obrasCalendario]);
+  // const _entregaSummary = useMemo(() => {
+  //   const entregadas = obrasCalendario.filter(o => o.estado === 'entregada').length;
+  //   const noEntregadas = obrasCalendario.filter(o => o.estado === 'no-entregada').length;
+  //   return { entregadas, noEntregadas };
+  // }, [obrasCalendario]);
 
 
   // Helpers para validar campos y ordenar por impacto

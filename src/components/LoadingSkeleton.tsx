@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface LoadingSkeletonProps {
   variant?: 'text' | 'card' | 'kpi' | 'table' | 'map' | 'chart' | 'button' | 'avatar' | 'custom';
