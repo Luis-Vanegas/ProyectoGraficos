@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { lazy, Suspense } from 'react';
 import ErrorBoundary from './components/ErrorBoundary';
 import { FullScreenLoader } from './components/LoadingSpinner';
+import { ProductionDiagnostic } from './components/ProductionDiagnostic';
 
 // Páginas principales (carga inmediata)
 import PaginaPrincipal from './page/PaginaPrincipal';
@@ -25,6 +26,7 @@ const UnidadHospitalariaDashboard = lazy(() => import('./page/UnidadHospitalaria
 export default function App() {
   return (
     <ErrorBoundary>
+      <ProductionDiagnostic />
       <Router>
         <Suspense fallback={<FullScreenLoader text="Cargando dashboard..." />}>
           <Routes>

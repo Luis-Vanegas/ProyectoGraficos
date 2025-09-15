@@ -8,6 +8,7 @@
     "dev:clean": "rm -rf .vite dist && vite --host --port 5173",
     "build": "tsc -b && vite build",
     "build:clean": "rm -rf dist .vite && tsc -b && vite build",
+    "build:vercel": "npm run build:clean && echo 'Build completado para Vercel'",
     "lint": "eslint .",
     "preview": "vite preview",
     "clean": "rm -rf node_modules package-lock.json .vite dist",

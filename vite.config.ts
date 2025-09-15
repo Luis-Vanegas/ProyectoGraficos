@@ -22,8 +22,17 @@ export default defineConfig({
       output: {
         manualChunks: undefined
       }
+    },
+    target: 'es2015',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
     }
   },
+  base: './',
   optimizeDeps: {
     include: ['react', 'react-dom']
   }
