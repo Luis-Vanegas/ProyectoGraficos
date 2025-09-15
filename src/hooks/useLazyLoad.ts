@@ -194,7 +194,8 @@ export function useThrottle<T extends (...args: unknown[]) => void>(
   delay: number
 ): T {
   const throttledCallback = useRef<T | undefined>(undefined);
-  const lastRan = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const lastRan = useRef<number | undefined>(undefined);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     throttledCallback.current = callback;
@@ -202,17 +203,23 @@ export function useThrottle<T extends (...args: unknown[]) => void>(
 
   const throttled = useCallback(
     (...args: Parameters<T>) => {
+      const now = Date.now();
+      
       if (lastRan.current === undefined) {
         throttledCallback.current?.(...args);
-        lastRan.current = Date.now();
+        lastRan.current = now;
       } else {
-        clearTimeout(lastRan.current);
-        lastRan.current = setTimeout(() => {
-          if (Date.now() - (lastRan.current || 0) >= delay) {
-            throttledCallback.current?.(...args);
-            lastRan.current = Date.now();
-          }
-        }, delay - (Date.now() - (lastRan.current || 0)));
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        
+        const timeSinceLastRun = now - lastRan.current;
+        const remainingDelay = Math.max(0, delay - timeSinceLastRun);
+        
+        timeoutRef.current = setTimeout(() => {
+          throttledCallback.current?.(...args);
+          lastRan.current = Date.now();
+        }, remainingDelay);
       }
     },
     [delay]
