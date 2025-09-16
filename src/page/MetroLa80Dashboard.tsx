@@ -560,7 +560,11 @@ const MetroLa80Dashboard = () => {
               ...(filters.dependencia ? { dependencia: String(filters.dependencia) } : {}),
               // Filtro específico para metro de la 80
               proyectoEstrategico: 'Metro de La 80',
-              ...(filters.comuna ? { comunaCodigo: String(filters.comuna) } : {}),
+              ...(filters.comuna ? { comunaNombre: String(filters.comuna) } : {}),
+              ...(filters.tipo ? { tipo: String(filters.tipo) } : {}),
+              ...(filters.contratista ? { contratista: String(filters.contratista) } : {}),
+              ...(combinedFilters.desde ? { desde: String(combinedFilters.desde) } : {}),
+              ...(combinedFilters.hasta ? { hasta: String(combinedFilters.hasta) } : {}),
             })} />
           </div>
         </div>

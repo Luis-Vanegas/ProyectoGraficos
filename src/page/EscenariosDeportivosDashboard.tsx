@@ -632,7 +632,11 @@ const EscenariosDeportivosDashboard = () => {
               ...(filters.dependencia ? { dependencia: String(filters.dependencia) } : {}),
               // Filtro específico para escenarios deportivos
               proyectoEstrategico: 'Escenarios Deportivos',
-              ...(filters.comuna ? { comunaCodigo: String(filters.comuna) } : {}),
+              ...(filters.comuna ? { comunaNombre: String(filters.comuna) } : {}),
+              ...(filters.tipo ? { tipo: String(filters.tipo) } : {}),
+              ...(filters.contratista ? { contratista: String(filters.contratista) } : {}),
+              ...(combinedFilters.desde ? { desde: String(combinedFilters.desde) } : {}),
+              ...(combinedFilters.hasta ? { hasta: String(combinedFilters.hasta) } : {}),
             })} />
           </div>
         </div>
