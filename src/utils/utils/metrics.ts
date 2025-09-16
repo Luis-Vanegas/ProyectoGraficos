@@ -269,6 +269,9 @@ export function cleanDependentFilters(
 
 // Aplica filtros (sin any)
 export function applyFilters(rows: Row[], f: Filters): Row[] {
+  console.log('🔍 applyFilters - Filtros aplicados:', f);
+  console.log('🔍 applyFilters - Total obras antes del filtrado:', rows.length);
+  
   const inStr = (val: string | undefined) =>
     (x: unknown) => !val || String(x ?? '') === val;
 
