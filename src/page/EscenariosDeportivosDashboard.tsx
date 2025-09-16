@@ -14,10 +14,7 @@ import {
 } from '../utils/utils/metrics';
 
 import Kpi from '../components/Kpi';
-import ComboBars from '../components/comboBars';
 import SimpleBarChart from '../components/SimpleBarChart';
-import WorksTable from '../components/WorksTable';
-import AlertsTable from '../components/AlertsTable';
 import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
@@ -73,7 +70,6 @@ const EscenariosDeportivosDashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
-  const [isMobileStack, setIsMobileStack] = useState(false);
 
   // ============================================================================
   // EFECTOS Y CARGA DE DATOS
@@ -95,17 +91,6 @@ const EscenariosDeportivosDashboard = () => {
     })();
   }, []);
 
-  // Efecto para detectar el tamaño de pantalla y ajustar el layout
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobileStack(window.innerWidth < 768);
-    };
-    
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
 
   // ============================================================================
   // FILTRADO ESPECÍFICO PARA ESCENARIOS DEPORTIVOS
@@ -207,7 +192,8 @@ const EscenariosDeportivosDashboard = () => {
     });
   }, [comboDataset]);
 
-  // Dataset para gráfico de avance por año
+  // Variables no utilizadas comentadas para evitar errores de build
+  /*
   const avanceDataset = useMemo(() => {
     if (!F.avance2024 || !F.avance2025 || !F.avance2026 || !F.avance2027) return [];
     
@@ -238,7 +224,6 @@ const EscenariosDeportivosDashboard = () => {
     }));
   }, [filtered]);
 
-  // Dataset para gráfico de presupuesto por año
   const presupuestoDataset = useMemo(() => {
     if (!F.presupuestoEjecutado2024 || !F.presupuestoEjecutado2025 || !F.presupuestoEjecutado2026 || !F.presupuestoEjecutado2027) return [];
     
@@ -269,9 +254,6 @@ const EscenariosDeportivosDashboard = () => {
     }));
   }, [filtered]);
 
-  // ============================================================================
-  // CLASIFICACIÓN DE OBRAS
-  // ============================================================================
   const entregadas = useMemo(() => {
     return filtered.filter(r => {
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
@@ -303,6 +285,7 @@ const EscenariosDeportivosDashboard = () => {
       F.descripcionDelRiesgo && String(r[F.descripcionDelRiesgo] ?? '').trim().length > 0
     );
   }, [filtered]);
+  */
 
   // ============================================================================
   // DATOS PARA EL MAPA - ORGANIZADOS POR DEPENDENCIA

@@ -13,14 +13,10 @@ import {
 } from '../utils/utils/metrics';
 
 import Kpi from '../components/Kpi';
-import ComboBars from '../components/comboBars';
 import SimpleBarChart from '../components/SimpleBarChart';
-import WorksTable from '../components/WorksTable';
-import AlertsTable from '../components/AlertsTable';
 import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
-import HeaderIcons from '../components/HeaderIcons';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
@@ -72,7 +68,6 @@ const UnidadHospitalariaDashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
-  const [isMobileStack, setIsMobileStack] = useState(false);
 
   // ============================================================================
   // EFECTOS Y CARGA DE DATOS
@@ -94,17 +89,6 @@ const UnidadHospitalariaDashboard = () => {
     })();
   }, []);
 
-  // Efecto para detectar el tamaño de pantalla y ajustar el layout
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobileStack(window.innerWidth < 768);
-    };
-    
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
 
   // ============================================================================
   // FILTRADO ESPECÍFICO PARA UNIDAD HOSPITALARIA SANTA CRUZ
@@ -199,8 +183,9 @@ const UnidadHospitalariaDashboard = () => {
   }, [comboDataset]);
 
   // ============================================================================
-  // CLASIFICACIÓN DE OBRAS
+  // CLASIFICACIÓN DE OBRAS (comentado - no utilizado)
   // ============================================================================
+  /*
   const entregadas = useMemo(() => {
     return filtered.filter(r => {
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
@@ -232,6 +217,7 @@ const UnidadHospitalariaDashboard = () => {
       F.descripcionDelRiesgo && String(r[F.descripcionDelRiesgo] ?? '').trim().length > 0
     );
   }, [filtered]);
+  */
 
   // ============================================================================
   // DATOS PARA EL MAPA - ORGANIZADOS POR DEPENDENCIA
