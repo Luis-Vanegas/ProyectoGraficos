@@ -20,14 +20,26 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: {
+          // Separar React y dependencias principales
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // Separar librerías de gráficos
+          'charts-vendor': ['echarts', '@kbox-labs/react-echarts'],
+          // Separar librerías de mapas
+          'maps-vendor': ['leaflet', 'react-leaflet', 'maplibre-gl', '@turf/turf'],
+          // Separar librerías de utilidades
+          'utils-vendor': ['xlsx', 'use-supercluster'],
+          // Separar componentes grandes
+          'vigencias-table': ['./src/components/VigenciasTable.tsx']
+        },
         assetFileNames: 'assets/[name].[hash][extname]',
         chunkFileNames: 'assets/[name].[hash].js',
         entryFileNames: 'assets/[name].[hash].js'
       }
     },
     target: 'es2015',
-    minify: 'esbuild'
+    minify: 'esbuild',
+    chunkSizeWarningLimit: 1000
   },
   base: '/',
   optimizeDeps: {

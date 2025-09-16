@@ -14,11 +14,13 @@ import {
 
 import Kpi from '../components/Kpi';
 import ComboBars from '../components/comboBars';
+import SimpleBarChart from '../components/SimpleBarChart';
 import WorksTable from '../components/WorksTable';
 import AlertsTable from '../components/AlertsTable';
 import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
+import HeaderIcons from '../components/HeaderIcons';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
@@ -70,6 +72,7 @@ const PrimaveraNorteDashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
+  const [isMobileStack, setIsMobileStack] = useState(false);
 
   // ============================================================================
   // EFECTOS Y CARGA DE DATOS
@@ -91,6 +94,18 @@ const PrimaveraNorteDashboard = () => {
     })();
   }, []);
 
+  // Efecto para detectar el tamaño de pantalla y ajustar el layout
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobileStack(window.innerWidth < 768);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
   // ============================================================================
   // FILTRADO ESPECÍFICO PARA PRIMAVERA NORTE
   // ============================================================================
@@ -98,13 +113,17 @@ const PrimaveraNorteDashboard = () => {
   const primaveraNorteRows = useMemo(() => {
     if (!F.proyectoEstrategico) return rows;
     
-    return rows.filter(row => {
+    const filtered = rows.filter(row => {
       const proyectoRow = String(row[F.proyectoEstrategico] ?? '').toLowerCase();
       return proyectoRow.includes('primavera norte') || 
              proyectoRow.includes('desarrollo urbano sostenible') ||
              proyectoRow.includes('primavera') ||
-             proyectoRow.includes('norte');
+             proyectoRow.includes('norte') ||
+             proyectoRow.includes('urbano');
     });
+    
+    console.log(`Primavera Norte: ${filtered.length} obras de ${rows.length} total`);
+    return filtered;
   }, [rows]);
 
   // ============================================================================
@@ -140,9 +159,46 @@ const PrimaveraNorteDashboard = () => {
 
   // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
   const comboDataset = useMemo(() => {
-    if (!F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
-    return buildTwoSeriesDataset(filtered, F.dependencia, F.costoTotalActualizado, F.presupuestoEjecutado, 12);
+    if (!F.costoTotalActualizado || !F.presupuestoEjecutado || !F.nombre) return [];
+    
+    // Filtrar datos válidos antes de construir el dataset
+    const validData = filtered.filter(row => {
+      const nombre = row[F.nombre!];
+      const costo = row[F.costoTotalActualizado!];
+      const presupuesto = row[F.presupuestoEjecutado!];
+      
+      return nombre && 
+             nombre !== '' && 
+             nombre !== 'Sin información' &&
+             (costo !== null && costo !== undefined) &&
+             (presupuesto !== null && presupuesto !== undefined);
+    });
+    
+    if (validData.length === 0) return [];
+    
+    return buildTwoSeriesDataset(
+      validData,
+      F.nombre,
+      F.costoTotalActualizado,
+      F.presupuestoEjecutado,
+      15
+    );
   }, [filtered]);
+
+  // Datos para el gráfico SimpleBarChart (SVG nativo)
+  const simpleChartData = useMemo(() => {
+    if (!comboDataset || comboDataset.length <= 1) return [];
+    
+    // Convertir el dataset de ECharts al formato del nuevo componente
+    return comboDataset.slice(1).map((row: (string | number)[]) => {
+      const [label, value1, value2] = row;
+      return {
+        label: String(label).substring(0, 20) + (String(label).length > 20 ? '...' : ''), // Truncar etiquetas largas
+        value1: Number(value1) || 0,
+        value2: Number(value2) || 0,
+      };
+    });
+  }, [comboDataset]);
 
   // ============================================================================
   // CLASIFICACIÓN DE OBRAS
@@ -534,48 +590,20 @@ const PrimaveraNorteDashboard = () => {
          ======================================================================== */}
         <div className="content-section" style={{ display: 'block' }}>
           {/* Gráfico principal de inversión */}
-          {comboDataset.length > 0 && (
-            <div className="chart-card">
-              <ComboBars
-                title="Inversión vs Presupuesto Ejecutado - Primavera Norte"
-                dataset={comboDataset}
-                dim={F.dependencia}
-                v1={F.costoTotalActualizado}
-                v2={F.presupuestoEjecutado}
+          {simpleChartData.length > 0 && (
+            <div className="main-chart-section">
+              <SimpleBarChart
+                title="Inversión Total vs Presupuesto Ejecutado - Primavera Norte"
+                data={simpleChartData}
+                seriesNames={['Inversión Total', 'Presupuesto Ejecutado']}
+                width={1200}
+                height={500}
+                showLegend={true}
+                formatValue={(value) => `$${(value / 1000000).toFixed(1)}M`}
               />
             </div>
           )}
 
-          {/* Tablas de información */}
-          <div className="tables-grid">
-            {/* Tabla de proyectos entregados */}
-            <div className="table-card">
-              <WorksTable
-                title="Proyectos Primavera Norte Completados"
-                works={entregadas}
-                type="entregadas"
-                maxRows={6}
-              />
-            </div>
-
-            {/* Tabla de proyectos por entregar */}
-            <div className="table-card">
-              <WorksTable
-                title="Proyectos Primavera Norte en Desarrollo"
-                works={porEntregar}
-                type="porEntregar"
-                maxRows={4}
-              />
-            </div>
-
-            {/* Tabla de alertas y riesgos urbanos */}
-            <div className="table-card">
-              <AlertsTable
-                alerts={alertas}
-                maxRows={6}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Indicador de estado de carga */}

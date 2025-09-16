@@ -14,11 +14,13 @@ import {
 
 import Kpi from '../components/Kpi';
 import ComboBars from '../components/comboBars';
+import SimpleBarChart from '../components/SimpleBarChart';
 import WorksTable from '../components/WorksTable';
 import AlertsTable from '../components/AlertsTable';
 import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
+import HeaderIcons from '../components/HeaderIcons';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
@@ -70,6 +72,7 @@ const EscuelasInteligentesDashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
+  const [isMobileStack, setIsMobileStack] = useState(false);
 
   // ============================================================================
   // EFECTOS Y CARGA DE DATOS
@@ -91,6 +94,18 @@ const EscuelasInteligentesDashboard = () => {
     })();
   }, []);
 
+  // Efecto para detectar el tamaño de pantalla y ajustar el layout
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobileStack(window.innerWidth < 768);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
   // ============================================================================
   // FILTRADO ESPECÍFICO PARA ESCUELAS INTELIGENTES
   // ============================================================================
@@ -98,13 +113,17 @@ const EscuelasInteligentesDashboard = () => {
   const escuelasInteligentesRows = useMemo(() => {
     if (!F.proyectoEstrategico) return rows;
     
-    return rows.filter(row => {
+    const filtered = rows.filter(row => {
       const proyectoRow = String(row[F.proyectoEstrategico] ?? '').toLowerCase();
       return proyectoRow.includes('escuelas inteligentes') || 
              proyectoRow.includes('escuela inteligente') ||
              proyectoRow.includes('tecnología educativa') ||
-             proyectoRow.includes('educación digital');
+             proyectoRow.includes('educación digital') ||
+             proyectoRow.includes('educativo');
     });
+    
+    console.log(`Escuelas Inteligentes: ${filtered.length} obras de ${rows.length} total`);
+    return filtered;
   }, [rows]);
 
   // ============================================================================
@@ -139,9 +158,109 @@ const EscuelasInteligentesDashboard = () => {
   }, [filtered]);
 
   // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
+  // Dataset para el gráfico principal de análisis (ComboBars)
   const comboDataset = useMemo(() => {
-    if (!F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
-    return buildTwoSeriesDataset(filtered, F.dependencia, F.costoTotalActualizado, F.presupuestoEjecutado, 12);
+    if (!F.costoTotalActualizado || !F.presupuestoEjecutado || !F.nombre) return [];
+    
+    // Filtrar datos válidos antes de construir el dataset
+    const validData = filtered.filter(row => {
+      const nombre = row[F.nombre!];
+      const costo = row[F.costoTotalActualizado!];
+      const presupuesto = row[F.presupuestoEjecutado!];
+      
+      return nombre && 
+             nombre !== '' && 
+             nombre !== 'Sin información' &&
+             (costo !== null && costo !== undefined) &&
+             (presupuesto !== null && presupuesto !== undefined);
+    });
+    
+    if (validData.length === 0) return [];
+    
+    return buildTwoSeriesDataset(
+      validData,
+      F.nombre,
+      F.costoTotalActualizado,
+      F.presupuestoEjecutado,
+      15
+    );
+  }, [filtered]);
+
+  // Datos para el gráfico SimpleBarChart (SVG nativo)
+  const simpleChartData = useMemo(() => {
+    if (!comboDataset || comboDataset.length <= 1) return [];
+    
+    // Convertir el dataset de ECharts al formato del nuevo componente
+    return comboDataset.slice(1).map((row: (string | number)[]) => {
+      const [label, value1, value2] = row;
+      return {
+        label: String(label).substring(0, 20) + (String(label).length > 20 ? '...' : ''), // Truncar etiquetas largas
+        value1: Number(value1) || 0,
+        value2: Number(value2) || 0,
+      };
+    });
+  }, [comboDataset]);
+
+  // Dataset para gráfico de avance por año
+  const avanceDataset = useMemo(() => {
+    if (!F.avance2024 || !F.avance2025 || !F.avance2026 || !F.avance2027) return [];
+    
+    const avanceData = filtered.reduce((acc, row) => {
+      const dependencia = F.dependencia ? String(row[F.dependencia] ?? 'Sin Dependencia') : 'Sin Dependencia';
+      
+      if (!acc[dependencia]) {
+        acc[dependencia] = {
+          '2024': 0,
+          '2025': 0,
+          '2026': 0,
+          '2027': 0
+        };
+      }
+      
+      // Sumar avances por año
+      if (F.avance2024) acc[dependencia]['2024'] += parseFloat(String(row[F.avance2024] ?? 0)) || 0;
+      if (F.avance2025) acc[dependencia]['2025'] += parseFloat(String(row[F.avance2025] ?? 0)) || 0;
+      if (F.avance2026) acc[dependencia]['2026'] += parseFloat(String(row[F.avance2026] ?? 0)) || 0;
+      if (F.avance2027) acc[dependencia]['2027'] += parseFloat(String(row[F.avance2027] ?? 0)) || 0;
+      
+      return acc;
+    }, {} as Record<string, Record<string, number>>);
+    
+    return Object.entries(avanceData).map(([dependencia, avances]) => ({
+      name: dependencia,
+      ...avances
+    }));
+  }, [filtered]);
+
+  // Dataset para gráfico de presupuesto por año
+  const presupuestoDataset = useMemo(() => {
+    if (!F.presupuestoEjecutado2024 || !F.presupuestoEjecutado2025 || !F.presupuestoEjecutado2026 || !F.presupuestoEjecutado2027) return [];
+    
+    const presupuestoData = filtered.reduce((acc, row) => {
+      const dependencia = F.dependencia ? String(row[F.dependencia] ?? 'Sin Dependencia') : 'Sin Dependencia';
+      
+      if (!acc[dependencia]) {
+        acc[dependencia] = {
+          '2024': 0,
+          '2025': 0,
+          '2026': 0,
+          '2027': 0
+        };
+      }
+      
+      // Sumar presupuestos por año
+      if (F.presupuestoEjecutado2024) acc[dependencia]['2024'] += parseFloat(String(row[F.presupuestoEjecutado2024] ?? 0)) || 0;
+      if (F.presupuestoEjecutado2025) acc[dependencia]['2025'] += parseFloat(String(row[F.presupuestoEjecutado2025] ?? 0)) || 0;
+      if (F.presupuestoEjecutado2026) acc[dependencia]['2026'] += parseFloat(String(row[F.presupuestoEjecutado2026] ?? 0)) || 0;
+      if (F.presupuestoEjecutado2027) acc[dependencia]['2027'] += parseFloat(String(row[F.presupuestoEjecutado2027] ?? 0)) || 0;
+      
+      return acc;
+    }, {} as Record<string, Record<string, number>>);
+    
+    return Object.entries(presupuestoData).map(([dependencia, presupuestos]) => ({
+      name: dependencia,
+      ...presupuestos
+    }));
   }, [filtered]);
 
   // ============================================================================
@@ -242,6 +361,9 @@ const EscuelasInteligentesDashboard = () => {
     <div className="dashboard-container">
       {/* Navegación superior */}
       <Navigation showBackButton={true} title="Dashboard - Escuelas Inteligentes" />
+      
+      {/* Iconos del header */}
+      <HeaderIcons rows={rows} filtered={filtered} />
 
       {/* Contenedor principal del dashboard */}
       <div className="dashboard-content">
@@ -537,49 +659,21 @@ const EscuelasInteligentesDashboard = () => {
              SECCIÓN DE CONTENIDO INFERIOR - GRÁFICOS Y TABLAS
          ======================================================================== */}
         <div className="content-section" style={{ display: 'block' }}>
-          {/* Gráfico principal de inversión */}
-          {comboDataset.length > 0 && (
-            <div className="chart-card">
-              <ComboBars
-                title="Inversión vs Presupuesto Ejecutado - Escuelas Inteligentes"
-                dataset={comboDataset}
-                dim={F.dependencia}
-                v1={F.costoTotalActualizado}
-                v2={F.presupuestoEjecutado}
+          {/* Gráfico principal de análisis */}
+          {simpleChartData.length > 0 && (
+            <div className="main-chart-section">
+              <SimpleBarChart
+                title="Inversión Total vs Presupuesto Ejecutado - Escuelas Inteligentes"
+                data={simpleChartData}
+                seriesNames={['Inversión Total', 'Presupuesto Ejecutado']}
+                width={1200}
+                height={500}
+                showLegend={true}
+                formatValue={(value) => `$${(value / 1000000).toFixed(1)}M`}
               />
             </div>
           )}
 
-          {/* Tablas de información */}
-          <div className="tables-grid">
-            {/* Tabla de escuelas entregadas */}
-            <div className="table-card">
-              <WorksTable
-                title="Escuelas Inteligentes Completadas"
-                works={entregadas}
-                type="entregadas"
-                maxRows={6}
-              />
-            </div>
-
-            {/* Tabla de escuelas por entregar */}
-            <div className="table-card">
-              <WorksTable
-                title="Escuelas Inteligentes en Desarrollo"
-                works={porEntregar}
-                type="porEntregar"
-                maxRows={4}
-              />
-            </div>
-
-            {/* Tabla de alertas y riesgos tecnológicos */}
-            <div className="table-card">
-              <AlertsTable
-                alerts={alertas}
-                maxRows={6}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Indicador de estado de carga */}
@@ -836,12 +930,13 @@ const EscuelasInteligentesDashboard = () => {
           margin-bottom: 40px;
         }
 
-        .tables-grid {
+        .charts-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
           gap: 30px;
-          margin-top: 30px;
+          margin-bottom: 30px;
         }
+
 
         /* ========================================================================
             TARJETAS DE CONTENIDO
@@ -945,6 +1040,16 @@ const EscuelasInteligentesDashboard = () => {
           .filters-container {
             grid-template-columns: repeat(3, 1fr);
           }
+          .charts-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .charts-grid {
+            grid-template-columns: 1fr;
+            gap: 25px;
+          }
         }
 
         @media (max-width: 768px) {
@@ -1026,11 +1131,12 @@ const EscuelasInteligentesDashboard = () => {
             margin-bottom: 25px;
           }
 
-          .tables-grid {
+          .charts-grid {
             grid-template-columns: 1fr;
             gap: 20px;
-            margin-top: 20px;
+            margin-bottom: 20px;
           }
+
         }
 
         @media (max-width: 480px) {
@@ -1117,10 +1223,11 @@ const EscuelasInteligentesDashboard = () => {
             margin-bottom: 20px;
           }
 
-          .tables-grid {
+          .charts-grid {
             gap: 15px;
-            margin-top: 15px;
+            margin-bottom: 15px;
           }
+
         }
 
         /* Estilos para los inputs de fecha tipo calendario */
