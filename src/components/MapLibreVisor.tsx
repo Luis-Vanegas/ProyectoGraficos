@@ -619,8 +619,23 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
 
   // (El visor no usa filtros internos; se controla por props/URL)
 
-  // No renderizar el mapa hasta que tengamos datos
-  if (!obras || obras.length === 0) {
+  // Mostrar mensaje de carga solo si estamos en producción y no hay datos después de un tiempo
+  const [showLoadingMessage, setShowLoadingMessage] = useState(false);
+  
+  useEffect(() => {
+    if (!obras || obras.length === 0) {
+      const timer = setTimeout(() => {
+        setShowLoadingMessage(true);
+      }, 2000); // Esperar 2 segundos antes de mostrar mensaje de carga
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoadingMessage(false);
+    }
+  }, [obras]);
+  
+  // Solo mostrar mensaje de carga en producción y si no hay datos después del timeout
+  if (import.meta.env.PROD && showLoadingMessage && (!obras || obras.length === 0)) {
     return (
       <div style={{ position: 'relative', height, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f2f5' }}>
         <div style={{ textAlign: 'center', color: '#666' }}>
