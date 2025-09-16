@@ -69,13 +69,32 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   }, []);
 
   const fetchObras = useCallback(async (params?: URLSearchParams) => {
-    const query = params ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/obras${query}`);
-    if (!res.ok) {
-      throw new Error('No se pudo cargar /api/obras');
+    try {
+      const query = params ? `?${params.toString()}` : '';
+      console.log('🔍 Fetching obras from:', `/api/obras${query}`);
+      const res = await fetch(`/api/obras${query}`);
+      
+      if (!res.ok) {
+        console.error('❌ Error response:', res.status, res.statusText);
+        throw new Error(`Error ${res.status}: No se pudo cargar /api/obras`);
+      }
+      
+      const data = (await res.json()) as Obra[];
+      console.log('✅ Obras cargadas:', data?.length || 0, 'registros');
+      console.log('🔍 Primeras 3 obras:', data?.slice(0, 3).map(o => ({
+        id: o.id,
+        nombre: (o as any).NOMBRE || (o as any).nombre,
+        dependencia: (o as any).DEPENDENCIA || (o as any).dependencia,
+        lat: (o as any).LATITUD || (o as any).lat,
+        lon: (o as any).LONGITUD || (o as any).lon
+      })));
+      
+      setObras(data || []);
+    } catch (error) {
+      console.error('❌ Error al cargar obras:', error);
+      setObras([]); // Establecer array vacío en caso de error
+      throw error;
     }
-    const data = (await res.json()) as Obra[];
-    setObras(data);
   }, []);
 
   // Colores por dependencia (HSL -> Hex)
@@ -143,9 +162,10 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     window.history.replaceState({}, '', newUrl);
   }, [selectedCodigo]);
 
-  // Función para detectar el formato de campos (minúsculas vs mayúsculas)
+  // ✅ ARREGLADO: Función para detectar el formato de campos con validación robusta
   const getFieldNames = useMemo(() => {
     if (!obras || !Array.isArray(obras) || obras.length === 0) {
+      console.log('🔍 No hay obras para detectar formato, usando formato por defecto');
       return {
         nombre: 'nombre',
         lat: 'lat',
@@ -165,12 +185,24 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     }
 
     const firstObra = obras[0] as any;
-    const hasUppercaseFields = firstObra['NOMBRE'] !== undefined;
-    const hasLowercaseFields = firstObra.nombre !== undefined;
+    const availableFields = Object.keys(firstObra);
+    
+    // Detectar formato más robustamente
+    const hasUppercaseFields = availableFields.some(field => 
+      field === 'NOMBRE' || field === 'DEPENDENCIA' || field === 'LATITUD' || field === 'LONGITUD'
+    );
+    const hasLowercaseFields = availableFields.some(field => 
+      field === 'nombre' || field === 'dependencia' || field === 'lat' || field === 'lon'
+    );
 
-    console.log('🔍 Detección de formato:', { hasUppercaseFields, hasLowercaseFields });
+    console.log('🔍 Detección de formato:', { 
+      hasUppercaseFields, 
+      hasLowercaseFields, 
+      availableFields: availableFields.slice(0, 10) // Mostrar solo los primeros 10 campos
+    });
 
     if (hasUppercaseFields) {
+      console.log('🔍 Usando formato MAYÚSCULAS');
       return {
         nombre: 'NOMBRE',
         lat: 'LATITUD',
@@ -188,6 +220,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
         alertaImpacto: 'IMPACTO DEL RIESGO'
       };
     } else {
+      console.log('🔍 Usando formato minúsculas');
       return {
         nombre: 'nombre',
         lat: 'lat',
@@ -321,7 +354,23 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     if (!map.getSource(centroidsSrc)) {
       map.addSource(centroidsSrc, { type: 'geojson', data: conteos.centroids });
       map.addLayer({ id: centroidsLayer, type: 'circle', source: centroidsSrc, paint: { 'circle-radius': 18, 'circle-color': '#F77F26', 'circle-stroke-color': '#00000033', 'circle-stroke-width': 3 } });
-      map.addLayer({ id: centroidsText, type: 'symbol', source: centroidsSrc, layout: { 'text-field': ['to-string', ['get', 'count']], 'text-size': 12, 'text-font': ['Open Sans Bold'] }, paint: { 'text-color': '#fff' } });
+      // ✅ ARREGLADO: Asegurar que el texto siempre se muestre, incluso si count es 0
+      map.addLayer({ 
+        id: centroidsText, 
+        type: 'symbol', 
+        source: centroidsSrc, 
+        layout: { 
+          'text-field': [
+            'case',
+            ['has', 'count'],
+            ['to-string', ['get', 'count']],
+            '0'
+          ], 
+          'text-size': 12, 
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'] 
+        }, 
+        paint: { 'text-color': '#fff' } 
+      });
     } else {
       (map.getSource(centroidsSrc) as GeoJSONSource).setData(conteos.centroids);
     }
@@ -365,17 +414,24 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       // Crear fuente sin clustering y capa de puntos individuales
       map.addSource(src, { type: 'geojson', data: fc });
       
-      // Crear expresión de color con validación para evitar error de MapLibre
+      // ✅ ARREGLADO: Crear expresión de color con validación robusta
       let circleColor: any;
       if (Object.keys(dependencyColorMap).length > 0) {
         const matchColor: any[] = ['match', ['get', 'dependencia']];
-        Object.entries(dependencyColorMap).forEach(([dep, color]) => { matchColor.push(dep, color); });
+        Object.entries(dependencyColorMap).forEach(([dep, color]) => { 
+          if (dep && color) { // Validar que dep y color no sean null/undefined
+            matchColor.push(dep, color); 
+          }
+        });
         matchColor.push('#3B8686'); // Color por defecto
         circleColor = matchColor;
       } else {
         // Si no hay dependencias, usar un color fijo
         circleColor = '#3B8686';
       }
+      
+      console.log('🔍 Debug colores - dependencyColorMap:', dependencyColorMap);
+      console.log('🔍 Debug colores - circleColor expression:', circleColor);
       
       map.addLayer({ 
         id: ptsLayer, 
