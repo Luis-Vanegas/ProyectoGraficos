@@ -90,15 +90,21 @@ const Dashboard = () => {
   useEffect(() => {
     (async () => {
       try {
+        console.log('🔍 Dashboard - Iniciando carga de datos...');
         const sres = await fetch('/api/sheets');
+        console.log('🔍 Dashboard - Respuesta de /api/sheets:', sres.status);
         const { sheets } = await sres.json();
+        console.log('🔍 Dashboard - Sheets disponibles:', sheets);
         const hoja = sheets.includes('Obras') ? 'Obras' : sheets[0];
+        console.log('🔍 Dashboard - Hoja seleccionada:', hoja);
         const dres = await fetch(`/api/data?sheet=${encodeURIComponent(hoja)}`);
+        console.log('🔍 Dashboard - Respuesta de /api/data:', dres.status);
         const { rows } = await dres.json();
+        console.log('🔍 Dashboard - Datos cargados:', rows.length, 'filas');
         setRows(rows);
         setStatus(`${rows.length} filas cargadas exitosamente`);
       } catch (e) {
-        console.error('Error al cargar datos:', e);
+        console.error('🔍 Dashboard - Error al cargar datos:', e);
         setStatus('Error: No se pudieron cargar los datos');
       }
     })();
