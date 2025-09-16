@@ -138,8 +138,17 @@ const Dashboard = () => {
   };
 
   const opciones = useMemo(() => getFilterOptions(rows, filters), [rows, filters]);
-  const combinedFilters = useMemo(() => combineDateFields(filters), [filters]);
-  const filtered = useMemo(() => applyFilters(rows, combinedFilters), [rows, combinedFilters]);
+  const combinedFilters = useMemo(() => {
+    const result = combineDateFields(filters);
+    console.log('🔍 Dashboard - combineDateFields result:', result);
+    return result;
+  }, [filters]);
+  const filtered = useMemo(() => {
+    console.log('🔍 Dashboard - Aplicando filtros a', rows.length, 'obras');
+    const result = applyFilters(rows, combinedFilters);
+    console.log('🔍 Dashboard - Resultado del filtrado:', result.length, 'obras');
+    return result;
+  }, [rows, combinedFilters]);
   const k = useMemo(() => kpis(filtered), [filtered]);
   const vigencias = useMemo(() => {
     const rows = computeVigencias(filtered);
