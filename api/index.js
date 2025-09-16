@@ -120,6 +120,19 @@ module.exports = async (req, res) => {
       return;
     }
     
+    // Endpoint: /api/limites
+    if (pathname === '/api/limites' && req.method === 'GET') {
+      res.json({ error: 'Límites no disponibles en este proxy' });
+      return;
+    }
+    
+    // Endpoint: /api/obras
+    if (pathname === '/api/obras' && req.method === 'GET') {
+      const data = await getData();
+      res.json(data);
+      return;
+    }
+    
     // Endpoint no encontrado
     res.status(404).json({ error: 'Endpoint no encontrado' });
     
