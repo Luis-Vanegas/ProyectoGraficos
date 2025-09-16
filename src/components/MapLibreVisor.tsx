@@ -143,31 +143,94 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     window.history.replaceState({}, '', newUrl);
   }, [selectedCodigo]);
 
+  // Función para detectar el formato de campos (minúsculas vs mayúsculas)
+  const getFieldNames = useMemo(() => {
+    if (!obras || !Array.isArray(obras) || obras.length === 0) {
+      return {
+        nombre: 'nombre',
+        lat: 'lat',
+        lon: 'lon',
+        estado: 'estado',
+        dependencia: 'dependencia',
+        direccion: 'direccion',
+        presupuesto: 'presupuesto',
+        fechaEntrega: 'fechaEntrega',
+        porcentaje: 'indicadorAvanceTotal',
+        comunaCodigo: 'comunaCodigo',
+        comunaNombre: 'comunaNombre',
+        alertaPresencia: 'alertaPresencia',
+        alertaDescripcion: 'alertaDescripcion',
+        alertaImpacto: 'alertaImpacto'
+      };
+    }
+
+    const firstObra = obras[0] as any;
+    const hasUppercaseFields = firstObra['NOMBRE'] !== undefined;
+    const hasLowercaseFields = firstObra.nombre !== undefined;
+
+    console.log('🔍 Detección de formato:', { hasUppercaseFields, hasLowercaseFields });
+
+    if (hasUppercaseFields) {
+      return {
+        nombre: 'NOMBRE',
+        lat: 'LATITUD',
+        lon: 'LONGITUD',
+        estado: 'ESTADO DE LA OBRA',
+        dependencia: 'DEPENDENCIA',
+        direccion: 'DIRECCIÓN',
+        presupuesto: 'PRESUPUESTO EJECUTADO',
+        fechaEntrega: 'FECHA REAL DE ENTREGA',
+        porcentaje: 'PORCENTAJE EJECUCIÓN OBRA',
+        comunaCodigo: 'COMUNA O CORREGIMIENTO',
+        comunaNombre: 'COMUNA O CORREGIMIENTO',
+        alertaPresencia: 'PRESENCIA DE RIESGO',
+        alertaDescripcion: 'DESCRIPCIÓN DEL RIESGO',
+        alertaImpacto: 'IMPACTO DEL RIESGO'
+      };
+    } else {
+      return {
+        nombre: 'nombre',
+        lat: 'lat',
+        lon: 'lon',
+        estado: 'estado',
+        dependencia: 'dependencia',
+        direccion: 'direccion',
+        presupuesto: 'presupuesto',
+        fechaEntrega: 'fechaEntrega',
+        porcentaje: 'indicadorAvanceTotal',
+        comunaCodigo: 'comunaCodigo',
+        comunaNombre: 'comunaNombre',
+        alertaPresencia: 'alertaPresencia',
+        alertaDescripcion: 'alertaDescripcion',
+        alertaImpacto: 'alertaImpacto'
+      };
+    }
+  }, [obras]);
+
   // Enriquecer obras: asignar comunaCodigo por PIP si falta pero tiene coords
   const obrasEnriquecidas = useMemo(() => {
     if (!obras || !Array.isArray(obras)) return [];
     
     console.log('🔍 Debug obrasEnriquecidas - Total obras originales:', obras.length);
     console.log('🔍 Debug obrasEnriquecidas - Campos disponibles:', obras.length > 0 ? Object.keys(obras[0]) : []);
-    console.log('🔍 Debug obrasEnriquecidas - Primeras 10 obras completas:', obras.slice(0, 10));
-    console.log('🔍 Debug obrasEnriquecidas - Primera obra completa:', obras.length > 0 ? obras[0] : null);
+    console.log('🔍 Debug obrasEnriquecidas - Formato detectado:', getFieldNames);
     console.log('🔍 Debug obrasEnriquecidas - Primeras 3 obras:', obras.slice(0, 3).map(o => ({
       id: o.id,
-      nombre: (o as any)['NOMBRE'],
-      comuna: (o as any)['COMUNA O CORREGIMIENTO'],
-      lat: (o as any)['LATITUD'],
-      lon: (o as any)['LONGITUD'],
-      comunaCodigo: (o as any)['COMUNA O CORREGIMIENTO']
+      nombre: (o as any)[getFieldNames.nombre],
+      comuna: (o as any)[getFieldNames.comunaNombre],
+      lat: (o as any)[getFieldNames.lat],
+      lon: (o as any)[getFieldNames.lon],
+      comunaCodigo: (o as any)[getFieldNames.comunaCodigo]
     })));
     
     if (!limites) {
-      return obras.map(o => ({ ...o, comunaCodigo: (o as any)['COMUNA O CORREGIMIENTO'] || null }));
+      return obras.map(o => ({ ...o, comunaCodigo: (o as any)[getFieldNames.comunaCodigo] || null }));
     }
     const fc = limites;
     const enriquecidas = obras.map(o => {
-      const normalizedCodigo = (o as any)['COMUNA O CORREGIMIENTO'] ? String((o as any)['COMUNA O CORREGIMIENTO']).trim() : null;
-      if (!normalizedCodigo && (o as any)['LATITUD'] != null && (o as any)['LONGITUD'] != null) {
-        const pt = turf.point([(o as any)['LONGITUD'], (o as any)['LATITUD']]);
+      const normalizedCodigo = (o as any)[getFieldNames.comunaCodigo] ? String((o as any)[getFieldNames.comunaCodigo]).trim() : null;
+      if (!normalizedCodigo && (o as any)[getFieldNames.lat] != null && (o as any)[getFieldNames.lon] != null) {
+        const pt = turf.point([(o as any)[getFieldNames.lon], (o as any)[getFieldNames.lat]]);
         if (fc.features) {
           for (const f of fc.features as LimiteFeature[]) {
             if (turf.booleanPointInPolygon(pt, f)) {
@@ -183,7 +246,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     console.log('🔍 Debug obrasEnriquecidas - Obras con comunaCodigo:', enriquecidas.filter(o => o.comunaCodigo).length);
     
     return enriquecidas;
-  }, [obras, limites]);
+  }, [obras, limites, getFieldNames]);
 
   // Build centroides y conteos por comuna (todas las obras con comuna conocida)
   const conteos = useMemo(() => {
@@ -196,9 +259,9 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       console.log('🔍 Debug conteos - Total obras:', obrasEnriquecidas.length);
       console.log('🔍 Debug conteos - Primeras 3 obras:', obrasEnriquecidas.slice(0, 3).map(o => ({
         id: o.id,
-        nombre: (o as any)['NOMBRE'],
+        nombre: (o as any)[getFieldNames.nombre],
         comunaCodigo: o.comunaCodigo,
-        comunaOriginal: (o as any)['COMUNA O CORREGIMIENTO'],
+        comunaOriginal: (o as any)[getFieldNames.comunaNombre],
         campos: Object.keys(o)
       })));
       
@@ -218,7 +281,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       }) : []
     } as unknown as GeoJSON.FeatureCollection;
     return { centroids, counts };
-  }, [limites, obrasEnriquecidas]);
+  }, [limites, obrasEnriquecidas, getFieldNames]);
 
   // Mapa de código -> nombre de comuna
   const codigoToComuna = useMemo(() => {
@@ -286,10 +349,10 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
 
     if (SHOW_OBRA_POINTS) {
     const features: GeoJSON.Feature[] = obrasEnriquecidas && Array.isArray(obrasEnriquecidas) 
-      ? obrasEnriquecidas.filter(o => (o as any)['LATITUD'] != null && (o as any)['LONGITUD'] != null).map(o => ({
+      ? obrasEnriquecidas.filter(o => (o as any)[getFieldNames.lat] != null && (o as any)[getFieldNames.lon] != null).map(o => ({
           type: 'Feature',
-          geometry: { type: 'Point', coordinates: [(o as any)['LONGITUD'] as number, (o as any)['LATITUD'] as number] },
-          properties: { id: o.id, nombre: (o as any)['NOMBRE'], estado: (o as any)['ESTADO DE LA OBRA'], dependencia: (o as any)['DEPENDENCIA'], comunaCodigo: o.comunaCodigo || '' }
+          geometry: { type: 'Point', coordinates: [(o as any)[getFieldNames.lon] as number, (o as any)[getFieldNames.lat] as number] },
+          properties: { id: o.id, nombre: (o as any)[getFieldNames.nombre], estado: (o as any)[getFieldNames.estado], dependencia: (o as any)[getFieldNames.dependencia], comunaCodigo: o.comunaCodigo || '' }
         }))
       : [];
     const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
@@ -385,8 +448,8 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
         const imgHtml = (obra as any)?.imagenUrl ? `<div style="margin-bottom:8px"><img src="${(obra as any).imagenUrl}" alt="${nombre || ''}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb"/></div>` : '';
         const comunaStr = (obra as any)?.comunaNombre || (obra?.comunaCodigo ? codigoToComuna[obra.comunaCodigo] : (selectedCodigo ? codigoToComuna[selectedCodigo] : '')) || '';
       const comunaText = comunaStr ? `<div style="color:#374151;margin-bottom:6px"><strong>Comuna:</strong> ${comunaStr}</div>` : '';
-      const depText = (obra as any)?.['DEPENDENCIA'] ? `<div style="color:#374151;margin-bottom:6px"><strong>Dependencia:</strong> ${(obra as any)['DEPENDENCIA']}</div>` : '';
-      const pctVal = (obra as any)?.['PORCENTAJE EJECUCIÓN OBRA'];
+      const depText = (obra as any)?.[getFieldNames.dependencia] ? `<div style="color:#374151;margin-bottom:6px"><strong>Dependencia:</strong> ${(obra as any)[getFieldNames.dependencia]}</div>` : '';
+      const pctVal = (obra as any)?.[getFieldNames.porcentaje];
       const pct = (pctVal === null || pctVal === undefined) ? 's/d' : `${pctVal}%`;
       const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
         .setLngLat(coords)
@@ -396,12 +459,12 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           ${depText}
           ${comunaText}
           <div style="color:#111827;margin-top:4px"><strong>Avance del proyecto:</strong> <span style="font-weight:800">${pct}</span></div>
-      ${(obra as any)?.['PRESENCIA DE RIESGO'] && (String((obra as any)['PRESENCIA DE RIESGO']).toLowerCase() !== 'sin información' && String((obra as any)['PRESENCIA DE RIESGO']).toLowerCase() !== 'sin informacion' && String((obra as any)['PRESENCIA DE RIESGO']).toLowerCase() !== 'no aplica' && String((obra as any)['PRESENCIA DE RIESGO']).toLowerCase() !== 'ninguna') ? `
+      ${(obra as any)?.[getFieldNames.alertaPresencia] && (String((obra as any)[getFieldNames.alertaPresencia]).toLowerCase() !== 'sin información' && String((obra as any)[getFieldNames.alertaPresencia]).toLowerCase() !== 'sin informacion' && String((obra as any)[getFieldNames.alertaPresencia]).toLowerCase() !== 'no aplica' && String((obra as any)[getFieldNames.alertaPresencia]).toLowerCase() !== 'ninguna') ? `
         <div style="margin-top:12px;padding:12px;border:2px solid #dc2626;border-radius:10px;background:#ffffff;box-shadow:0 2px 8px rgba(220,38,38,0.15)">
           <div style="font-weight:900;color:#000000;margin-bottom:8px;font-size:14px;text-transform:uppercase;letter-spacing:0.5px">⚠️ Alerta y Riesgo</div>
-          <div style="color:#000000;margin-bottom:6px"><strong style="font-weight:700;color:#000000">Presencia de Riesgo:</strong> <span style="color:#374151">${(obra as any)['PRESENCIA DE RIESGO']}</span></div>
-          ${(obra as any)?.['DESCRIPCIÓN DEL RIESGO'] ? `<div style="color:#000000;margin-bottom:6px"><strong style="font-weight:700;color:#000000">Descripción:</strong> <span style="color:#374151;line-height:1.4">${(obra as any)['DESCRIPCIÓN DEL RIESGO']}</span></div>` : ''}
-          ${(obra as any)?.['IMPACTO DEL RIESGO'] ? `<div style="color:#000000"><strong style="font-weight:700;color:#000000">Impacto:</strong> <span style="color:#374151">${(obra as any)['IMPACTO DEL RIESGO']}</span></div>` : ''}
+          <div style="color:#000000;margin-bottom:6px"><strong style="font-weight:700;color:#000000">Presencia de Riesgo:</strong> <span style="color:#374151">${(obra as any)[getFieldNames.alertaPresencia]}</span></div>
+          ${(obra as any)?.[getFieldNames.alertaDescripcion] ? `<div style="color:#000000;margin-bottom:6px"><strong style="font-weight:700;color:#000000">Descripción:</strong> <span style="color:#374151;line-height:1.4">${(obra as any)[getFieldNames.alertaDescripcion]}</span></div>` : ''}
+          ${(obra as any)?.[getFieldNames.alertaImpacto] ? `<div style="color:#000000"><strong style="font-weight:700;color:#000000">Impacto:</strong> <span style="color:#374151">${(obra as any)[getFieldNames.alertaImpacto]}</span></div>` : ''}
         </div>
       ` : ''}
         `)
@@ -440,8 +503,8 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     if (SHOW_SELECTED_POINTS) {
     const featuresSel: GeoJSON.Feature[] = obrasEnriquecidas && Array.isArray(obrasEnriquecidas)
       ? obrasEnriquecidas
-          .filter(o => (o as any)['LATITUD'] != null && (o as any)['LONGITUD'] != null && (selectedCodigo ? o.comunaCodigo === selectedCodigo : false))
-          .map(o => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [(o as any)['LONGITUD'] as number, (o as any)['LATITUD'] as number] }, properties: { id: o.id, nombre: (o as any)['NOMBRE'], estado: (o as any)['ESTADO DE LA OBRA'], dependencia: (o as any)['DEPENDENCIA'], comunaCodigo: o.comunaCodigo || '' } }))
+          .filter(o => (o as any)[getFieldNames.lat] != null && (o as any)[getFieldNames.lon] != null && (selectedCodigo ? o.comunaCodigo === selectedCodigo : false))
+          .map(o => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [(o as any)[getFieldNames.lon] as number, (o as any)[getFieldNames.lat] as number] }, properties: { id: o.id, nombre: (o as any)[getFieldNames.nombre], estado: (o as any)[getFieldNames.estado], dependencia: (o as any)[getFieldNames.dependencia], comunaCodigo: o.comunaCodigo || '' } }))
       : [];
     const fcSel: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: featuresSel };
     // Crear expresión de color con validación para evitar error de MapLibre
@@ -498,7 +561,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     });
       }
     }
-  }, [obrasEnriquecidas, selectedCodigo, mapLoaded, dependencyColorMap, SHOW_OBRA_POINTS, SHOW_SELECTED_POINTS, onObraClick, hasProyectoFilter, codigoToComuna]);
+  }, [obrasEnriquecidas, selectedCodigo, mapLoaded, dependencyColorMap, SHOW_OBRA_POINTS, SHOW_SELECTED_POINTS, onObraClick, hasProyectoFilter, codigoToComuna, getFieldNames]);
 
 
   // ESC para limpiar
@@ -545,14 +608,14 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     return obrasEnriquecidas.filter(o => String(o.comunaCodigo ?? '').trim() === sel);
   }, [obrasEnriquecidas, selectedCodigo]);
 
-  const totalConUbicacion = obrasDeComuna ? obrasDeComuna.filter(o => (o as any)['LATITUD'] != null && (o as any)['LONGITUD'] != null).length : 0;
+  const totalConUbicacion = obrasDeComuna ? obrasDeComuna.filter(o => (o as any)[getFieldNames.lat] != null && (o as any)[getFieldNames.lon] != null).length : 0;
   const sinUbicacion = obrasDeComuna ? obrasDeComuna.length - totalConUbicacion : 0;
   const indicadorPromedio = useMemo(() => {
     if (!obrasDeComuna || obrasDeComuna.length === 0) return 0;
-    const vals = (obrasDeComuna as any[]).map(o => Number((o as any)['PORCENTAJE EJECUCIÓN OBRA']) || 0);
+    const vals = (obrasDeComuna as any[]).map(o => Number((o as any)[getFieldNames.porcentaje]) || 0);
     const sum = vals.reduce((a, b) => a + b, 0);
     return Math.round((sum / vals.length) * 100) / 100;
-  }, [obrasDeComuna]);
+  }, [obrasDeComuna, getFieldNames]);
 
   // (El visor no usa filtros internos; se controla por props/URL)
 
@@ -592,16 +655,16 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
 
 
             {obrasDeComuna.map((o) => {
-              const estado = ((o as any)['ESTADO DE LA OBRA'] || '').toLowerCase();
+              const estado = ((o as any)[getFieldNames.estado] || '').toLowerCase();
               const estadoColor = estado.includes('termin') ? '#16a34a' : estado.includes('ejec') ? '#2563eb' : estado.includes('suspend') ? '#f59e0b' : '#6b7280';
               const estadoBg = estado.includes('termin') ? 'rgba(22,163,74,0.12)' : estado.includes('ejec') ? 'rgba(37,99,235,0.12)' : estado.includes('suspend') ? 'rgba(245,158,11,0.12)' : 'rgba(107,114,128,0.12)';
-              const avance = (o as any)['PORCENTAJE EJECUCIÓN OBRA'] ?? 0;
-              const depColor = dependencyColorMap[(o as any)['DEPENDENCIA']] || '#0B7285';
+              const avance = (o as any)[getFieldNames.porcentaje] ?? 0;
+              const depColor = dependencyColorMap[(o as any)[getFieldNames.dependencia]] || '#0B7285';
               return (
                 <div key={o.id} style={{ padding: '12px 8px', borderBottom: '1px solid #E5E7EB' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <div style={{ fontWeight: 800, color: '#111827', fontSize: 12 }}>{(o as any)['NOMBRE']}</div>
-                    <span style={{ background: estadoBg, color: estadoColor, border: `1px solid ${estadoColor}22`, borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, textTransform: 'capitalize' }}>{(o as any)['ESTADO DE LA OBRA'] || 'sin estado'}</span>
+                    <div style={{ fontWeight: 800, color: '#111827', fontSize: 12 }}>{(o as any)[getFieldNames.nombre]}</div>
+                    <span style={{ background: estadoBg, color: estadoColor, border: `1px solid ${estadoColor}22`, borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, textTransform: 'capitalize' }}>{(o as any)[getFieldNames.estado] || 'sin estado'}</span>
                   </div>
 
                   {/* Información básica con bordes */}
@@ -609,16 +672,16 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#374151', marginBottom: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: depColor, display: 'inline-block' }}></span>
                       <span style={{ fontWeight: 600 }}>Dependencia:</span>
-                      <span>{(o as any)['DEPENDENCIA']}</span>
+                      <span>{(o as any)[getFieldNames.dependencia]}</span>
                     </div>
-                    {(o as any)['DIRECCIÓN'] && (
-                      <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}><span style={{ fontWeight: 600 }}>Dirección:</span> {(o as any)['DIRECCIÓN']}</div>
+                    {(o as any)[getFieldNames.direccion] && (
+                      <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}><span style={{ fontWeight: 600 }}>Dirección:</span> {(o as any)[getFieldNames.direccion]}</div>
                     )}
-                    {(o as any)['PRESUPUESTO EJECUTADO'] != null && (
-                      <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}><span style={{ fontWeight: 600 }}>Presupuesto:</span> {Number((o as any)['PRESUPUESTO EJECUTADO']).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div>
+                    {(o as any)[getFieldNames.presupuesto] != null && (
+                      <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}><span style={{ fontWeight: 600 }}>Presupuesto:</span> {Number((o as any)[getFieldNames.presupuesto]).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</div>
                     )}
-                    {(o as any)['FECHA REAL DE ENTREGA'] && (
-                      <div style={{ fontSize: 11, color: '#374151' }}><span style={{ fontWeight: 600 }}>Fecha entrega:</span> {new Date((o as any)['FECHA REAL DE ENTREGA']).toLocaleDateString('es-CO')}</div>
+                    {(o as any)[getFieldNames.fechaEntrega] && (
+                      <div style={{ fontSize: 11, color: '#374151' }}><span style={{ fontWeight: 600 }}>Fecha entrega:</span> {new Date((o as any)[getFieldNames.fechaEntrega]).toLocaleDateString('es-CO')}</div>
                     )}
                   </div>
 
@@ -632,10 +695,10 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
 
                   {/* Ubicación con borde */}
                   <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '8px', marginBottom: '8px', backgroundColor: '#F9FAFB' }}>
-                    {((o as any)['LATITUD'] != null && (o as any)['LONGITUD'] != null) && (
-                      <a href="#" onClick={(ev) => { ev.preventDefault(); const map = mapRef.current; if (!map) return; map.easeTo({ center: [(o as any)['LONGITUD'] as number, (o as any)['LATITUD'] as number], zoom: 16, duration: 600 }); if (onObraClick) onObraClick(o); }} style={{ fontSize: 10, color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Con ubicación en mapa</a>
+                    {((o as any)[getFieldNames.lat] != null && (o as any)[getFieldNames.lon] != null) && (
+                      <a href="#" onClick={(ev) => { ev.preventDefault(); const map = mapRef.current; if (!map) return; map.easeTo({ center: [(o as any)[getFieldNames.lon] as number, (o as any)[getFieldNames.lat] as number], zoom: 16, duration: 600 }); if (onObraClick) onObraClick(o); }} style={{ fontSize: 10, color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>Con ubicación en mapa</a>
                     )}
-                    {((o as any)['LATITUD'] == null || (o as any)['LONGITUD'] == null) && (
+                    {((o as any)[getFieldNames.lat] == null || (o as any)[getFieldNames.lon] == null) && (
                       <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 600 }}>Sin coordenadas</div>
                     )}
                   </div>
