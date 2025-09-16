@@ -100,7 +100,7 @@ const Dashboard = () => {
         const dres = await fetch(`/api/data?sheet=${encodeURIComponent(hoja)}`);
         console.log('🔍 Dashboard - Respuesta de /api/data:', dres.status);
         const { rows } = await dres.json();
-        console.log('🔍 Dashboard - Datos cargados:', rows.length, 'filas');
+        console.log('🔍 Dashboard - Datos cargados desde /api/data:', rows.length, 'filas');
         setRows(rows);
         setStatus(`${rows.length} filas cargadas exitosamente`);
       } catch (e) {
