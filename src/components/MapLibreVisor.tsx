@@ -619,6 +619,18 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
 
   // (El visor no usa filtros internos; se controla por props/URL)
 
+  // No renderizar el mapa hasta que tengamos datos
+  if (!obras || obras.length === 0) {
+    return (
+      <div style={{ position: 'relative', height, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f2f5' }}>
+        <div style={{ textAlign: 'center', color: '#666' }}>
+          <div style={{ fontSize: '18px', marginBottom: '10px' }}>🗺️</div>
+          <div>Cargando datos del mapa...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ position: 'relative', height }}> 
       <div ref={containerRef} style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
