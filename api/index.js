@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Configuración de la API
-const API_URL = 'https://visorestrategicobackendprepdd-aaejehbqgednb5fr.eastus2-01.azurewebsites.net/api/powerbi/obras';
+const API_URL = 'https://visorestrategicobackend-gkejc4hthnace6b4.eastus2-01.azurewebsites.net/api/powerbi/obras';
 const API_CONFIG = {
   headers: {
     'Accept': 'application/json',
@@ -117,6 +117,19 @@ module.exports = async (req, res) => {
       lastFetch = 0;
       await getData();
       res.json({ message: 'Cache actualizado exitosamente' });
+      return;
+    }
+    
+    // Endpoint: /api/limites
+    if (pathname === '/api/limites' && req.method === 'GET') {
+      res.json({ error: 'Límites no disponibles en este proxy' });
+      return;
+    }
+    
+    // Endpoint: /api/obras
+    if (pathname === '/api/obras' && req.method === 'GET') {
+      const data = await getData();
+      res.json(data);
       return;
     }
     

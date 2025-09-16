@@ -1,37 +1,31 @@
 {
-  "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite",
-  "builds": [
+  "headers": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node"
+      "source": "/assets/(.*).js",
+      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
-  "env": {
-    "NODE_ENV": "production"
-  },
   "functions": {
     "api/index.js": {
       "maxDuration": 30
     }
+  },
+  "env": {
+    "VITE_API_BASE_URL": "https://visorestrategicobackend-gkejc4hthnace6b4.eastus2-01.azurewebsites.net",
+    "VITE_API_URL": "https://visorestrategicobackend-gkejc4hthnace6b4.eastus2-01.azurewebsites.net/api/powerbi/obras",
+    "VITE_API_KEY": "pow3rb1_visor_3str4t3g1co_2025",
+    "VITE_APP_TITLE": "Dashboard Alcaldía - Proyecto Gráficos",
+    "VITE_APP_VERSION": "1.0.0",
+    "NODE_ENV": "production"
   }
 }

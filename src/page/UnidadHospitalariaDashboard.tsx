@@ -13,9 +13,7 @@ import {
 } from '../utils/utils/metrics';
 
 import Kpi from '../components/Kpi';
-import ComboBars from '../components/comboBars';
-import WorksTable from '../components/WorksTable';
-import AlertsTable from '../components/AlertsTable';
+import SimpleBarChart from '../components/SimpleBarChart';
 import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
@@ -91,6 +89,7 @@ const UnidadHospitalariaDashboard = () => {
     })();
   }, []);
 
+
   // ============================================================================
   // FILTRADO ESPECÍFICO PARA UNIDAD HOSPITALARIA SANTA CRUZ
   // ============================================================================
@@ -142,13 +141,51 @@ const UnidadHospitalariaDashboard = () => {
 
   // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
   const comboDataset = useMemo(() => {
-    if (!F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
-    return buildTwoSeriesDataset(filtered, F.dependencia, F.costoTotalActualizado, F.presupuestoEjecutado, 12);
+    if (!F.costoTotalActualizado || !F.presupuestoEjecutado || !F.nombre) return [];
+    
+    // Filtrar datos válidos antes de construir el dataset
+    const validData = filtered.filter(row => {
+      const nombre = row[F.nombre!];
+      const costo = row[F.costoTotalActualizado!];
+      const presupuesto = row[F.presupuestoEjecutado!];
+      
+      return nombre && 
+             nombre !== '' && 
+             nombre !== 'Sin información' &&
+             (costo !== null && costo !== undefined) &&
+             (presupuesto !== null && presupuesto !== undefined);
+    });
+    
+    if (validData.length === 0) return [];
+    
+    return buildTwoSeriesDataset(
+      validData,
+      F.nombre,
+      F.costoTotalActualizado,
+      F.presupuestoEjecutado,
+      15
+    );
   }, [filtered]);
 
+  // Datos para el gráfico SimpleBarChart (SVG nativo)
+  const simpleChartData = useMemo(() => {
+    if (!comboDataset || comboDataset.length <= 1) return [];
+    
+    // Convertir el dataset de ECharts al formato del nuevo componente
+    return comboDataset.slice(1).map((row: (string | number)[]) => {
+      const [label, value1, value2] = row;
+      return {
+        label: String(label).substring(0, 20) + (String(label).length > 20 ? '...' : ''), // Truncar etiquetas largas
+        value1: Number(value1) || 0,
+        value2: Number(value2) || 0,
+      };
+    });
+  }, [comboDataset]);
+
   // ============================================================================
-  // CLASIFICACIÓN DE OBRAS
+  // CLASIFICACIÓN DE OBRAS (comentado - no utilizado)
   // ============================================================================
+  /*
   const entregadas = useMemo(() => {
     return filtered.filter(r => {
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
@@ -180,6 +217,7 @@ const UnidadHospitalariaDashboard = () => {
       F.descripcionDelRiesgo && String(r[F.descripcionDelRiesgo] ?? '').trim().length > 0
     );
   }, [filtered]);
+  */
 
   // ============================================================================
   // DATOS PARA EL MAPA - ORGANIZADOS POR DEPENDENCIA
@@ -536,48 +574,20 @@ const UnidadHospitalariaDashboard = () => {
          ======================================================================== */}
         <div className="content-section" style={{ display: 'block' }}>
           {/* Gráfico principal de inversión */}
-          {comboDataset.length > 0 && (
-            <div className="chart-card">
-              <ComboBars
-                title="Inversión vs Presupuesto Ejecutado - Unidad Hospitalaria Santa Cruz"
-                dataset={comboDataset}
-                dim={F.dependencia}
-                v1={F.costoTotalActualizado}
-                v2={F.presupuestoEjecutado}
+          {simpleChartData.length > 0 && (
+            <div className="main-chart-section">
+              <SimpleBarChart
+                title="Inversión Total vs Presupuesto Ejecutado - Unidad Hospitalaria Santa Cruz"
+                data={simpleChartData}
+                seriesNames={['Inversión Total', 'Presupuesto Ejecutado']}
+                width={1200}
+                height={500}
+                showLegend={true}
+                formatValue={(value) => `$${(value / 1000000).toFixed(1)}M`}
               />
             </div>
           )}
 
-          {/* Tablas de información */}
-          <div className="tables-grid">
-            {/* Tabla de obras entregadas */}
-            <div className="table-card">
-              <WorksTable
-                title="Infraestructura de Salud Completada"
-                works={entregadas}
-                type="entregadas"
-                maxRows={6}
-              />
-            </div>
-
-            {/* Tabla de obras por entregar */}
-            <div className="table-card">
-              <WorksTable
-                title="Infraestructura de Salud en Desarrollo"
-                works={porEntregar}
-                type="porEntregar"
-                maxRows={4}
-              />
-            </div>
-
-            {/* Tabla de alertas y riesgos de salud */}
-            <div className="table-card">
-              <AlertsTable
-                alerts={alertas}
-                maxRows={6}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Indicador de estado de carga */}
