@@ -631,17 +631,24 @@ const Dashboard = () => {
           
           {/* Mapa principal: responsive y conectado a filtros externos */}
           <div style={{ height: '60vh', minHeight: 380, width: '100%' }}>
-            <MapLibreVisor height={'100%'} query={new URLSearchParams({
-              ...(combinedFilters.estadoDeLaObra ? { estado: String(combinedFilters.estadoDeLaObra) } : {}),
-              ...(combinedFilters.dependencia ? { dependencia: String(combinedFilters.dependencia) } : {}),
-              ...(combinedFilters.proyecto ? { proyectoEstrategico: String(combinedFilters.proyecto) } : {}),
-              // Comuna puede venir como nombre; el backend acepta comunaNombre
-              ...(combinedFilters.comuna ? { comunaNombre: String(combinedFilters.comuna) } : {}),
-              ...(combinedFilters.tipo ? { tipo: String(combinedFilters.tipo) } : {}),
-              ...(combinedFilters.contratista ? { contratista: String(combinedFilters.contratista) } : {}),
-              ...(combinedFilters.desde ? { desde: String(combinedFilters.desde) } : {}),
-              ...(combinedFilters.hasta ? { hasta: String(combinedFilters.hasta) } : {}),
-            })} />
+            {(() => {
+              const mapQuery = new URLSearchParams({
+                ...(combinedFilters.estadoDeLaObra ? { estadoDeLaObra: String(combinedFilters.estadoDeLaObra) } : {}),
+                ...(combinedFilters.dependencia ? { dependencia: String(combinedFilters.dependencia) } : {}),
+                ...(combinedFilters.proyecto ? { proyectoEstrategico: String(combinedFilters.proyecto) } : {}),
+                // Comuna puede venir como nombre; el backend acepta comunaNombre
+                ...(combinedFilters.comuna ? { comuna: String(combinedFilters.comuna) } : {}),
+                ...(combinedFilters.tipo ? { tipo: String(combinedFilters.tipo) } : {}),
+                ...(combinedFilters.contratista ? { contratista: String(combinedFilters.contratista) } : {}),
+                ...(combinedFilters.desde ? { desde: String(combinedFilters.desde) } : {}),
+                ...(combinedFilters.hasta ? { hasta: String(combinedFilters.hasta) } : {}),
+              });
+              
+              console.log('🔍 Dashboard - Filtros pasados al mapa:', Object.fromEntries(mapQuery));
+              console.log('🔍 Dashboard - combinedFilters:', combinedFilters);
+              
+              return <MapLibreVisor height={'100%'} query={mapQuery} />;
+            })()}
           </div>
         </div>
 
