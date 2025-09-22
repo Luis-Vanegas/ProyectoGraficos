@@ -164,7 +164,7 @@ app.get('/api/obras', async (req, res) => {
       inicio: 'PORCENTAJE INICIO',
       disenos: 'PORCENTAJE DISEÑOS',
       ejecucion: 'PORCENTAJE EJECUCIÓN OBRA',
-      entrega: 'PORCENTAJE DOTACIÓN Y PUESTA EN OPERACIÓN',
+      entrega: 'PORCENTAJE ENTREGA OBRA',
       liquidacion: 'PORCENTAJE LIQUIDACIÓN',
       presupuestoPctEjec: 'PRESUPUESTO PORCENTAJE EJECUTADO'
     };
@@ -200,7 +200,7 @@ app.get('/api/obras', async (req, res) => {
       const pDisenos    = parsePct(r['PORCENTAJE DISEÑOS']);
       let   pEjec       = parsePct(r['PORCENTAJE EJECUCIÓN OBRA']);
       if (pEjec === null) pEjec = parsePct(r['PRESUPUESTO PORCENTAJE EJECUTADO']);
-      const pEnt        = parsePct(r['PORCENTAJE DOTACIÓN Y PUESTA EN OPERACIÓN']);
+      const pEnt        = parsePct(r['PORCENTAJE ENTREGA OBRA']);
       const pLiq        = parsePct(r['PORCENTAJE LIQUIDACIÓN']);
 
       const wPlaneacion = 2.0, wEstudios = 1.5, wViabili = 1.5, wPredial = 1.5, wContra = 1.5,
@@ -320,10 +320,10 @@ app.get('/api/obras', async (req, res) => {
       'FECHA INICIO REAL DISEÑOS': String(r['FECHA INICIO REAL DISEÑOS'] ?? ''),
       'FECHA FIN REAL DISEÑOS': String(r['FECHA FIN REAL DISEÑOS'] ?? ''),
       
-      'FECHA INICIO ESTIMADA DOTACIÓN Y PUESTA EN OPERACIÓN': String(r['FECHA INICIO ESTIMADA DOTACIÓN Y PUESTA EN OPERACIÓN'] ?? ''),
-      'FECHA FIN ESTIMADA DOTACIÓN Y PUESTA EN OPERACIÓN': String(r['FECHA FIN ESTIMADA DOTACIÓN Y PUESTA EN OPERACIÓN'] ?? ''),
-      'FECHA INICIO REAL DOTACIÓN Y PUESTA EN OPERACIÓN': String(r['FECHA INICIO REAL DOTACIÓN Y PUESTA EN OPERACIÓN'] ?? ''),
-      'FECHA FIN REAL DOTACIÓN Y PUESTA EN OPERACIÓN': String(r['FECHA FIN REAL DOTACIÓN Y PUESTA EN OPERACIÓN'] ?? ''),
+      'FECHA INICIO ESTIMADA ENTREGA OBRA': String(r['FECHA INICIO ESTIMADA ENTREGA OBRA'] ?? ''),
+      'FECHA FIN ESTIMADA ENTREGA OBRA': String(r['FECHA FIN ESTIMADA ENTREGA OBRA'] ?? ''),
+      'FECHA INICIO REAL ENTREGA OBRA': String(r['FECHA INICIO REAL ENTREGA OBRA'] ?? ''),
+      'FECHA FIN REAL ENTREGA OBRA': String(r['FECHA FIN REAL ENTREGA OBRA'] ?? ''),
       
       'FECHA INICIO ESTIMADA LIQUIDACIÓN': String(r['FECHA INICIO ESTIMADA LIQUIDACIÓN'] ?? ''),
       'FECHA FIN ESTIMADA LIQUIDACIÓN': String(r['FECHA FIN ESTIMADA LIQUIDACIÓN'] ?? ''),

@@ -23,7 +23,7 @@ export default function ConsultarObra() {
         const { rows } = await dres.json();
         setRows(rows);
       } catch (e) {
-        console.error(e);
+        // Error al cargar datos
       }
     })();
   }, []);

@@ -12,8 +12,6 @@ export default function ComboBars({
   const [isReady, setIsReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Log para debug
-  console.log('ComboBars recibió:', { title, dataset: dataset?.length, dim, v1, v2 });
 
   // Verificar que el contenedor tenga dimensiones antes de renderizar ECharts
   useEffect(() => {
@@ -102,7 +100,6 @@ export default function ComboBars({
   };
 
   // ⬅️ ocupa 100% del alto del contenedor .chart
-  console.log('ComboBars renderizando:', { isReady, datasetLength: dataset?.length });
   
   return (
     <div className="combo-chart-container">

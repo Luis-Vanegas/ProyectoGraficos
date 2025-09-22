@@ -28,7 +28,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Puedes registrar el error en un servicio de logging
-    console.error('ErrorBoundary capturó un error:', error, errorInfo);
+    // Error capturado por ErrorBoundary
     
     this.setState({
       error,

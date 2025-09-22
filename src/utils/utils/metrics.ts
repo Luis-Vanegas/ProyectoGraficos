@@ -131,12 +131,12 @@ export function getDefaultDateFilters(): { desde: string; hasta: string } {
 
 // Modelo de filtros del UI
 export type Filters = {
-  proyecto?: string;
-  comuna?: string;
-  dependencia?: string;
-  tipo?: string;
-  estadoDeLaObra?: string;
-  contratista?: string;
+  proyecto?: string[];
+  comuna?: string[];
+  dependencia?: string[];
+  tipo?: string[];
+  estadoDeLaObra?: string[];
+  contratista?: string[];
   desde?: string; // 'YYYY' o 'YYYY-MM'
   hasta?: string; // 'YYYY' o 'YYYY-MM'
   // Campos UI para construir fechas sin romper tipado
@@ -160,8 +160,17 @@ export type FilterOptions = {
 
 // Obtiene opciones de filtros basadas en datos filtrados
 export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOptions {
-  // Aplica filtros actuales excepto el que estamos calculando
-  const filteredForOptions = applyFiltersForOptions(rows, currentFilters);
+  // Para filtros múltiples, calculamos las opciones de cada filtro
+  // SIN aplicar ningún filtro, para permitir selección múltiple real
+  
+  // Solo aplicar filtros de fecha si existen, ya que estos no limitan las opciones
+  const dateFilters = {
+    desde: currentFilters.desde,
+    hasta: currentFilters.hasta
+  };
+  
+  // Aplicar solo filtros de fecha para mantener las opciones disponibles
+  const filteredForOptions = applyFiltersForOptions(rows, dateFilters);
   
   return {
     proyectos: uniques(filteredForOptions, F.proyectoEstrategico),
@@ -175,8 +184,14 @@ export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOp
 
 // Aplica filtros para calcular opciones (excluye el filtro que se está calculando)
 export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
-  const inStr = (val: string | undefined) =>
-    (x: unknown) => !val || String(x ?? '') === val;
+  const inStr = (val: string[] | undefined) =>
+    (x: unknown) => {
+      if (!val) return true;
+      // Si el array está vacío, no filtrar (mostrar todos)
+      if (val.length === 0) return true;
+      // Si el array tiene valores, verificar si el valor actual está incluido
+      return val.includes(String(x ?? ''));
+    };
 
   const inDateRange = (x: unknown) => {
     // Si no hay filtros de fecha, no filtrar
@@ -220,7 +235,6 @@ export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
       
       return true;
     } catch (error) {
-      console.warn('Error al procesar fecha:', raw, error);
       return true; // Si hay error, no filtrar
     }
   };
@@ -237,29 +251,41 @@ export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
 }
 
 // Función para limpiar filtros dependientes cuando cambia un filtro padre
+// MODIFICADA: Para permitir selección múltiple, NO eliminamos filtros dependientes
 export function cleanDependentFilters(
   currentFilters: Filters, 
   changedFilter: keyof Filters
 ): Filters {
   const newFilters = { ...currentFilters };
   
-  // Si cambió el proyecto, limpia dependencias, comunas, contratista y estado de obra
-  if (changedFilter === 'proyecto') {
+  // Para filtros múltiples, NO eliminamos filtros dependientes
+  // Esto permite que el usuario mantenga sus selecciones múltiples
+  // en todos los filtros, independientemente del orden de selección
+  
+  // Solo eliminamos filtros dependientes si el filtro padre se vacía completamente
+  if (changedFilter === 'proyecto' && (!newFilters.proyecto || newFilters.proyecto.length === 0)) {
+    // Si se deseleccionan todos los proyectos, limpiar filtros dependientes
     delete newFilters.dependencia;
     delete newFilters.comuna;
     delete newFilters.contratista;
     delete newFilters.estadoDeLaObra;
   }
   
-  // Si cambió la dependencia, limpia comunas, contratista y estado de obra
-  if (changedFilter === 'dependencia') {
+  if (changedFilter === 'dependencia' && (!newFilters.dependencia || newFilters.dependencia.length === 0)) {
+    // Si se deseleccionan todas las dependencias, limpiar filtros dependientes
     delete newFilters.comuna;
     delete newFilters.contratista;
     delete newFilters.estadoDeLaObra;
   }
   
-  // Si cambió el tipo, limpia contratista y estado de obra
-  if (changedFilter === 'tipo') {
+  if (changedFilter === 'tipo' && (!newFilters.tipo || newFilters.tipo.length === 0)) {
+    // Si se deseleccionan todos los tipos, limpiar filtros dependientes
+    delete newFilters.contratista;
+    delete newFilters.estadoDeLaObra;
+  }
+  
+  if (changedFilter === 'comuna' && (!newFilters.comuna || newFilters.comuna.length === 0)) {
+    // Si se deseleccionan todas las comunas, limpiar filtros dependientes
     delete newFilters.contratista;
     delete newFilters.estadoDeLaObra;
   }
@@ -269,13 +295,15 @@ export function cleanDependentFilters(
 
 // Aplica filtros (sin any)
 export function applyFilters(rows: Row[], f: Filters): Row[] {
-  console.log('🔍 applyFilters - Filtros aplicados:', f);
-  console.log('🔍 applyFilters - Total obras antes del filtrado:', rows.length);
-  console.log('🔍 applyFilters - ¿Hay filtros activos?', Object.keys(f).length > 0);
-  console.log('🔍 applyFilters - Detalles de filtros:', Object.entries(f).filter(([, value]) => value !== undefined && value !== ''));
   
-  const inStr = (val: string | undefined) =>
-    (x: unknown) => !val || String(x ?? '') === val;
+  const inStr = (val: string[] | undefined) =>
+    (x: unknown) => {
+      if (!val) return true;
+      // Si el array está vacío, no filtrar (mostrar todos)
+      if (val.length === 0) return true;
+      // Si el array tiene valores, verificar si el valor actual está incluido
+      return val.includes(String(x ?? ''));
+    };
 
   const inDateRange = (x: unknown) => {
     // Si no hay filtros de fecha, no filtrar
@@ -319,7 +347,6 @@ export function applyFilters(rows: Row[], f: Filters): Row[] {
       
       return true;
     } catch (error) {
-      console.warn('Error al procesar fecha:', raw, error);
       return true; // Si hay error, no filtrar
     }
   };
@@ -420,6 +447,15 @@ export function kpis(rows: Row[]) {
   const porcentajeCuatrienio2024_2027 = calcularPorcentajeCuatrienio2024_2027(rows);
   const valorCuatrienio2024_2027 = calcularValorCuatrienio2024_2027(rows);
 
+  // Calcular obras con y sin coordenadas
+  const conUbicacion = rows.filter(r => {
+    const lat = F.latitud ? parseFloat(String(r[F.latitud] ?? '')) : null;
+    const lng = F.longitud ? parseFloat(String(r[F.longitud] ?? '')) : null;
+    return lat && lng && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+  }).length;
+  
+  const sinUbicacion = totalObras - conUbicacion;
+
   return { 
     totalObras, 
     invTotal, 
@@ -435,7 +471,9 @@ export function kpis(rows: Row[]) {
     vigencias2024,
     entregadasConfirmadas,
     porcentajeCuatrienio2024_2027,
-    valorCuatrienio2024_2027
+    valorCuatrienio2024_2027,
+    conUbicacion,
+    sinUbicacion
   };
 }
 

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import logoNegroInicio from '../assets/logo.png';
+import logoHorizontal from '../assets/LogoHorizontal.png';
 
 interface NavigationProps {
   showBackButton?: boolean;
@@ -33,9 +33,10 @@ export default function Navigation({ showBackButton = false, title }: Navigation
       {/* Logo a la derecha */}
       <div className="logo-container">
         <img 
-          src={logoNegroInicio} 
+          src={logoHorizontal} 
           alt="Logo Alcaldía de Medellín" 
           className="logo"
+          style={{ height: '50px' }}
         />
       </div>
 
@@ -46,15 +47,15 @@ export default function Navigation({ showBackButton = false, title }: Navigation
           top: 0;
           left: 0;
           right: 0;
-          background: linear-gradient(135deg, rgba(121, 188, 153, 0.95) 0%, rgba(78, 132, 132, 0.95) 100%);
+          background: #00B4FF;
           backdrop-filter: blur(10px);
-          border-bottom: 2px solid #79BC99;
+          border-bottom: 2px solid #2AA7E1;
           padding: 15px 30px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           z-index: 1000;
-          box-shadow: 0 4px 20px rgba(121, 188, 153, 0.3);
+          box-shadow: 0 4px 20px rgba(0, 180, 255, 0.3);
         }
 
         .back-button {

@@ -30,7 +30,6 @@ export function useErrorHandler(): ErrorHandlerReturn {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleError = useCallback((error: Error | string, code?: string) => {
-    console.error('Error capturado:', error);
     
     let errorMessage = '';
     let errorObject: Error | null = null;
@@ -57,11 +56,7 @@ export function useErrorHandler(): ErrorHandlerReturn {
 
     // En desarrollo, mostrar error en consola
     if (typeof window !== 'undefined' && (window as unknown as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV === 'development') {
-      console.group('🚨 Error Details');
-      console.error('Original error:', error);
-      console.error('Error code:', code);
-      console.error('Friendly message:', friendlyMessage);
-      console.groupEnd();
+      // Error details logged
     }
 
     // Aquí podrías enviar el error a un servicio de logging

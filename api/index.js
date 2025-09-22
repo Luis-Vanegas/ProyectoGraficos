@@ -18,28 +18,22 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 // Función para obtener datos de la API con cache
 async function fetchDataFromAPI() {
   try {
-    console.log('🔐 Conectando a la API...');
     
     const response = await axios.get(API_URL, {
       timeout: 10000,
       headers: API_CONFIG.headers
     });
     
-    console.log(`✅ Respuesta de la API recibida. Tipo:`, typeof response.data, 'Longitud:', response.data?.length || 'N/A');
     
     // Verificar estructura de respuesta
     let actualData = response.data;
     if (response.data && response.data.data && Array.isArray(response.data.data)) {
       actualData = response.data.data;
-      console.log('📊 Usando response.data.data - Longitud:', actualData.length);
     } else if (response.data && response.data.rows && Array.isArray(response.data.rows)) {
       actualData = response.data.rows;
-      console.log('📊 Usando response.data.rows - Longitud:', actualData.length);
     } else if (Array.isArray(response.data)) {
       actualData = response.data;
-      console.log('📊 Usando response.data directamente - Longitud:', actualData.length);
     } else {
-      console.log('⚠️ Estructura de respuesta inesperada:', Object.keys(response.data || {}));
     }
     
     return actualData;
@@ -57,17 +51,13 @@ async function getData() {
     try {
       cachedData = await fetchDataFromAPI();
       lastFetch = now;
-      console.log('🔄 Cache actualizado - Datos:', cachedData?.length || 0, 'registros');
     } catch (error) {
-      console.log('❌ Error al obtener datos:', error.message);
       if (cachedData) {
-        console.log('⚠️ Usando cache anterior - Datos:', cachedData?.length || 0, 'registros');
         return cachedData;
       }
       throw error;
     }
   } else {
-    console.log('📦 Usando cache existente - Datos:', cachedData?.length || 0, 'registros');
   }
   
   return cachedData;
@@ -154,7 +144,6 @@ module.exports = async (req, res) => {
     // Endpoint: /api/obras
     if (pathname === '/api/obras' && req.method === 'GET') {
       const data = await getData();
-      console.log('🔍 /api/obras - Datos obtenidos:', data?.length || 0, 'registros');
       res.json(data);
       return;
     }

@@ -1,7 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FondoInicio from '../assets/FondoInicio.jpg';
-import logoNegroInicio from '../assets/logo.png';
+// Fondo con logo
+import FondoConLogo from '../assets/PNG/Fondo Azul con logo.jpg';
+import LogoNuevo from '../assets/PNG/Logo en contenedor.png';
+
+
+// Importar iconos principales
+import lupa from '../assets/PNG/Buscador.png';
+import estadis from '../assets/PNG/Reporte General.png';
+
+// Importar fotos normales de proyectos estratégicos
+import escenariosDeportivos from '../assets/Escuelas-inteligentes.jpg'; // Usar foto real
+import jardinesBuenComienzo from '../assets/Buen-Comienzo.jpg';
+import escuelasInteligentes from '../assets/Escuelas-inteligentes.jpg';
+import recreos from '../assets/Recreo.jpg';
+import primaveraNorte from '../assets/Primavera-norte.jpg';
+import c5i from '../assets/C5I.jpg';
+import tacitaDePlata from '../assets/Tacita-de-plata.jpg';
+import metroLa80 from '../assets/Metro-de-la-80.jpg';
+import unidadHospitalaria from '../assets/UHSanta-Cruz.jpg';
 
 // Interfaz para definir la estructura de cada elemento del menú
 interface MenuItem {
@@ -26,17 +43,17 @@ export default function PaginaPrincipal() {
       id: 'reporte-general',
       titulo: 'Reporte General',
       descripcion: 'Visor de proyectos estratégicos',
-      icono: '📊',
+      icono: estadis, // Icono de estadísticas
       ruta: '/dashboard',
-      color: '#00904c'
+      color: '#00FF88'
     },
     {
       id: 'consultar-obra',
       titulo: 'Consultar Obra',
       descripcion: 'Consulta por obra específica',
-      icono: '🔍',
+      icono: lupa, // Icono de lupa
       ruta: '/consultar-obra',
-      color: '#4682B4'
+      color: '#00B4FF'
     }
   ];
 
@@ -46,7 +63,7 @@ export default function PaginaPrincipal() {
       id: 'escenarios-deportivos',
       titulo: 'Escenarios Deportivos',
       descripcion: 'Proyectos deportivos y recreativos',
-      icono: '⚽',
+      icono: escenariosDeportivos, // Imagen real
       ruta: '/dashboard/escenarios-deportivos',
       color: '#FF6B35'
     },
@@ -54,65 +71,65 @@ export default function PaginaPrincipal() {
       id: 'jardines-buen-comienzo',
       titulo: 'Jardines Buen Comienzo',
       descripcion: 'Educación y desarrollo infantil',
-      icono: '🌱',
+      icono: jardinesBuenComienzo, // Imagen real
       ruta: '/dashboard/jardines-buen-comienzo',
-      color: '#4CAF50'
+      color: '#00FF88'
     },
     {
       id: 'escuelas-inteligentes',
       titulo: 'Escuelas Inteligentes',
       descripcion: 'Tecnología educativa',
-      icono: '🏫',
+      icono: escuelasInteligentes, // Imagen real
       ruta: '/dashboard/escuelas-inteligentes',
-      color: '#9C27B0'
+      color: '#00B4FF'
     },
     {
       id: 'recreos',
       titulo: 'Recreos',
       descripcion: 'Espacios de recreación',
-      icono: '🎮',
+      icono: recreos, // Imagen real
       ruta: '/dashboard/recreos',
-      color: '#FF9800'
+      color: '#00B4FF'
     },
     {
       id: 'primavera-norte',
       titulo: 'Primavera Norte',
       descripcion: 'Desarrollo urbano sostenible',
-      icono: '🌸',
+      icono: primaveraNorte, // Imagen real
       ruta: '/dashboard/primavera-norte',
-      color: '#E91E63'
+      color: '#00FF88'
     },
     {
       id: 'c5i',
       titulo: 'C5i',
       descripcion: 'Centro de Comando, Control, Comunicaciones, Computadores, Coordinación e Inteligencia',
-      icono: '👮',
+      icono: c5i, // Imagen real
       ruta: '/dashboard/c5i',
-      color: '#3F51B5'
+      color: '#00FF88'
     },
     {
       id: 'tacita-de-plata',
       titulo: 'Tacita de Plata',
       descripcion: 'Proyectos ambientales',
-      icono: '🌍',
+      icono: tacitaDePlata, // Imagen real
       ruta: '/dashboard/tacita-de-plata',
-      color: '#009688'
+      color: '#00FF88'
     },
     {
       id: 'metro-la-80',
       titulo: 'Metro de La 80',
       descripcion: 'Sistema de transporte masivo',
-      icono: '🚇',
+      icono: metroLa80, // Imagen real
       ruta: '/dashboard/metro-la-80',
-      color: '#795548'
+      color: '#FF6B35'
     },
     {
       id: 'unidad-hospitalaria',
       titulo: 'Unidad Hospitalaria Santa Cruz',
       descripcion: 'Infraestructura de salud',
-      icono: '🏥',
+      icono: unidadHospitalaria, // Imagen real
       ruta: '/dashboard/unidad-hospitalaria',
-      color: '#F44336'
+      color: '#00B4FF'
     }
   ];
 
@@ -126,10 +143,7 @@ export default function PaginaPrincipal() {
       className="pagina-principal"
       style={{
         minHeight: '100vh',
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${FondoInicio})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
+        background: `url(${FondoConLogo}) center/cover no-repeat, #00233D`,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-start',
@@ -139,44 +153,62 @@ export default function PaginaPrincipal() {
         overflow: 'hidden'
       }}
     >
-      {/* Header con logo y branding - responsive */}
+      {/* Logo en contenedor en esquina superior derecha */}
       <div 
         style={{
           position: 'absolute',
-          top: '15px',
-          left: '15px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          zIndex: 10,
-          padding: '6px'
+          top: '20px',
+          right: '20px',
+          zIndex: 10
         }}
       >
         <img 
-          src={logoNegroInicio} 
-          alt="Logo Alcaldía de Medellín" 
+          src={LogoNuevo} 
+          alt="Logo Medellín" 
           style={{ 
-            height: 'clamp(35px, 6vw, 100px)',
+            height: 'clamp(60px, 8vw, 120px)',
             maxWidth: '100%'
           }}
         />
       </div>
 
+
       {/* Título principal centrado - responsive */}
-      <div style={{ textAlign: 'center', marginBottom: '20px', zIndex: 10, padding: '0 14px', marginTop: '12px' }}>
-        <h1 
-          style={{
-            color: 'white',
-            fontSize: 'clamp(1.2rem, 4vw, 2.5rem)',
-            fontWeight: 'bold',
-            margin: 0,
-            textShadow: '2px 2px 4px rgba(0,0,0,0.7)',
-            letterSpacing: '1.5px',
-            lineHeight: '1.2'
-          }}
-        >
-          Visor de Proyectos Estratégicos
-        </h1>
+      <div style={{ 
+        textAlign: 'center', 
+        marginBottom: '30px', 
+        zIndex: 10, 
+        padding: '0 20px', 
+        marginTop: '20px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        {/* Banner con título */}
+        <div style={{
+          background: '#00B4FF',
+          borderRadius: '15px',
+          padding: '20px 40px',
+          margin: '0 auto',
+          maxWidth: '700px',
+          boxShadow: '0 8px 25px rgba(42, 167, 225, 0.3)',
+          textAlign: 'center'
+        }}>
+          <h1 
+            style={{
+              fontSize: 'clamp(1.5rem, 5vw, 3rem)',
+              fontWeight: 'bold',
+              margin: 0,
+              textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+              letterSpacing: '2px',
+              lineHeight: '1.2',
+              fontFamily: 'Metropolis'
+            }}
+          >
+            <span style={{ color: 'white' }}>Proyectos </span>
+            <span style={{ color: '#00233D' }}>Estratégicos</span>
+          </h1>
+        </div>
       </div>
 
       {/* Panel principal destacado para Reporte General y Consultar Obra */}
@@ -184,13 +216,14 @@ export default function PaginaPrincipal() {
         className="panel-principal"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
-          gap: '18px',
-          maxWidth: '830px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+          gap: '25px',
+          maxWidth: '900px',
           width: '100%',
           zIndex: 10,
-          padding: '0 20px',
-          marginBottom: '11px'
+          padding: '0 30px',
+          marginBottom: '40px',
+          justifyContent: 'center'
         }}
       >
         {menuItemsPrincipales.map((item) => (
@@ -200,8 +233,7 @@ export default function PaginaPrincipal() {
             onMouseEnter={() => setHoveredItem(item.id)}
             onMouseLeave={() => setHoveredItem(null)}
             style={{
-              background: 'linear-gradient(135deg, #ffffffdd, #ffffffaa)',
-              backdropFilter: 'blur(10px)',
+              background: '#E0E0E0',
               borderRadius: '20px',
               padding: '25px',
               cursor: 'pointer',
@@ -210,7 +242,7 @@ export default function PaginaPrincipal() {
               boxShadow: hoveredItem === item.id 
                 ? '0 15px 35px rgba(0,0,0,0.3)' 
                 : '0 8px 25px rgba(0,0,0,0.2)',
-              border: `3px solid ${item.color}`,
+              border: 'none',
               position: 'relative',
               overflow: 'hidden',
               minHeight: '140px',
@@ -240,19 +272,38 @@ export default function PaginaPrincipal() {
               <div 
                 className="icono"
                 style={{
-                  fontSize: '2.5rem',
                   marginBottom: '10px',
                   textAlign: 'center',
-                  filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
                 }}
               >
-                {item.icono}
+                <div 
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}
+                >
+                  <img 
+                    src={item.icono} 
+                    alt={item.titulo}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </div>
               </div>
 
               {/* Título de la tarjeta */}
               <h3 
                 style={{
-                  color: item.color,
+                  color: '#333',
                   fontSize: '1.3rem',
                   fontWeight: 'bold',
                   margin: '0 0 8px 0',
@@ -266,11 +317,11 @@ export default function PaginaPrincipal() {
               {/* Descripción de la tarjeta */}
               <p 
                 style={{
-                  color: '#333',
+                  color: '#666',
                   fontSize: '0.95rem',
                   margin: 0,
                   textAlign: 'center',
-                  opacity: 0.8,
+                  opacity: 1,
                   textShadow: 'none',
                   lineHeight: '1.2'
                 }}
@@ -288,11 +339,13 @@ export default function PaginaPrincipal() {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '15px',
-          maxWidth: '1172px',
+          gap: '20px',
+          maxWidth: '1200px',
           width: '100%',
           zIndex: 10,
-          padding: '0 20px'
+          padding: '0 30px',
+          marginBottom: '30px',
+          justifyContent: 'center'
         }}
       >
         {menuItemsSecundarios.slice(0, 5).map((item) => (
@@ -302,23 +355,21 @@ export default function PaginaPrincipal() {
             onMouseEnter={() => setHoveredItem(item.id)}
             onMouseLeave={() => setHoveredItem(null)}
             style={{
-              background: `linear-gradient(135deg, ${item.color}dd, ${item.color}aa)`,
-              backdropFilter: 'blur(10px)',
+              background: '#E0E0E0',
               borderRadius: '18px',
-              padding: '16px',
+              padding: '0',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
               transform: hoveredItem === item.id ? 'translateY(-6px) scale(1.02)' : 'translateY(0) scale(1)',
               boxShadow: hoveredItem === item.id 
                 ? '0 12px 30px rgba(0,0,0,0.3)' 
                 : '0 6px 20px rgba(0,0,0,0.2)',
-              border: '2px solid transparent',
+              border: 'none',
               position: 'relative',
               overflow: 'hidden',
-              minHeight: '120px',
+              minHeight: '140px',
               display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center'
+              flexDirection: 'column'
             }}
           >
             {/* Efecto de brillo que se desliza al hacer hover */}
@@ -337,29 +388,37 @@ export default function PaginaPrincipal() {
               />
             )}
 
-            <div style={{ position: 'relative', zIndex: 2 }}>
-              {/* Icono principal de la tarjeta */}
-              <div 
-                className="icono"
-                style={{
-                  fontSize: '2rem',
-                  marginBottom: '8px',
-                  textAlign: 'center',
-                  filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
-                }}
-              >
-                {item.icono}
-              </div>
-
+            {/* Imagen de la tarjeta */}
+            <img 
+              src={item.icono} 
+              alt={item.titulo}
+              style={{
+                width: '100%',
+                height: '80px',
+                objectFit: 'cover',
+                borderRadius: '12px 12px 0 0'
+              }}
+            />
+            
+            {/* Contenido de texto */}
+            <div style={{ 
+              position: 'relative', 
+              zIndex: 2, 
+              padding: '12px',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
               {/* Título de la tarjeta */}
               <h3 
                 style={{
-                  color: 'white',
+                  color: '#333',
                   fontSize: '1.05rem',
                   fontWeight: 'bold',
                   margin: '0 0 6px 0',
                   textAlign: 'center',
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
+                  textShadow: 'none'
                 }}
               >
                 {item.titulo}
@@ -368,12 +427,12 @@ export default function PaginaPrincipal() {
               {/* Descripción de la tarjeta */}
               <p 
                 style={{
-                  color: 'white',
+                  color: '#666',
                   fontSize: '0.7rem',
                   margin: 0,
                   textAlign: 'center',
-                  opacity: 0.9,
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                  opacity: 1,
+                  textShadow: 'none',
                   lineHeight: '1.3'
                 }}
               >
@@ -405,8 +464,7 @@ export default function PaginaPrincipal() {
             onMouseEnter={() => setHoveredItem(item.id)}
             onMouseLeave={() => setHoveredItem(null)}
             style={{
-              background: `linear-gradient(135deg, ${item.color}dd, ${item.color}aa)`,
-              backdropFilter: 'blur(10px)',
+              background: '#E0E0E0',
               borderRadius: '18px',
               padding: '8px',
               cursor: 'pointer',
@@ -415,7 +473,7 @@ export default function PaginaPrincipal() {
               boxShadow: hoveredItem === item.id 
                 ? '0 12px 30px rgba(0,0,0,0.3)' 
                 : '0 6px 20px rgba(0,0,0,0.2)',
-              border: '2px solid transparent',
+              border: 'none',
               position: 'relative',
               overflow: 'hidden',
               minHeight: '120px',
@@ -445,24 +503,36 @@ export default function PaginaPrincipal() {
               <div 
                 className="icono"
                 style={{
-                  fontSize: '2rem',
                   marginBottom: '8px',
                   textAlign: 'center',
-                  filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))'
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
                 }}
               >
-                {item.icono}
+                <img 
+                  src={item.icono} 
+                  alt={item.titulo}
+                  style={{
+                    width: '100%',
+                    height: '80px',
+                    objectFit: 'cover',
+                    borderRadius: '12px 12px 0 0',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    marginBottom: '8px'
+                  }}
+                />
               </div>
 
               {/* Título de la tarjeta */}
               <h3 
                 style={{
-                  color: 'white',
+                  color: '#333',
                   fontSize: '1.05rem',
                   fontWeight: 'bold',
                   margin: '0 0 6px 0',
                   textAlign: 'center',
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
+                  textShadow: 'none'
                 }}
               >
                 {item.titulo}
@@ -471,12 +541,12 @@ export default function PaginaPrincipal() {
               {/* Descripción de la tarjeta */}
               <p 
                 style={{
-                  color: 'white',
+                  color: '#666',
                   fontSize: '0.8rem',
                   margin: 0,
                   textAlign: 'center',
-                  opacity: 0.9,
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                  opacity: 1,
+                  textShadow: 'none',
                   lineHeight: '1.3'
                 }}
               >
@@ -495,7 +565,7 @@ export default function PaginaPrincipal() {
         }
         
         .pagina-principal {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         /* ========================================================================

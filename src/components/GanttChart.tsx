@@ -159,12 +159,12 @@ export default function GanttChart({ rows, limit = 30, mode = 'phase' }: GanttCh
         realEndKey: F.fechaFinRealEjecucionObra as unknown as keyof Row,
       },
       {
-        id: '08_dotacion',
-        label: '08_Dotación y Puesta en Operación',
-        estStartKey: F.fechaInicioEstimadaDotacionYPuestaEnOperacion as unknown as keyof Row,
-        estEndKey: F.fechaFinEstimadaDotacionYPuestaEnOperacion as unknown as keyof Row,
-        realStartKey: F.fechaInicioRealDotacionYPuestaEnOperacion as unknown as keyof Row,
-        realEndKey: F.fechaFinRealDotacionYPuestaEnOperacion as unknown as keyof Row,
+        id: '08_entrega',
+        label: '08_Entrega de Obra',
+        estStartKey: F.fechaInicioEstimadaEntregaObra as unknown as keyof Row,
+        estEndKey: F.fechaFinEstimadaEntregaObra as unknown as keyof Row,
+        realStartKey: F.fechaInicioRealEntregaObra as unknown as keyof Row,
+        realEndKey: F.fechaFinRealEntregaObra as unknown as keyof Row,
       },
       {
         id: '09_liquidacion',

@@ -7,7 +7,7 @@ import {
   kpis,
   buildTwoSeriesDataset,
   getFilterOptions,
-  cleanDependentFilters,
+  // cleanDependentFilters, // TEMPORALMENTE DESHABILITADO
   type Row,
   type Filters,
   computeVigencias
@@ -22,19 +22,35 @@ import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
 import HeaderIcons from '../components/HeaderIcons';
+import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
 // ============================================================================
 const CORPORATE_COLORS = {
+  // Colores principales
   primary: '#79BC99',      // Verde principal - usado para elementos destacados
   secondary: '#4E8484',    // Verde azulado - usado para elementos secundarios
   accent: '#3B8686',       // Verde oscuro - usado para acentos y textos importantes
-  white: '#FFFFFF',        // Blanco puro - usado para fondos y textos claros
-  lightGray: '#F8F9FA',    // Gris claro - usado para fondos secundarios
-  darkGray: '#2C3E50',     // Gris oscuro - usado para textos principales
-  mediumGray: '#6C757D',   // Gris medio - usado para textos secundarios
-  border: '#E9ECEF'        // Gris borde - usado para separadores y bordes
+  
+  // Colores de estado
+  success: '#10B981',      // Verde éxito
+  warning: '#F59E0B',      // Amarillo advertencia
+  error: '#EF4444',        // Rojo error
+  info: '#3B82F6',         // Azul información
+  
+  // Colores neutros
+  white: '#FFFFFF',        // Blanco puro
+  lightGray: '#F8F9FA',    // Gris claro
+  mediumGray: '#6C757D',   // Gris medio
+  darkGray: '#2C3E50',     // Gris oscuro
+  border: '#E9ECEF',       // Gris borde
+  
+  // Colores de fondo
+  background: '#F0F8FF',   // Azul muy claro
+  cardBackground: '#FFFFFF', // Blanco para tarjetas
+  gradientStart: '#D4E6F1', // Inicio del gradiente
+  gradientEnd: '#E8F4F8'   // Fin del gradiente
 };
 
 // ============================================================================
@@ -61,7 +77,16 @@ const hslToHex = (h: number, s: number, l: number): string => {
 // ============================================================================
 // COMPONENTE PRINCIPAL DEL DASHBOARD
 // ============================================================================
-type UIFilters = Filters & {
+type UIFilters = {
+  proyecto?: string[];
+  comuna?: string[];
+  dependencia?: string[];
+  tipo?: string[];
+  estadoDeLaObra?: string[];
+  contratista?: string[];
+  desde?: string; // 'YYYY' o 'YYYY-MM'
+  hasta?: string; // 'YYYY' o 'YYYY-MM'
+  // Campos UI para construir fechas sin romper tipado
   desdeDia?: string;
   desdeMes?: string;
   desdeAnio?: string;
@@ -77,6 +102,25 @@ const Dashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
+  
+  // Función para contar filtros activos (que no sean undefined o vacíos)
+  const getActiveFiltersCount = (filters: UIFilters): number => {
+    return Object.keys(filters).filter(key => {
+      const value = filters[key as keyof UIFilters];
+      return value !== undefined && value !== '';
+    }).length;
+  };
+  
+  // Logging para rastrear cambios de estado
+  useEffect(() => {
+    console.log('🔍 Dashboard - filters cambiaron:', filters);
+    console.log('🔍 Dashboard - filters.proyecto:', filters.proyecto);
+    console.log('🔍 Dashboard - filters.comuna:', filters.comuna);
+    console.log('🔍 Dashboard - filters.dependencia:', filters.dependencia);
+    console.log('🔍 Dashboard - filters.tipo:', filters.tipo);
+    console.log('🔍 Dashboard - filters.estadoDeLaObra:', filters.estadoDeLaObra);
+    console.log('🔍 Dashboard - filters.contratista:', filters.contratista);
+  }, [filters]);
   const [isMobileStack, setIsMobileStack] = useState(false);
   // Estado no utilizado en esta vista (selección se maneja en MapLibre)
   // const [selectedComuna] = useState<string | null>(null);
@@ -90,22 +134,26 @@ const Dashboard = () => {
   useEffect(() => {
     (async () => {
       try {
-        console.log('🔍 Dashboard - Iniciando carga de datos...');
         const sres = await fetch('/api/sheets');
-        console.log('🔍 Dashboard - Respuesta de /api/sheets:', sres.status);
+        
+        if (!sres.ok) {
+          throw new Error(`Error ${sres.status}: No se pudo cargar /api/sheets`);
+        }
+        
         const { sheets } = await sres.json();
-        console.log('🔍 Dashboard - Sheets disponibles:', sheets);
         const hoja = sheets.includes('Obras') ? 'Obras' : sheets[0];
-        console.log('🔍 Dashboard - Hoja seleccionada:', hoja);
+        
         const dres = await fetch(`/api/data?sheet=${encodeURIComponent(hoja)}`);
-        console.log('🔍 Dashboard - Respuesta de /api/data:', dres.status);
+        
+        if (!dres.ok) {
+          throw new Error(`Error ${dres.status}: No se pudo cargar /api/data`);
+        }
+        
         const { rows } = await dres.json();
-        console.log('🔍 Dashboard - Datos cargados desde /api/data:', rows.length, 'filas');
         setRows(rows);
         setStatus(`${rows.length} filas cargadas exitosamente`);
       } catch (e) {
-        console.error('🔍 Dashboard - Error al cargar datos:', e);
-        setStatus('Error: No se pudieron cargar los datos');
+        setStatus(`Error: ${e instanceof Error ? e.message : 'Error desconocido'}`);
       }
     })();
   }, []);
@@ -128,7 +176,14 @@ const Dashboard = () => {
   
   // Función para combinar los campos de fecha en formato YYYY-MM-DD
   const combineDateFields = (filters: UIFilters): Filters => {
-    const newFilters: UIFilters = { ...filters };
+    const newFilters: Filters = { 
+      proyecto: filters.proyecto,
+      comuna: filters.comuna,
+      dependencia: filters.dependencia,
+      tipo: filters.tipo,
+      estadoDeLaObra: filters.estadoDeLaObra,
+      contratista: filters.contratista
+    };
     
     // Combinar fecha desde
     if (filters.desdeDia && filters.desdeMes && filters.desdeAnio) {
@@ -143,16 +198,22 @@ const Dashboard = () => {
     return newFilters;
   };
 
-  const opciones = useMemo(() => getFilterOptions(rows, filters), [rows, filters]);
+  const opciones = useMemo(() => {
+    console.log('🔍 Dashboard - opciones recalculando...');
+    console.log('🔍 Dashboard - rows.length:', rows.length);
+    console.log('🔍 Dashboard - filters:', filters);
+    return getFilterOptions(rows, filters);
+  }, [rows, filters]);
   const combinedFilters = useMemo(() => {
-    const result = combineDateFields(filters);
-    console.log('🔍 Dashboard - combineDateFields result:', result);
-    return result;
+    return combineDateFields(filters);
   }, [filters]);
   const filtered = useMemo(() => {
-    console.log('🔍 Dashboard - Aplicando filtros a', rows.length, 'obras');
+    console.log('🔍 Dashboard - filtered calculation:');
+    console.log('🔍 Dashboard - rows.length:', rows.length);
+    console.log('🔍 Dashboard - combinedFilters:', combinedFilters);
     const result = applyFilters(rows, combinedFilters);
-    console.log('🔍 Dashboard - Resultado del filtrado:', result.length, 'obras');
+    console.log('🔍 Dashboard - filtered result length:', result.length);
+    console.log('🔍 Dashboard - filtered first 3:', result.slice(0, 3));
     return result;
   }, [rows, combinedFilters]);
   const k = useMemo(() => kpis(filtered), [filtered]);
@@ -237,9 +298,6 @@ const Dashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas:', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas:', filtered.length);
-    console.log('Campos de latitud y longitud:', F.latitud, F.longitud);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -251,7 +309,6 @@ const Dashboard = () => {
       return acc;
     }, {} as Record<string, Row[]>);
 
-    console.log('Datos del mapa agrupados:', groupedByDependency);
     return groupedByDependency;
   }, [filtered]);
 
@@ -259,7 +316,12 @@ const Dashboard = () => {
   // MAPEO DE COLORES ÚNICOS POR DEPENDENCIA (SIN REPETICIONES)
   // ============================================================================
   const dependencyColorMap = useMemo(() => {
-    const dependencias = Object.keys(mapData).sort();
+    // ✅ ARREGLADO: Obtener dependencias directamente de las obras filtradas
+    const dependencias = Array.from(new Set(
+      filtered.map(r => F.dependencia ? String(r[F.dependencia] ?? 'Sin Dependencia') : 'Sin Dependencia')
+    )).sort();
+    
+    
     const total = dependencias.length || 1;
     const saturation = 72; // 0-100
     const lightness = 38;  // 0-100 (más bajo = más oscuro)
@@ -268,8 +330,9 @@ const Dashboard = () => {
       const hue = Math.round((idx * 360) / total);
       colorMap[dep] = hslToHex(hue, saturation, lightness);
     });
+    
     return colorMap;
-  }, [mapData]);
+  }, [filtered]);
 
   // ============================================================================
   // (Marcadores individuales no usados en modo por comuna)
@@ -302,13 +365,24 @@ const Dashboard = () => {
   // ============================================================================
   // MANEJADORES DE EVENTOS
   // ============================================================================
-  const handleFilterChange = (filterKey: keyof UIFilters, value: string) => {
-    const newValue = value || undefined;
+  const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
+    console.log('🔍 handleFilterChange - INICIANDO');
+    console.log('🔍 handleFilterChange - filterKey:', filterKey, 'value:', value);
+    console.log('🔍 handleFilterChange - filters actuales:', filters);
+    
+    // Si el array está vacío, limpiar el filtro
+    const newValue = value.length === 0 ? undefined : value;
+    console.log('🔍 handleFilterChange - newValue:', newValue);
+    
     const newFilters = { ...filters, [filterKey]: newValue };
+    console.log('🔍 handleFilterChange - newFilters antes de clean:', newFilters);
 
-    // Limpia filtros dependientes automáticamente
-    const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    setFilters(cleanedFilters);
+    // TEMPORALMENTE DESHABILITADO: Limpia filtros dependientes automáticamente
+    // const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
+    console.log('🔍 handleFilterChange - newFilters (sin clean):', newFilters);
+    console.log('🔍 handleFilterChange - newFilters.proyecto:', newFilters.proyecto);
+    setFilters(newFilters);
+    console.log('🔍 handleFilterChange - setFilters llamado');
   };
 
   // ============================================================================
@@ -352,10 +426,10 @@ const Dashboard = () => {
         <div className="filters-section">
           <div className="filters-actions">
             <div className="filters-status">
-              {Object.keys(filters).length > 0 ? (
+              {getActiveFiltersCount(filters) > 0 ? (
                 <span className="filters-active">
                   <span className="status-icon">🔍</span>
-                  Filtros activos ({Object.keys(filters).length})
+                  Filtros activos ({getActiveFiltersCount(filters)})
                 </span>
               ) : (
                 <span className="filters-all">
@@ -368,7 +442,7 @@ const Dashboard = () => {
               className="clear-filters-btn"
               onClick={() => setFilters({})}
               title="Borrar todos los filtros"
-              disabled={Object.keys(filters).length === 0}
+              disabled={getActiveFiltersCount(filters) === 0}
             >
               <span className="btn-icon" aria-hidden>✖</span>
               Borrar filtros
@@ -378,49 +452,40 @@ const Dashboard = () => {
           <div className="filters-container filters-row-main">
             {/* Filtro: Proyectos estratégicos */}
             {F.proyectoEstrategico && (
-              <div className="filter-group">
-                <label className="filter-label">PROYECTOS ESTRATÉGICOS</label>
-                <select
-                  className="filter-select"
-                  value={filters.proyecto ?? ''}
-                  onChange={e => handleFilterChange('proyecto', e.target.value)}
-                >
-                  <option value="">Todos los proyectos</option>
-                  {opciones.proyectos.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="PROYECTOS ESTRATÉGICOS"
+                options={opciones.proyectos}
+                selectedValues={filters.proyecto || []}
+                onSelectionChange={(values) => {
+                  console.log('🔍 Dashboard - ImprovedMultiSelect onSelectionChange:', values);
+                  handleFilterChange('proyecto', values);
+                }}
+                placeholder="Todos los proyectos"
+              />
             )}
 
             {/* Filtro: Dependencia */}
             {F.dependencia && (
-              <div className="filter-group">
-                <label className="filter-label">DEPENDENCIA</label>
-                <select
-                  className="filter-select"
-                  value={filters.dependencia ?? ''}
-                  onChange={e => handleFilterChange('dependencia', e.target.value)}
-                  disabled={opciones.dependencias.length === 0}
-                >
-                  <option value="">Todas las dependencias</option>
-                  {opciones.dependencias.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="DEPENDENCIA"
+                options={opciones.dependencias}
+                selectedValues={filters.dependencia || []}
+                onSelectionChange={(values) => handleFilterChange('dependencia', values)}
+                disabled={opciones.dependencias.length === 0}
+                placeholder="Todas las dependencias"
+              />
             )}
 
             {/* Filtro: Comuna / Corregimiento */}
             {F.comunaOCorregimiento && (
-              <div className="filter-group">
-                <label className="filter-label">COMUNA / CORREGIMIENTO</label>
-                <select
-                  className="filter-select"
-                  value={filters.comuna ?? ''}
-                  onChange={e => handleFilterChange('comuna', e.target.value)}
-                  disabled={opciones.comunas.length === 0}
-                >
-                  <option value="">Todas las comunas</option>
-                  {opciones.comunas.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="COMUNA / CORREGIMIENTO"
+                options={opciones.comunas}
+                selectedValues={filters.comuna || []}
+                onSelectionChange={(values) => handleFilterChange('comuna', values)}
+                disabled={opciones.comunas.length === 0}
+                placeholder="Todas las comunas"
+              />
             )}
           </div>
 
@@ -428,48 +493,36 @@ const Dashboard = () => {
           <div className="filters-container filters-row-secondary">
             {/* Filtro: Tipo de Intervención */}
             {F.tipoDeIntervecion && (
-              <div className="filter-group">
-                <label className="filter-label">TIPO DE INTERVENCIÓN</label>
-                <select
-                  className="filter-select"
-                  value={filters.tipo ?? ''}
-                  onChange={e => handleFilterChange('tipo', e.target.value)}
-                  disabled={opciones.tipos.length === 0}
-                >
-                  <option value="">Todos los tipos</option>
-                  {opciones.tipos.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="TIPO DE INTERVENCIÓN"
+                options={opciones.tipos}
+                selectedValues={filters.tipo || []}
+                onSelectionChange={(values) => handleFilterChange('tipo', values)}
+                disabled={opciones.tipos.length === 0}
+                placeholder="Todos los tipos"
+              />
             )}
 
             {/* Filtro: Contratista */}
             {F.contratistaOperador && (
-              <div className="filter-group">
-                <label className="filter-label">CONTRATISTA</label>
-                <select
-                  className="filter-select"
-                  value={filters.contratista ?? ''}
-                  onChange={e => handleFilterChange('contratista', e.target.value)}
-                  disabled={opciones.contratistas?.length === 0}
-                >
-                  <option value="">Todos los contratistas</option>
-                  {opciones.contratistas?.map(v => <option key={v} value={v}>{v}</option>) || []}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="CONTRATISTA"
+                options={opciones.contratistas || []}
+                selectedValues={filters.contratista || []}
+                onSelectionChange={(values) => handleFilterChange('contratista', values)}
+                disabled={opciones.contratistas?.length === 0}
+                placeholder="Todos los contratistas"
+              />
             )}
 
             {/* Filtro: Estado de la Obra */}
-            <div className="filter-group">
-              <label className="filter-label">ESTADO DE LA OBRA</label>
-              <select
-                className="filter-select"
-                value={filters.estadoDeLaObra ?? ''}
-                onChange={e => handleFilterChange('estadoDeLaObra', e.target.value)}
-              >
-                <option value="">Todos los estados</option>
-                {opciones.estadoDeLaObra.map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
+            <ImprovedMultiSelect
+              label="ESTADO DE LA OBRA"
+              options={opciones.estadoDeLaObra}
+              selectedValues={filters.estadoDeLaObra || []}
+              onSelectionChange={(values) => handleFilterChange('estadoDeLaObra', values)}
+              placeholder="Todos los estados"
+            />
           </div>
 
           {/* Tercera fila - Filtros de fecha */}
@@ -578,7 +631,7 @@ const Dashboard = () => {
         <div className="kpis-section">
           <div className="kpis-container">
             {/* Fila única: 6 KPIs organizados */}
-            <div className="kpis-grid kpis-row-6" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined}>
+            <div className="kpis-grid kpis-row-7" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined}>
               <Kpi 
                 label="Total obras" 
                 value={k.totalObras}
@@ -616,6 +669,11 @@ const Dashboard = () => {
                 label="Alertas" 
                 value={k.alertasEncontradas}
               />
+              <Kpi 
+                label="Sin coordenadas" 
+                value={k.sinUbicacion}
+                subtitle="Obras sin ubicación"
+              />
             </div>
           </div>
         </div>
@@ -647,22 +705,82 @@ const Dashboard = () => {
           {/* Mapa principal: responsive y conectado a filtros externos */}
           <div style={{ height: '60vh', minHeight: 380, width: '100%' }}>
             {(() => {
-              const mapQuery = new URLSearchParams({
-                ...(combinedFilters.estadoDeLaObra ? { estadoDeLaObra: String(combinedFilters.estadoDeLaObra) } : {}),
-                ...(combinedFilters.dependencia ? { dependencia: String(combinedFilters.dependencia) } : {}),
-                ...(combinedFilters.proyecto ? { proyectoEstrategico: String(combinedFilters.proyecto) } : {}),
-                // Comuna puede venir como nombre; el backend acepta comunaNombre
-                ...(combinedFilters.comuna ? { comuna: String(combinedFilters.comuna) } : {}),
-                ...(combinedFilters.tipo ? { tipo: String(combinedFilters.tipo) } : {}),
-                ...(combinedFilters.contratista ? { contratista: String(combinedFilters.contratista) } : {}),
-                ...(combinedFilters.desde ? { desde: String(combinedFilters.desde) } : {}),
-                ...(combinedFilters.hasta ? { hasta: String(combinedFilters.hasta) } : {}),
+              const mapQuery = new URLSearchParams();
+              
+              // Manejar filtros que pueden ser arrays o strings
+              if (combinedFilters.estadoDeLaObra) {
+                if (Array.isArray(combinedFilters.estadoDeLaObra)) {
+                  combinedFilters.estadoDeLaObra.forEach(val => mapQuery.append('estadoDeLaObra', val));
+                } else {
+                  mapQuery.set('estadoDeLaObra', String(combinedFilters.estadoDeLaObra));
+                }
+              }
+              
+              if (combinedFilters.dependencia) {
+                if (Array.isArray(combinedFilters.dependencia)) {
+                  combinedFilters.dependencia.forEach(val => mapQuery.append('dependencia', val));
+                } else {
+                  mapQuery.set('dependencia', String(combinedFilters.dependencia));
+                }
+              }
+              
+              if (combinedFilters.proyecto) {
+                if (Array.isArray(combinedFilters.proyecto)) {
+                  combinedFilters.proyecto.forEach(val => mapQuery.append('proyectoEstrategico', val));
+                } else {
+                  mapQuery.set('proyectoEstrategico', String(combinedFilters.proyecto));
+                }
+              }
+              
+              if (combinedFilters.comuna) {
+                if (Array.isArray(combinedFilters.comuna)) {
+                  combinedFilters.comuna.forEach(val => mapQuery.append('comuna', val));
+                } else {
+                  mapQuery.set('comuna', String(combinedFilters.comuna));
+                }
+              }
+              
+              if (combinedFilters.tipo) {
+                if (Array.isArray(combinedFilters.tipo)) {
+                  combinedFilters.tipo.forEach(val => mapQuery.append('tipo', val));
+                } else {
+                  mapQuery.set('tipo', String(combinedFilters.tipo));
+                }
+              }
+              
+              if (combinedFilters.contratista) {
+                if (Array.isArray(combinedFilters.contratista)) {
+                  combinedFilters.contratista.forEach(val => mapQuery.append('contratista', val));
+                } else {
+                  mapQuery.set('contratista', String(combinedFilters.contratista));
+                }
+              }
+              
+              if (combinedFilters.desde) {
+                mapQuery.set('desde', String(combinedFilters.desde));
+              }
+              
+              if (combinedFilters.hasta) {
+                mapQuery.set('hasta', String(combinedFilters.hasta));
+              }
+              
+              
+              const obrasParaMapa = filtered.map(row => ({ ...row, id: String(row.id || row.ID || '') }));
+              
+              // Calcular obras con y sin coordenadas
+              const obrasConCoordenadas = obrasParaMapa.filter(o => {
+                const lat = F.latitud ? parseFloat(String((o as any)[F.latitud] ?? '')) : null;
+                const lng = F.longitud ? parseFloat(String((o as any)[F.longitud] ?? '')) : null;
+                return lat && lng && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
               });
               
-              console.log('🔍 Dashboard - Filtros pasados al mapa:', Object.fromEntries(mapQuery));
-              console.log('🔍 Dashboard - combinedFilters:', combinedFilters);
+              const obrasSinCoordenadas = obrasParaMapa.length - obrasConCoordenadas.length;
               
-              return <MapLibreVisor height={'100%'} query={mapQuery} />;
+              console.log('🔍 Dashboard - obrasParaMapa:', obrasParaMapa.length);
+              console.log('🔍 Dashboard - obrasConCoordenadas:', obrasConCoordenadas.length);
+              console.log('🔍 Dashboard - obrasSinCoordenadas:', obrasSinCoordenadas);
+              
+              return <MapLibreVisor height={'100%'} query={mapQuery} filteredObras={obrasParaMapa} />;
             })()}
           </div>
         </div>
@@ -758,8 +876,8 @@ const Dashboard = () => {
         ======================================================================== */
         .dashboard-container {
           min-height: 100vh;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%);
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: #00233D;
+          font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .dashboard-content {
@@ -777,10 +895,10 @@ const Dashboard = () => {
           align-items: center;
           justify-content: center;
           height: 300px; /* Altura fija para el indicador de carga */
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: var(--white);
           border-radius: 20px;
           box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
-          border: 2px solid ${CORPORATE_COLORS.primary};
+          border: 2px solid var(--primary-green);
           margin-bottom: 30px;
         }
 
@@ -796,23 +914,23 @@ const Dashboard = () => {
           width: 100%;
           height: 100%;
           border: 4px solid transparent;
-          border-top-color: ${CORPORATE_COLORS.primary};
+          border-top-color: var(--primary-green);
           border-radius: 50%;
           animation: spin 1.5s linear infinite;
         }
 
         .spinner-ring:nth-child(1) {
-          border-top-color: ${CORPORATE_COLORS.primary};
+          border-top-color: var(--primary-green);
           animation-delay: -0.8s;
         }
 
         .spinner-ring:nth-child(2) {
-          border-top-color: ${CORPORATE_COLORS.secondary};
+          border-top-color: var(--primary-blue);
           animation-delay: -0.4s;
         }
 
         .spinner-ring:nth-child(3) {
-          border-top-color: ${CORPORATE_COLORS.accent};
+          border-top-color: var(--secondary-blue);
           animation-delay: 0s;
         }
 
@@ -823,31 +941,31 @@ const Dashboard = () => {
 
         .loading-text {
           text-align: center;
-          color: ${CORPORATE_COLORS.darkGray};
+          color: var(--text-dark);
         }
 
         .loading-text h3 {
           font-size: 1.2rem;
           font-weight: 600;
           margin-bottom: 8px;
-          color: ${CORPORATE_COLORS.accent};
+          color: var(--secondary-blue);
         }
 
         .loading-text p {
           font-size: 0.9rem;
-          color: ${CORPORATE_COLORS.mediumGray};
+          color: var(--text-light);
         }
 
         /* ========================================================================
             SECCIÓN DE FILTROS - DISEÑO MEJORADO
         ======================================================================== */
         .filters-section {
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: #FFFFFF;
           border-radius: 16px;
           padding: 20px;
           margin-bottom: 18px;
-          box-shadow: 0 6px 18px rgba(121, 188, 153, 0.12);
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+          border: 1px solid #E9ECEF;
         }
 
         .filters-actions {
@@ -868,7 +986,7 @@ const Dashboard = () => {
           align-items: center;
           gap: 6px;
           padding: 6px 12px;
-          background: linear-gradient(135deg, #FFE4E1 0%, #FFB6C1 100%);
+          background: #FFB6C1;
           border: 1px solid #FF6B6B;
           border-radius: 20px;
           color: #D63031;
@@ -882,7 +1000,7 @@ const Dashboard = () => {
           align-items: center;
           gap: 6px;
           padding: 6px 12px;
-          background: linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%);
+          background: #C8E6C9;
           border: 1px solid #4CAF50;
           border-radius: 20px;
           color: #2E7D32;
@@ -901,9 +1019,9 @@ const Dashboard = () => {
           gap: 8px;
           padding: 8px 12px;
           border-radius: 10px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           background: #ffffff;
-          color: ${CORPORATE_COLORS.accent};
+          color: var(--secondary-blue);
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
@@ -912,13 +1030,13 @@ const Dashboard = () => {
 
         .clear-filters-btn:hover:not(:disabled) {
           transform: translateY(-1px);
-          border-color: ${CORPORATE_COLORS.secondary};
+          border-color: var(--primary-blue);
           box-shadow: 0 6px 16px rgba(121, 188, 153, 0.18);
         }
 
         .clear-filters-btn:disabled {
           background: #F8F9FA;
-          color: ${CORPORATE_COLORS.mediumGray};
+          color: var(--text-light);
           border-color: #E9ECEF;
           cursor: not-allowed;
           opacity: 0.6;
@@ -966,7 +1084,7 @@ const Dashboard = () => {
 
         .filter-label {
           font-weight: 600;
-          color: ${CORPORATE_COLORS.primary};
+          color: var(--primary-green);
           font-size: 0.9rem;
           text-transform: uppercase;
           letter-spacing: 0.4px;
@@ -974,12 +1092,12 @@ const Dashboard = () => {
 
         .filter-select, .filter-input {
           padding: 12px 14px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           border-radius: 10px;
           font-size: 0.95rem;
           transition: all 0.25s ease;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          color: ${CORPORATE_COLORS.darkGray};
+          background: var(--white);
+          color: var(--text-dark);
           box-shadow: 0 1px 6px rgba(121, 188, 153, 0.08);
           width: 100%;
           box-sizing: border-box;
@@ -991,15 +1109,15 @@ const Dashboard = () => {
         /* Estilo especial para cuando el filtro está en "Todos" */
         .filter-select:has(option[value=""]:checked),
         .filter-select[value=""] {
-          background: linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%);
-          border-color: ${CORPORATE_COLORS.mediumGray};
-          color: ${CORPORATE_COLORS.mediumGray};
+          background: #E9ECEF;
+          border-color: var(--text-light);
+          color: var(--text-light);
           font-style: italic;
         }
 
         /* Estilo para opciones seleccionadas */
         .filter-select option:checked {
-          background: ${CORPORATE_COLORS.primary};
+          background: var(--primary-green);
           color: white;
           font-weight: 600;
         }
@@ -1007,23 +1125,173 @@ const Dashboard = () => {
         /* Estilo para la opción "Todos" */
         .filter-select option[value=""] {
           background: #F8F9FA;
-          color: ${CORPORATE_COLORS.mediumGray};
+          color: var(--text-light);
           font-style: italic;
           font-weight: 500;
         }
 
         .filter-select:focus, .filter-input:focus {
           outline: none;
-          border-color: ${CORPORATE_COLORS.accent};
+          border-color: var(--secondary-blue);
           box-shadow: 0 0 0 4px rgba(59, 134, 134, 0.25);
           transform: translateY(-2px);
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
         }
 
         .filter-select:hover, .filter-input:hover {
-          border-color: ${CORPORATE_COLORS.secondary};
+          border-color: var(--primary-blue);
           transform: translateY(-1px);
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
+        }
+
+        /* ========================================================================
+            FILTROS MÚLTIPLES - ESTILOS
+        ======================================================================== */
+        .multi-select-container {
+          position: relative;
+          width: 100%;
+        }
+
+        .multi-select-trigger {
+          background: var(--white);
+          border: 2px solid #79BC99;
+          border-radius: 12px;
+          padding: 12px 16px;
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          transition: all 0.3s ease;
+          min-height: 48px;
+        }
+
+        .multi-select-trigger:hover {
+          border-color: #4E8484;
+          background: #F0F8FF;
+        }
+
+        .multi-select-trigger.open {
+          border-color: #3B8686;
+          box-shadow: 0 0 0 3px rgba(59, 134, 134, 0.25);
+        }
+
+        .multi-select-trigger.disabled {
+          background: #1a1d20;
+          color: #6a6f73;
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .multi-select-text {
+          color: #2C3E50;
+          font-weight: 500;
+          flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .multi-select-arrow {
+          color: #3B8686;
+          font-size: 12px;
+          transition: transform 0.3s ease;
+          margin-left: 8px;
+        }
+
+        .multi-select-trigger.open .multi-select-arrow {
+          transform: rotate(180deg);
+        }
+
+        .multi-select-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 2px solid #79BC99;
+          border-radius: 12px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.2);
+          z-index: 1000;
+          max-height: 300px;
+          overflow: hidden;
+        }
+
+        .multi-select-search {
+          padding: 12px;
+          border-bottom: 1px solid #E9ECEF;
+        }
+
+        .multi-select-search-input {
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #E9ECEF;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+        }
+
+        .multi-select-search-input:focus {
+          border-color: #79BC99;
+          box-shadow: 0 0 0 2px rgba(121, 188, 153, 0.2);
+        }
+
+        .multi-select-actions {
+          padding: 8px 12px;
+          border-bottom: 1px solid #E9ECEF;
+          display: flex;
+          gap: 8px;
+        }
+
+        .multi-select-action-btn {
+          background: #79BC99;
+          color: white;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .multi-select-action-btn:hover {
+          background: #4E8484;
+        }
+
+        .multi-select-action-btn.clear {
+          background: #dc2626;
+        }
+
+        .multi-select-action-btn.clear:hover {
+          background: #b91c1c;
+        }
+
+        .multi-select-options {
+          max-height: 200px;
+          overflow-y: auto;
+          padding: 8px 0;
+        }
+
+        .multi-select-option {
+          display: flex;
+          align-items: center;
+          padding: 8px 16px;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .multi-select-option:hover {
+          background-color: #F8F9FA;
+        }
+
+        .multi-select-option input[type="checkbox"] {
+          margin-right: 12px;
+          accent-color: #79BC99;
+        }
+
+        .multi-select-option-text {
+          color: #2C3E50;
+          font-size: 14px;
+          flex: 1;
         }
 
         /* Estilos específicos para móviles en filtros */
@@ -1112,7 +1380,7 @@ const Dashboard = () => {
         .kpis-section {
           margin-bottom: 22px;
           padding: 20px;
-          background: linear-gradient(135deg, rgba(212, 230, 241, 0.35) 0%, rgba(232, 244, 248, 0.35) 100%);
+          background: rgba(232, 244, 248, 0.35);
           border-radius: 18px;
           border: 1px solid rgba(121, 188, 153, 0.25);
         }
@@ -1130,14 +1398,14 @@ const Dashboard = () => {
           align-items: stretch;
         }
 
-        /* Estilos para las tarjetas de KPI - Colores corporativos */
+        /* Estilos para las tarjetas de KPI - Colores exactos del usuario */
         .kpis-grid .kpi {
-          background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%) !important;
-          color: white !important;
+          background: #98C73B !important;
+          color: #FFFFFF !important;
           border-radius: 16px !important;
           padding: 16px !important;
-          box-shadow: 0 6px 18px rgba(121, 188, 153, 0.22) !important;
-          border: 1px solid rgba(255, 255, 255, 0.18) !important;
+          box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
+          border: none !important;
           transition: all 0.25s ease !important;
           position: relative !important;
           overflow: hidden !important;
@@ -1145,7 +1413,7 @@ const Dashboard = () => {
 
         .kpis-grid .kpi:hover {
           transform: translateY(-5px) !important;
-          box-shadow: 0 15px 35px rgba(121, 188, 153, 0.4) !important;
+          box-shadow: 0 15px 35px rgba(152, 199, 59, 0.4) !important;
           border-color: rgba(255, 255, 255, 0.4) !important;
         }
 
@@ -1156,7 +1424,7 @@ const Dashboard = () => {
           left: 0 !important;
           right: 0 !important;
           height: 4px !important;
-          background: linear-gradient(90deg, #3B8686, #79BC99, #4E8484) !important;
+          background: var(--primary-green) !important;
         }
 
         /* Estilos para el contenido de los KPIs */
@@ -1197,6 +1465,7 @@ const Dashboard = () => {
         .kpis-row-2 { grid-template-columns: repeat(2, 1fr); }
         .kpis-row-5 { grid-template-columns: repeat(5, 1fr); }
         .kpis-row-6 { grid-template-columns: repeat(6, 1fr); }
+        .kpis-row-7 { grid-template-columns: repeat(7, 1fr); }
 
         .kpis-row-3 {
           grid-template-columns: repeat(1, 1fr);
@@ -1237,17 +1506,17 @@ const Dashboard = () => {
             TARJETAS DE CONTENIDO
         ======================================================================== */
         .chart-card, .table-card {
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: #FFFFFF;
           border-radius: 20px;
           padding: 30px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+          border: 1px solid #98C73B;
           transition: all 0.3s ease;
         }
 
         .chart-card:hover, .table-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 15px 35px rgba(121, 188, 153, 0.2);
+          box-shadow: 0 15px 35px rgba(152, 199, 59, 0.2);
         }
 
         /* ========================================================================
@@ -1286,15 +1555,15 @@ const Dashboard = () => {
         .map-legend {
           margin-bottom: 25px;
           padding: 20px;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: var(--white);
           border-radius: 15px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
         }
 
         .map-legend h4 {
           margin: 0 0 20px 0;
-          color: ${CORPORATE_COLORS.accent};
+          color: var(--secondary-blue);
           font-size: 1.1rem;
           font-weight: 600;
         }
@@ -1310,9 +1579,9 @@ const Dashboard = () => {
           align-items: center;
           gap: 12px;
           padding: 8px 12px;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
           border-radius: 10px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           box-shadow: 0 2px 8px rgba(121, 188, 153, 0.08);
           transition: all 0.3s ease;
         }
@@ -1320,20 +1589,20 @@ const Dashboard = () => {
         .legend-item:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
         }
 
         .legend-color {
           width: 18px;
           height: 18px;
           border-radius: 50%;
-          border: 2px solid ${CORPORATE_COLORS.primary};
+          border: 2px solid var(--primary-green);
           box-shadow: 0 2px 6px rgba(121, 188, 153, 0.3);
         }
 
         .legend-text {
           font-size: 0.9rem;
-          color: ${CORPORATE_COLORS.darkGray};
+          color: var(--text-dark);
           font-weight: 500;
         }
 
@@ -1358,8 +1627,8 @@ const Dashboard = () => {
           padding: 6px 10px;
           border-radius: 999px;
           background: #ffffff;
-          border: 1px solid ${CORPORATE_COLORS.primary};
-          color: ${CORPORATE_COLORS.darkGray};
+          border: 1px solid var(--primary-green);
+          color: var(--text-dark);
           font-size: 12px;
           line-height: 1;
           white-space: nowrap;
@@ -1373,7 +1642,7 @@ const Dashboard = () => {
           width: 10px;
           height: 10px;
           border-radius: 50%;
-          border: 2px solid ${CORPORATE_COLORS.primary};
+          border: 2px solid var(--primary-green);
           box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           flex: 0 0 auto;
         }
@@ -1423,8 +1692,8 @@ const Dashboard = () => {
           justify-content: center;
           height: 100%;
           font-size: 1.2rem;
-          color: ${CORPORATE_COLORS.mediumGray};
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          color: var(--text-light);
+          background: var(--white);
           border-radius: 15px;
           text-align: center;
           padding: 20px;
@@ -1443,27 +1712,27 @@ const Dashboard = () => {
           padding: 0;
           min-width: 240px;
           max-width: 280px;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
           border-radius: 12px;
         }
 
         .map-popup {
           padding: 0;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
           border-radius: 12px;
         }
 
         .popup-header {
           padding: 12px 16px;
           border-left: 4px solid;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: var(--white);
           border-radius: 12px 12px 0 0;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
 
         .popup-header h4 {
           margin: 0 0 6px 0;
-          color: ${CORPORATE_COLORS.darkGray};
+          color: var(--text-dark);
           font-size: 1rem;
           font-weight: 600;
           line-height: 1.3;
@@ -1477,19 +1746,19 @@ const Dashboard = () => {
 
         .popup-info {
           padding: 10px 16px;
-          border-bottom: 1px solid ${CORPORATE_COLORS.primary};
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-bottom: 1px solid var(--primary-green);
+          background: var(--white);
         }
 
         .popup-info p {
           margin: 6px 0;
           font-size: 0.85rem;
-          color: ${CORPORATE_COLORS.mediumGray};
+          color: var(--text-light);
           line-height: 1.4;
         }
 
         .popup-info strong {
-          color: ${CORPORATE_COLORS.darkGray};
+          color: var(--text-dark);
         }
 
         .popup-percentages {
@@ -1518,7 +1787,7 @@ const Dashboard = () => {
 
         .percentage-label {
           font-size: 0.8rem;
-          color: ${CORPORATE_COLORS.mediumGray};
+          color: var(--text-light);
           font-weight: 500;
           line-height: 1.3;
         }
@@ -1526,7 +1795,7 @@ const Dashboard = () => {
         .percentage-bar {
           width: 70px;
           height: 8px;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: var(--white);
           border-radius: 4px;
           overflow: hidden;
           box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -1591,7 +1860,7 @@ const Dashboard = () => {
         }
         .overlay-header {
           display: flex; align-items: center; justify-content: space-between;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
           border-bottom: 1px solid #E9ECEF; padding: 10px 12px;
         }
         .overlay-title { font-weight: 700; color: #2C3E50; }
@@ -1613,12 +1882,12 @@ const Dashboard = () => {
         .status-indicator {
           text-align: center;
           padding: 25px;
-          color: ${CORPORATE_COLORS.mediumGray};
+          color: var(--text-light);
           font-style: italic;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: var(--white);
           border-radius: 15px;
           margin-top: 30px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
         }
 
@@ -1633,9 +1902,9 @@ const Dashboard = () => {
         .main-chart-section {
           margin-bottom: 30px;
           padding: 20px;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
           border-radius: 20px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
           overflow: hidden;
           width: 100%;
@@ -1675,6 +1944,7 @@ const Dashboard = () => {
         @media (max-width: 1200px) {
           .kpis-row-5 { grid-template-columns: repeat(4, 1fr); }
           .kpis-row-6 { grid-template-columns: repeat(4, 1fr); }
+          .kpis-row-7 { grid-template-columns: repeat(4, 1fr); }
           .main-content {
             grid-template-columns: 1fr;
           }
@@ -1726,6 +1996,7 @@ const Dashboard = () => {
           .kpis-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
           .kpis-row-5 { grid-template-columns: repeat(2, 1fr); }
           .kpis-row-6 { grid-template-columns: repeat(2, 1fr); }
+          .kpis-row-7 { grid-template-columns: repeat(2, 1fr); }
 
           .kpis-grid .kpi {
             padding: 14px !important;
@@ -1839,6 +2110,7 @@ const Dashboard = () => {
           .kpis-grid { gap: 14px; grid-template-columns: 1fr !important; }
           .kpis-row-5 { grid-template-columns: 1fr !important; }
           .kpis-row-6 { grid-template-columns: 1fr !important; }
+          .kpis-row-7 { grid-template-columns: 1fr !important; }
 
           .kpis-grid .kpi {
             padding: 12px !important;

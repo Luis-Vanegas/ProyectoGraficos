@@ -17,6 +17,7 @@ import SimpleBarChart from '../components/SimpleBarChart';
 import Navigation from '../components/Navigation';
 import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
+import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 
 // ============================================================================
 // PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
@@ -83,7 +84,6 @@ const UnidadHospitalariaDashboard = () => {
         setRows(rows);
         setStatus(`${rows.length} filas cargadas exitosamente`);
       } catch (e) {
-        console.error('Error al cargar datos:', e);
         setStatus('Error: No se pudieron cargar los datos');
       }
     })();
@@ -229,8 +229,6 @@ const UnidadHospitalariaDashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas (Unidad Hospitalaria):', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas (Unidad Hospitalaria):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -266,13 +264,23 @@ const UnidadHospitalariaDashboard = () => {
   // ============================================================================
   // MANEJADORES DE EVENTOS
   // ============================================================================
-  const handleFilterChange = (filterKey: keyof UIFilters, value: string) => {
-    const newValue = value || undefined;
+  const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
+    console.log('🔍 UnidadHospitalariaDashboard - handleFilterChange - INICIANDO');
+    console.log('🔍 UnidadHospitalariaDashboard - filterKey:', filterKey, 'value:', value);
+    console.log('🔍 UnidadHospitalariaDashboard - filters actuales:', filters);
+    
+    // Si el array está vacío, limpiar el filtro
+    const newValue = value.length === 0 ? undefined : value;
+    console.log('🔍 UnidadHospitalariaDashboard - newValue:', newValue);
+    
     const newFilters = { ...filters, [filterKey]: newValue };
+    console.log('🔍 UnidadHospitalariaDashboard - newFilters antes de clean:', newFilters);
 
     // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
+    console.log('🔍 UnidadHospitalariaDashboard - cleanedFilters:', cleanedFilters);
     setFilters(cleanedFilters);
+    console.log('🔍 UnidadHospitalariaDashboard - setFilters llamado');
   };
 
   // ============================================================================
@@ -310,76 +318,56 @@ const UnidadHospitalariaDashboard = () => {
           <div className="filters-container">
             {/* Filtros básicos reutilizados */}
             {F.dependencia && (
-              <div className="filter-group">
-                <label className="filter-label">DEPENDENCIA</label>
-                <select
-                  className="filter-select"
-                  value={filters.dependencia ?? ''}
-                  onChange={e => handleFilterChange('dependencia', e.target.value)}
-                  disabled={opciones.dependencias.length === 0}
-                >
-                  <option value="">Todas las dependencias</option>
-                  {opciones.dependencias.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="DEPENDENCIA"
+                options={opciones.dependencias}
+                selectedValues={filters.dependencia || []}
+                onSelectionChange={(values) => handleFilterChange('dependencia', values)}
+                disabled={opciones.dependencias.length === 0}
+                placeholder="Todas las dependencias"
+              />
             )}
 
             {F.comunaOCorregimiento && (
-              <div className="filter-group">
-                <label className="filter-label">COMUNA / CORREGIMIENTO</label>
-                <select
-                  className="filter-select"
-                  value={filters.comuna ?? ''}
-                  onChange={e => handleFilterChange('comuna', e.target.value)}
-                  disabled={opciones.comunas.length === 0}
-                >
-                  <option value="">Todas las comunas</option>
-                  {opciones.comunas.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="COMUNA / CORREGIMIENTO"
+                options={opciones.comunas}
+                selectedValues={filters.comuna || []}
+                onSelectionChange={(values) => handleFilterChange('comuna', values)}
+                disabled={opciones.comunas.length === 0}
+                placeholder="Todas las comunas"
+              />
             )}
 
             {F.tipoDeIntervecion && (
-              <div className="filter-group">
-                <label className="filter-label">TIPO DE INTERVENCIÓN</label>
-                <select
-                  className="filter-select"
-                  value={filters.tipo ?? ''}
-                  onChange={e => handleFilterChange('tipo', e.target.value)}
-                  disabled={opciones.tipos.length === 0}
-                >
-                  <option value="">Todos los tipos</option>
-                  {opciones.tipos.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="TIPO DE INTERVENCIÓN"
+                options={opciones.tipos}
+                selectedValues={filters.tipo || []}
+                onSelectionChange={(values) => handleFilterChange('tipo', values)}
+                disabled={opciones.tipos.length === 0}
+                placeholder="Todos los tipos"
+              />
             )}
 
             {F.contratistaOperador && (
-              <div className="filter-group">
-                <label className="filter-label">CONTRATISTA</label>
-                <select
-                  className="filter-select"
-                  value={filters.contratista ?? ''}
-                  onChange={e => handleFilterChange('contratista', e.target.value)}
-                  disabled={opciones.contratistas?.length === 0}
-                >
-                  <option value="">Todos los contratistas</option>
-                  {opciones.contratistas?.map(v => <option key={v} value={v}>{v}</option>) || []}
-                </select>
-              </div>
+              <ImprovedMultiSelect
+                label="CONTRATISTA"
+                options={opciones.contratistas || []}
+                selectedValues={filters.contratista || []}
+                onSelectionChange={(values) => handleFilterChange('contratista', values)}
+                disabled={opciones.contratistas?.length === 0}
+                placeholder="Todos los contratistas"
+              />
             )}
 
-            <div className="filter-group">
-              <label className="filter-label">ESTADO DE LA OBRA</label>
-              <select
-                className="filter-select"
-                value={filters.estadoDeLaObra ?? ''}
-                onChange={e => handleFilterChange('estadoDeLaObra', e.target.value)}
-              >
-                <option value="">Todos los estados</option>
-                {opciones.estadoDeLaObra.map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
+            <ImprovedMultiSelect
+              label="ESTADO DE LA OBRA"
+              options={opciones.estadoDeLaObra}
+              selectedValues={filters.estadoDeLaObra || []}
+              onSelectionChange={(values) => handleFilterChange('estadoDeLaObra', values)}
+              placeholder="Todos los estados"
+            />
 
             {/* Filtros de fecha */}
             {(F.fechaRealDeEntrega || F.fechaEstimadaDeEntrega) && (

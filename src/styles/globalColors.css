@@ -1,0 +1,215 @@
+/* ============================================================================
+   COLORES GLOBALES - BASADOS EN LA PÁGINA PRINCIPAL
+   ============================================================================ */
+
+:root {
+  /* Paleta de colores oficial */
+  --primary-green: #98C73B;
+  --primary-blue: #00B4FF;
+  --secondary-blue: #2AA7E1;
+  --dark-blue: #00233D;
+  --darker-blue: #002945;
+  --white: #FFFFFF;
+  
+  /* Colores de fondo */
+  --background-dark: #00233D;
+  --background-light: #F0F8FF;
+  --background-gradient-start: #D4E6F1;
+  --background-gradient-end: #E8F4F8;
+  
+  /* Colores de tarjetas */
+  --card-background: #E0E0E0;
+  --card-hover: #D0D0D0;
+  
+  /* Colores de texto */
+  --text-dark: #00233D;
+  --text-medium: #002945;
+  --text-light: #666666;
+  --text-white: #FFFFFF;
+  
+  /* Colores de botones */
+  --button-primary: #98C73B;
+  --button-secondary: #00B4FF;
+  --button-accent: #2AA7E1;
+  --button-hover: #7FB832;
+  
+  /* Colores de bordes */
+  --border-light: #E9ECEF;
+  --border-medium: #D0D0D0;
+  
+  /* Sombras */
+  --shadow-light: 0 8px 25px rgba(0,0,0,0.2);
+  --shadow-medium: 0 15px 35px rgba(0,0,0,0.3);
+  --shadow-green: 0 6px 18px rgba(152, 199, 59, 0.22);
+}
+
+/* ============================================================================
+   APLICACIÓN GLOBAL DE COLORES
+   ============================================================================ */
+
+/* Fondo principal de todas las páginas */
+.dashboard-container,
+.page-container {
+  background: #00233D !important;
+  min-height: 100vh;
+  font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Tarjetas principales */
+.main-card,
+.principal-card {
+  background: var(--card-background) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--shadow-light) !important;
+  transition: all 0.3s ease !important;
+}
+
+.main-card:hover,
+.principal-card:hover {
+  transform: translateY(-8px) scale(1.03) !important;
+  box-shadow: var(--shadow-medium) !important;
+  background: var(--card-hover) !important;
+}
+
+/* Tarjetas KPI - Colores exactos del usuario */
+.kpis-grid .kpi,
+.kpis-grid .kpi-card {
+  background: #98C73B !important;
+  color: #FFFFFF !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
+  border: none !important;
+}
+
+.kpis-grid .kpi .kpi-value,
+.kpis-grid .kpi-card .kpi-value {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+.kpis-grid .kpi .kpi-title,
+.kpis-grid .kpi-card .kpi-title {
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+}
+
+.kpis-grid .kpi .kpi-subtitle,
+.kpis-grid .kpi-card .kpi-subtitle {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 0.9rem !important;
+}
+
+/* Secciones de filtros */
+.filters-section {
+  background: #FFFFFF !important;
+  border-radius: 16px !important;
+  border: 1px solid #E9ECEF !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Menú de navegación */
+.navigation {
+  background: #00B4FF !important;
+  border-bottom: 2px solid #2AA7E1 !important;
+  box-shadow: 0 4px 20px rgba(0, 180, 255, 0.3) !important;
+}
+
+.navigation .back-button {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #FFFFFF !important;
+}
+
+.navigation .back-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.navigation .title {
+  color: #FFFFFF !important;
+}
+
+/* Botones */
+.btn-primary {
+  background: #98C73B !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-primary:hover {
+  background: #7FB832 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 15px 35px rgba(152, 199, 59, 0.4) !important;
+}
+
+.btn-secondary {
+  background: #00B4FF !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-secondary:hover {
+  background: #2AA7E1 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 15px 35px rgba(0, 180, 255, 0.4) !important;
+}
+
+/* Campos de formulario */
+.filter-select,
+.filter-input {
+  background: var(--white) !important;
+  border: 2px solid var(--border-light) !important;
+  border-radius: 12px !important;
+  color: var(--text-dark) !important;
+  transition: all 0.3s ease !important;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+  border-color: var(--primary-green) !important;
+  box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.25) !important;
+  background: var(--white) !important;
+}
+
+/* Tarjetas de contenido */
+.chart-card,
+.table-card,
+.content-card {
+  background: var(--white) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--shadow-green) !important;
+  border: 1px solid var(--border-light) !important;
+}
+
+/* Títulos */
+.page-title,
+.section-title {
+  color: var(--text-dark) !important;
+  font-weight: 700 !important;
+}
+
+/* Texto general */
+body {
+  color: var(--text-dark) !important;
+  font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Estados de filtros */
+.filters-active {
+  background: linear-gradient(135deg, #FFE4E1 0%, #FFB6C1 100%) !important;
+  border: 1px solid #FF6B6B !important;
+  color: #D63031 !important;
+}
+
+.filters-all {
+  background: linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%) !important;
+  border: 1px solid #4CAF50 !important;
+  color: #2E7D32 !important;
+}
