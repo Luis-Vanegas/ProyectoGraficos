@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 import { F } from '../dataConfig';
 // import type * as GeoJSON from 'geojson';
@@ -24,34 +25,7 @@ import VigenciasTable from '../components/VigenciasTable';
 import HeaderIcons from '../components/HeaderIcons';
 import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 
-// ============================================================================
-// PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
-// ============================================================================
-const CORPORATE_COLORS = {
-  // Colores principales
-  primary: '#79BC99',      // Verde principal - usado para elementos destacados
-  secondary: '#4E8484',    // Verde azulado - usado para elementos secundarios
-  accent: '#3B8686',       // Verde oscuro - usado para acentos y textos importantes
-  
-  // Colores de estado
-  success: '#10B981',      // Verde éxito
-  warning: '#F59E0B',      // Amarillo advertencia
-  error: '#EF4444',        // Rojo error
-  info: '#3B82F6',         // Azul información
-  
-  // Colores neutros
-  white: '#FFFFFF',        // Blanco puro
-  lightGray: '#F8F9FA',    // Gris claro
-  mediumGray: '#6C757D',   // Gris medio
-  darkGray: '#2C3E50',     // Gris oscuro
-  border: '#E9ECEF',       // Gris borde
-  
-  // Colores de fondo
-  background: '#F0F8FF',   // Azul muy claro
-  cardBackground: '#FFFFFF', // Blanco para tarjetas
-  gradientStart: '#D4E6F1', // Inicio del gradiente
-  gradientEnd: '#E8F4F8'   // Fin del gradiente
-};
+//
 
 // ============================================================================
 // UTILIDAD: CONVERTIR HSL A HEX PARA GENERAR COLORES DISTINTOS ILIMITADOS
@@ -122,6 +96,7 @@ const Dashboard = () => {
     console.log('🔍 Dashboard - filters.contratista:', filters.contratista);
   }, [filters]);
   const [isMobileStack, setIsMobileStack] = useState(false);
+  const prefersReduced = useReducedMotion?.() ?? false;
   // Estado no utilizado en esta vista (selección se maneja en MapLibre)
   // const [selectedComuna] = useState<string | null>(null);
   // const [comunasGeo, setComunasGeo] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -630,51 +605,76 @@ const Dashboard = () => {
          ======================================================================== */}
         <div className="kpis-section">
           <div className="kpis-container">
-            {/* Fila única: 6 KPIs organizados */}
-            <div className="kpis-grid kpis-row-7" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined}>
-              <Kpi 
-                label="Total obras" 
-                value={k.totalObras}
-              />
-              <Kpi 
-                label="Inversión total" 
-                value={k.invTotal} 
-                format="money" 
-                abbreviate 
-                digits={1}
-                subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
-              />
-              <Kpi 
-                label="Presupuesto ejecutado" 
-                value={k.ejec} 
-                format="money" 
-                abbreviate
-                digits={1}
-                subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
-              />
-              <Kpi 
-                label="Presupuesto ejecutado administración actual 2024-2027" 
-                value={k.valorCuatrienio2024_2027} 
-                format="money"
-                abbreviate
-                digits={1}
-                subtitle={`${Math.round(k.porcentajeCuatrienio2024_2027 * 100)}% de la inversión total`}
-              />
-              <Kpi 
-                label="Obras entregadas" 
-                value={k.entregadas} 
-                subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
-              />
-              <Kpi 
-                label="Alertas" 
-                value={k.alertasEncontradas}
-              />
-              <Kpi 
-                label="Sin coordenadas" 
-                value={k.sinUbicacion}
-                subtitle="Obras sin ubicación"
-              />
-            </div>
+            {/* Fila única: 6 KPIs organizados con animación */}
+            {(() => {
+              const container = {
+                hidden: { opacity: 0 },
+                show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.04 } }
+              } as const;
+              const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } } as const;
+              const gridProps = prefersReduced ? {} : { variants: container, initial: 'hidden', animate: 'show' };
+              const childProps = prefersReduced ? {} : { variants: item };
+              return (
+                <motion.div className="kpis-grid kpis-row-7" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined} {...gridProps}>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Total obras" 
+                      value={k.totalObras} 
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Inversión total" 
+                      value={k.invTotal} 
+                      format="money" 
+                      abbreviate 
+                      digits={1}
+                      subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Presupuesto ejecutado" 
+                      value={k.ejec} 
+                      format="money" 
+                      abbreviate
+                      digits={1}
+                      subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Presupuesto 2024-2027" 
+                      value={k.valorCuatrienio2024_2027} 
+                      format="money"
+                      abbreviate
+                      digits={1}
+                      subtitle={`${Math.round(k.porcentajeCuatrienio2024_2027 * 100)}% de la inversión total`}
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Obras entregadas" 
+                      value={k.entregadas} 
+                      subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Alertas" 
+                      value={k.alertasEncontradas}
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Sin coordenadas" 
+                      value={k.sinUbicacion}
+                      subtitle="Obras sin ubicación"
+                    />
+                  </motion.div>
+                </motion.div>
+              );
+            })()}
           </div>
         </div>
 

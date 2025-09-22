@@ -1,4 +1,6 @@
 import { nf, cf } from '../utils/utils/metrics';
+import { motion, useReducedMotion } from 'framer-motion';
+import CountUp from 'react-countup';
 
 type Props = {
   label: string;
@@ -26,9 +28,10 @@ export default function Kpi({
   compactMoney = false,
   abbreviate = false,
   digits = 0,
-  subtitle
-  // trend
+  subtitle,
+  // trend = 'neutral'
 }: Props) {
+  const prefersReduced = useReducedMotion?.() ?? false;
 
   const abbreviateNumber = (num: number, d = 1): string => {
     const abs = Math.abs(num);
@@ -60,33 +63,76 @@ export default function Kpi({
     return nf.format(value);
   })();
 
+
   return (
-    <div className="kpi" role="figure" aria-label={`KPI ${label}: ${fmt}`}>
+    <motion.div
+      className="kpi"
+      role="figure"
+      aria-label={`KPI ${label}: ${fmt}`}
+      initial={prefersReduced ? false : { opacity: 0, y: 16 }}
+      animate={prefersReduced ? undefined : { opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 140, damping: 18, duration: 0.5 }}
+      whileHover={prefersReduced ? undefined : { y: -6, scale: 1.02 }}
+      whileTap={prefersReduced ? undefined : { scale: 0.99 }}
+    >
       <div className="kpi-header">
         <div className="kpi-label">{label}</div>
       </div>
-      <div className="kpi-value">{fmt}</div>
+      
+      <div className="kpi-value">
+        {(() => {
+          if (abbreviate) return fmt;
+          if (format === 'pct') {
+            return (
+              <CountUp 
+                end={value * 100} 
+                decimals={digits} 
+                duration={1.2} 
+                suffix={' %'} 
+                separator="."
+              />
+            );
+          }
+          if (format === 'money') {
+            return (
+              <CountUp
+                end={value}
+                duration={1.2}
+                separator="."
+                formattingFn={(n) => (compactMoney ? moneyCompact.format(n) : cf.format(n))}
+              />
+            );
+          }
+          return <CountUp end={value} duration={1.0} separator="." />;
+        })()}
+      </div>
+      
       {subtitle && <div className="kpi-subtitle" title={subtitle}>{subtitle}</div>}
-    </div>
+    </motion.div>
   );
 }
 
-// Estilos CSS con responsive design
+// Estilos CSS limpios y organizados
 const kpiStyles = `
   .kpi {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-radius: 14px;
-    padding: 18px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-    border: 1px solid #e0e0e0;
+    background: #98C73B;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22);
+    border: none;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: white;
   }
 
   .kpi:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(152, 199, 59, 0.3);
   }
 
   .kpi::before {
@@ -96,148 +142,158 @@ const kpiStyles = `
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #00904c 0%, #79BC99 100%);
+    background: linear-gradient(90deg, #79BC99 0%, #4E8484 100%);
+    border-radius: 16px 16px 0 0;
   }
 
   .kpi-header {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+    height: 32px;
     display: flex;
-    justify-content: flex-start;
     align-items: center;
-    margin-bottom: 10px;
+    justify-content: center;
   }
 
   .kpi-label {
-    color: #555;
-    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
     font-weight: 600;
     letter-spacing: 0.5px;
     text-transform: uppercase;
+    line-height: 1.2;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .kpi-value {
-    font-size: 1.6rem;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 6px;
-    line-height: 1.2;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    padding-top: 20px;
   }
 
   .kpi-subtitle {
-    color: #666;
-    font-size: 0.8rem;
-    font-style: italic;
-    opacity: 0.8;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.3;
+    text-align: center;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* ========================================================================
-      DISEÑO RESPONSIVE COMPLETO
+      DISEÑO RESPONSIVE LIMPIO
   ======================================================================== */
   
   @media (max-width: 1200px) {
     .kpi {
-      padding: 16px;
+      padding: 18px;
+      height: 150px;
+    }
+    
+    .kpi-header {
+      height: 30px;
+      margin-bottom: 10px;
     }
     
     .kpi-label {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
     .kpi-value {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
+      padding-top: 18px;
+    }
+    
+    .kpi-subtitle {
+      height: 18px;
     }
   }
   
   @media (max-width: 768px) {
     .kpi {
-      padding: 14px;
-      border-radius: 12px;
+      padding: 16px;
+      border-radius: 14px;
+      height: 140px;
     }
     
     .kpi-header {
+      height: 28px;
       margin-bottom: 8px;
     }
     
     .kpi-label {
-      font-size: 0.78rem;
-      letter-spacing: 0.3px;
+      font-size: 0.7rem;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
     .kpi-value {
-      font-size: 1.35rem;
-      margin-bottom: 4px;
+      font-size: 1.4rem;
+      padding-top: 16px;
     }
     
     .kpi-subtitle {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
+      height: 16px;
     }
   }
   
   @media (max-width: 480px) {
     .kpi {
-      padding: 12px;
-      border-radius: 10px;
+      padding: 14px;
+      border-radius: 12px;
+      height: 130px;
     }
     
     .kpi-header {
+      height: 26px;
       margin-bottom: 6px;
     }
     
     .kpi-label {
-      font-size: 0.72rem;
-      letter-spacing: 0.2px;
+      font-size: 0.65rem;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
     .kpi-value {
       font-size: 1.2rem;
-      margin-bottom: 3px;
-    }
-    
-    .kpi-subtitle {
-      font-size: 0.7rem;
-    }
-  }
-  
-  @media (max-width: 360px) {
-    .kpi {
-      padding: 10px;
-      border-radius: 8px;
-    }
-    
-    .kpi-header {
-      margin-bottom: 4px;
-    }
-    
-    .kpi-label {
-      font-size: 0.68rem;
-      letter-spacing: 0.1px;
-    }
-    
-    .kpi-value {
-      font-size: 1.1rem;
-      margin-bottom: 2px;
+      padding-top: 14px;
     }
     
     .kpi-subtitle {
       font-size: 0.65rem;
-    }
-  }
-  
-  /* Manejo especial para pantallas muy pequeñas */
-  @media (max-width: 320px) {
-    .kpi {
-      padding: 8px;
-    }
-    
-    .kpi-label {
-      font-size: 0.62rem;
-    }
-    
-    .kpi-value {
-      font-size: 1rem;
-    }
-    
-    .kpi-subtitle {
-      font-size: 0.6rem;
+      height: 14px;
     }
   }
 `;

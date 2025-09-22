@@ -145,6 +145,12 @@ export const F = {
   fechaFinEstimadaLiquidacion: 'FECHA FIN ESTIMADA LIQUIDACIÓN',
   fechaFinRealLiquidacion: 'FECHA FIN REAL LIQUIDACIÓN',
 
+  // ===== RIESGOS Y ALERTAS (4 campos) =====
+  descripcionDelRiesgo: 'DESCRIPCIÓN DEL RIESGO',
+  presenciaDeRiesgo: 'PRESENCIA DE RIESGO',
+  impactoDelRiesgo: 'IMPACTO DEL RIESGO',
+  estadoDeRiesgo: 'ESTADO DE RIESGO',
+
 } as const;
 
 // Ayuda de tipos (opcional)

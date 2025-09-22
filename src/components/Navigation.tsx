@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import logoHorizontal from '../assets/LogoHorizontal.png';
+import logo2022 from '../assets/logo_2022.png';
 
 interface NavigationProps {
   showBackButton?: boolean;
@@ -33,7 +33,7 @@ export default function Navigation({ showBackButton = false, title }: Navigation
       {/* Logo a la derecha */}
       <div className="logo-container">
         <img 
-          src={logoHorizontal} 
+          src={logo2022} 
           alt="Logo Alcaldía de Medellín" 
           className="logo"
           style={{ height: '50px' }}
