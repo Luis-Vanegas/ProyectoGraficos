@@ -96,6 +96,7 @@ const Dashboard = () => {
     console.log('🔍 Dashboard - filters.contratista:', filters.contratista);
   }, [filters]);
   const [isMobileStack, setIsMobileStack] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const prefersReduced = useReducedMotion?.() ?? false;
   // Estado no utilizado en esta vista (selección se maneja en MapLibre)
   // const [selectedComuna] = useState<string | null>(null);
@@ -374,6 +375,17 @@ const Dashboard = () => {
         // onShowLearningPanel={() => setShowLearningPanel(true)}
       />
 
+      {/* Botón flotante para abrir el panel de filtros (derecha) */}
+      <button
+        className={`filters-fab${isFiltersOpen ? ' open' : ''}`}
+        title={isFiltersOpen ? 'Cerrar filtros' : 'Abrir filtros'}
+        onClick={() => setIsFiltersOpen(v => !v)}
+        aria-expanded={isFiltersOpen}
+        aria-controls="filtersDrawer"
+      >
+        {isFiltersOpen ? '✖ Cerrar' : '☰ Filtros'}
+      </button>
+
       {/* Contenedor principal del dashboard */}
       <div className="dashboard-content">
 
@@ -395,10 +407,11 @@ const Dashboard = () => {
         )}
 
         {/* ========================================================================
-             SECCIÓN DE FILTROS - PRIMERA POSICIÓN
+            PANEL LATERAL DE FILTROS (COLAPSABLE A LA DERECHA)
          ======================================================================== */}
-        <div className="filters-section">
-          <div className="filters-actions">
+        <aside id="filtersDrawer" className={`filters-drawer${isFiltersOpen ? ' open' : ''}`} aria-hidden={!isFiltersOpen}>
+          <div className="filters-actions drawer-header">
+            <h3 className="drawer-title">Filtros</h3>
             <div className="filters-status">
               {getActiveFiltersCount(filters) > 0 ? (
                 <span className="filters-active">
@@ -421,7 +434,9 @@ const Dashboard = () => {
               <span className="btn-icon" aria-hidden>✖</span>
               Borrar filtros
             </button>
+            <button className="drawer-close-btn" aria-label="Cerrar filtros" onClick={() => setIsFiltersOpen(false)}>✖</button>
           </div>
+          <div className="drawer-scroll">
           {/* Primera fila de filtros */}
           <div className="filters-container filters-row-main">
             {/* Filtro: Proyectos estratégicos */}
@@ -598,6 +613,12 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+        <div className="drawer-footer">
+            <button className="apply-filters-btn" onClick={() => setIsFiltersOpen(false)}>Aplicar y cerrar</button>
+          </div>
+        </aside>
+        {/* Fondo semitransparente al abrir el drawer */}
+        {isFiltersOpen && <div className="filters-backdrop" onClick={() => setIsFiltersOpen(false)} />}
 
         {/* ========================================================================
              SECCIÓN DE KPIs - SEGUNDA POSICIÓN
@@ -768,8 +789,8 @@ const Dashboard = () => {
               
               // Calcular obras con y sin coordenadas
               const obrasConCoordenadas = obrasParaMapa.filter(o => {
-                const lat = F.latitud ? parseFloat(String((o as any)[F.latitud] ?? '')) : null;
-                const lng = F.longitud ? parseFloat(String((o as any)[F.longitud] ?? '')) : null;
+                const lat = F.latitud ? parseFloat(String((o as Row)[F.latitud] ?? '')) : null;
+                const lng = F.longitud ? parseFloat(String((o as Row)[F.longitud] ?? '')) : null;
                 return lat && lng && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
               });
               
@@ -803,7 +824,7 @@ const Dashboard = () => {
               width={1200}
               height={500}
               showLegend={true}
-              formatValue={(value) => `$${(value / 1000000).toFixed(1)}M`}
+                  formatValue={(value: number) => `$${(value / 1000000).toFixed(1)}M`}
             />
           </div>
         )}
@@ -958,13 +979,105 @@ const Dashboard = () => {
         /* ========================================================================
             SECCIÓN DE FILTROS - DISEÑO MEJORADO
         ======================================================================== */
-        .filters-section {
+        /* Drawer lateral de filtros */
+        .filters-drawer {
+          position: fixed;
+          top: 90px;
+          left: 0;
+          width: min(620px, 96vw);
+          height: calc(100vh - 100px);
           background: #FFFFFF;
-          border-radius: 16px;
+          border-right: 1px solid #E9ECEF;
+          box-shadow: 12px 0 30px rgba(0,0,0,0.15);
+          border-top-right-radius: 12px;
+          border-bottom-right-radius: 12px;
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+          z-index: 1200;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .filters-drawer.open {
+          transform: translateX(0);
+        }
+
+        .drawer-scroll {
           padding: 20px;
-          margin-bottom: 18px;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
-          border: 1px solid #E9ECEF;
+          overflow-y: auto;
+          overflow-x: hidden;
+          flex: 1 1 auto;
+        }
+
+        .drawer-footer {
+          padding: 12px 16px;
+          border-top: 1px solid #E9ECEF;
+          background: #fafafa;
+          position: sticky;
+          bottom: 0;
+          z-index: 2;
+          box-shadow: 0 -6px 16px rgba(0,0,0,0.06);
+        }
+
+        .apply-filters-btn {
+          width: 100%;
+          padding: 10px 14px;
+          border-radius: 10px;
+          border: 1px solid var(--primary-green);
+          background: #00904c;
+          color: #fff;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .filters-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.25);
+          z-index: 1100;
+        }
+
+        /* Botón flotante para abrir/cerrar filtros */
+        .filters-fab {
+          position: fixed;
+          top: 96px;
+          left: 16px;
+          background: linear-gradient(135deg, #00904c, #0bbf6a);
+          color: #fff;
+          border: none;
+          border-radius: 999px;
+          padding: 10px 16px;
+          font-weight: 700;
+          box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+          cursor: pointer;
+          z-index: 1250;
+        }
+
+        .filters-fab.open {
+          background: linear-gradient(135deg, #dc2626, #ef4444);
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .drawer-header { gap: 8px; position: sticky; top: 0; background: #fff; z-index: 2; padding-top: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+        .drawer-title { margin: 0; font-size: 1rem; color: #2C3E50; font-weight: 700; }
+        .drawer-close-btn { margin-left: auto; background: transparent; border: none; color: #2C3E50; font-size: 18px; cursor: pointer; }
+
+        /* Optimiza el grid de filtros dentro del drawer */
+        .filters-drawer .filters-row-main,
+        .filters-drawer .filters-row-secondary {
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        .filters-drawer .filters-row-dates {
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        .filters-drawer .filter-group { min-width: 0; }
+        .filters-drawer .improved-multi-select { width: 100%; }
+
+        @media (min-width: 1400px) {
+          .filters-drawer { width: 700px; }
         }
 
         .filters-actions {

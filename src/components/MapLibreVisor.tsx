@@ -873,7 +873,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
                       
                       // NUEVO: Mostrar algunos features de ejemplo para debugging
                       console.log('🔍 MapLibreVisor - Primeros 5 features comunaCodigo:');
-                      resolvedData.features.slice(0, 5).forEach((feature, index) => {
+                      resolvedData.features.slice(0, 5).forEach((feature: any, index: number) => {
                         const codigo = feature.properties?.comunaCodigo || 'N/A';
                         console.log(`  Feature ${index}: ${codigo}`);
                       });
@@ -884,9 +884,11 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
                       console.log('🔍 MapLibreVisor - comunaCodigo matches selectedCodigo:', comunaCodigo === selectedCodigo);
                       
                       // NUEVO: Verificar si hay features que coincidan con el selectedCodigo
-                      const matchingFeatures = resolvedData.features.filter(f => {
+                      const matchingFeatures = resolvedData.features.filter((f: any) => {
                         const codigo = f.properties?.comunaCodigo || '';
-                        return codigo.includes(selectedCodigo) || codigo.includes(codigoToComuna[selectedCodigo] || '');
+                        const sel = selectedCodigo || '';
+                        const alt = sel ? (codigoToComuna as Record<string, string>)[sel] || '' : '';
+                        return (sel && codigo.includes(sel)) || (alt && codigo.includes(alt));
                       });
                       console.log('🔍 MapLibreVisor - Features que coinciden con selectedCodigo:', matchingFeatures.length);
                     

@@ -160,19 +160,24 @@ export type FilterOptions = {
 
 // Obtiene opciones de filtros basadas en datos filtrados
 export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOptions {
-  // NUEVO: Calcular opciones dinámicamente basadas en filtros activos
-  // Esto permite que las opciones se actualicen según las relaciones entre filtros
-  
-  // Aplicar todos los filtros activos para calcular opciones relacionadas
-  const filteredForOptions = applyFiltersForOptions(rows, currentFilters);
-  
+  // Calcular opciones dinámicamente, pero SIN autofiltrar por su propia dimensión.
+  // Ejemplo: las opciones de "proyectos" deben considerar los demás filtros activos,
+  // pero ignorar el filtro de "proyecto" para permitir seleccionar múltiples valores.
+
+  const filteredExceptProyecto = applyFiltersForOptions(rows, { ...currentFilters, proyecto: undefined });
+  const filteredExceptComuna = applyFiltersForOptions(rows, { ...currentFilters, comuna: undefined });
+  const filteredExceptDependencia = applyFiltersForOptions(rows, { ...currentFilters, dependencia: undefined });
+  const filteredExceptTipo = applyFiltersForOptions(rows, { ...currentFilters, tipo: undefined });
+  const filteredExceptEstado = applyFiltersForOptions(rows, { ...currentFilters, estadoDeLaObra: undefined });
+  const filteredExceptContratista = applyFiltersForOptions(rows, { ...currentFilters, contratista: undefined });
+
   return {
-    proyectos: uniques(filteredForOptions, F.proyectoEstrategico),
-    comunas: uniques(filteredForOptions, F.comunaOCorregimiento),
-    dependencias: uniques(filteredForOptions, F.dependencia),
-    tipos: uniques(filteredForOptions, F.tipoDeIntervecion),
-    estadoDeLaObra: uniques(filteredForOptions, F.estadoDeLaObra),
-    contratistas: uniques(filteredForOptions, F.contratistaOperador),
+    proyectos: uniques(filteredExceptProyecto, F.proyectoEstrategico),
+    comunas: uniques(filteredExceptComuna, F.comunaOCorregimiento),
+    dependencias: uniques(filteredExceptDependencia, F.dependencia),
+    tipos: uniques(filteredExceptTipo, F.tipoDeIntervecion),
+    estadoDeLaObra: uniques(filteredExceptEstado, F.estadoDeLaObra),
+    contratistas: uniques(filteredExceptContratista, F.contratistaOperador),
   };
 }
 

@@ -242,7 +242,8 @@ const EscenariosDeportivosDashboard = () => {
   // ============================================================================
   // CLASIFICACIÓN DE OBRAS
   // ============================================================================
-  const entregadas = useMemo(() => {
+  // NOTE: estos cálculos no se usan en esta vista tras el rediseño, los desactivo para evitar warnings de build
+  /* const _entregadas = useMemo(() => {
     return filtered.filter(r => {
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
       const okEstado = est.includes('entreg');
@@ -253,9 +254,9 @@ const EscenariosDeportivosDashboard = () => {
       }
       return false;
     });
-  }, [filtered]);
+  }, [filtered]); */
 
-  const porEntregar = useMemo(() => {
+  /* const _porEntregar = useMemo(() => {
     return filtered.filter(r => {
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
       const noEntregada = est && !est.includes('entreg');
@@ -266,18 +267,18 @@ const EscenariosDeportivosDashboard = () => {
       }
       return false;
     });
-  }, [filtered]);
+  }, [filtered]); */
 
-  const alertas = useMemo(() => {
+  /* const _alertas = useMemo(() => {
     return filtered.filter(r =>
       F.descripcionDelRiesgo && String(r[F.descripcionDelRiesgo] ?? '').trim().length > 0
     );
-  }, [filtered]);
+  }, [filtered]); */
 
   // ============================================================================
   // DATOS PARA EL MAPA - ORGANIZADOS POR DEPENDENCIA
   // ============================================================================
-  const mapData = useMemo(() => {
+  /* const _mapData = useMemo(() => {
     const obrasConCoordenadas = filtered.filter(r => {
       const lat = F.latitud ? parseFloat(String(r[F.latitud] ?? '')) : null;
       const lng = F.longitud ? parseFloat(String(r[F.longitud] ?? '')) : null;
@@ -296,7 +297,7 @@ const EscenariosDeportivosDashboard = () => {
     }, {} as Record<string, Row[]>);
 
     return groupedByDependency;
-  }, [filtered]);
+  }, [filtered]); */
 
   // ============================================================================
   // MAPEO DE COLORES ÚNICOS POR DEPENDENCIA (SIN REPETICIONES)
@@ -322,7 +323,7 @@ const EscenariosDeportivosDashboard = () => {
     });
   }, [filtered]);
 
-  const showLegend = true;
+  // const _showLegend = true;
 
   // ============================================================================
   // MANEJADORES DE EVENTOS
