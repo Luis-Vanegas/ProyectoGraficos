@@ -160,17 +160,11 @@ export type FilterOptions = {
 
 // Obtiene opciones de filtros basadas en datos filtrados
 export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOptions {
-  // Para filtros múltiples, calculamos las opciones de cada filtro
-  // SIN aplicar ningún filtro, para permitir selección múltiple real
+  // NUEVO: Calcular opciones dinámicamente basadas en filtros activos
+  // Esto permite que las opciones se actualicen según las relaciones entre filtros
   
-  // Solo aplicar filtros de fecha si existen, ya que estos no limitan las opciones
-  const dateFilters = {
-    desde: currentFilters.desde,
-    hasta: currentFilters.hasta
-  };
-  
-  // Aplicar solo filtros de fecha para mantener las opciones disponibles
-  const filteredForOptions = applyFiltersForOptions(rows, dateFilters);
+  // Aplicar todos los filtros activos para calcular opciones relacionadas
+  const filteredForOptions = applyFiltersForOptions(rows, currentFilters);
   
   return {
     proyectos: uniques(filteredForOptions, F.proyectoEstrategico),
@@ -182,7 +176,7 @@ export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOp
   };
 }
 
-// Aplica filtros para calcular opciones (excluye el filtro que se está calculando)
+// Aplica filtros para calcular opciones (incluye todos los filtros activos)
 export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
   const inStr = (val: string[] | undefined) =>
     (x: unknown) => {
@@ -239,6 +233,7 @@ export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
     }
   };
 
+  // NUEVO: Aplicar TODOS los filtros activos para calcular opciones relacionadas
   return rows.filter(r =>
     inStr(f.proyecto)(F.proyectoEstrategico ? r[F.proyectoEstrategico] : undefined) &&
     inStr(f.comuna)(F.comunaOCorregimiento ? r[F.comunaOCorregimiento] : undefined) &&

@@ -565,8 +565,27 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       setSelectedCodigo(codigo || null);
       if (onComunaChange) onComunaChange(codigo || null);
       
-      // Mostrar popup con información del cluster
+      // NUEVO: Expandir cluster haciendo zoom y mostrando puntos individuales
       if (f && codigo && nombre && count !== undefined) {
+        // Hacer zoom al cluster para mostrar puntos individuales
+        const currentZoom = map.getZoom();
+        const targetZoom = Math.min(currentZoom + 3, 16); // Zoom máximo de 16
+        
+        console.log('🔍 MapLibreVisor - Expandiendo cluster:', {
+          currentZoom,
+          targetZoom,
+          codigo,
+          nombre
+        });
+        
+        // Hacer zoom al centro del cluster
+        map.easeTo({
+          center: e.lngLat,
+          zoom: targetZoom,
+          duration: 1000
+        });
+        
+        // Mostrar popup con información del cluster
         const popup = new (window as any).maplibregl.Popup({
           closeButton: true,
           closeOnClick: false
@@ -582,7 +601,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
               <strong>Total de obras:</strong> ${count}
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
-              Haz clic para ver las obras individuales
+              🔍 Cluster expandido - Verás los puntos individuales
             </p>
           </div>
         `)
@@ -593,6 +612,14 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           (map as any)._clusterPopup.remove();
         }
         (map as any)._clusterPopup = popup;
+        
+        // Programar la eliminación del popup después de 3 segundos
+        setTimeout(() => {
+          if ((map as any)._clusterPopup) {
+            (map as any)._clusterPopup.remove();
+            (map as any)._clusterPopup = null;
+          }
+        }, 3000);
       }
     });
 
@@ -602,6 +629,22 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   useEffect(() => {
     // useEffect de clusters
   }, [limites, conteos, mapLoaded, onComunaChange, codigoToComuna]);
+  
+  // NUEVO: Reaccionar a cambios en selectedCodigo para mostrar puntos
+  useEffect(() => {
+    if (mapLoaded && selectedCodigo) {
+      console.log('🔍 MapLibreVisor - selectedCodigo cambió, actualizando visibilidad:', selectedCodigo);
+      
+      // Forzar actualización de visibilidad después de un breve delay
+      setTimeout(() => {
+        const map = mapRef.current;
+        if (map && map.getLayer('obras-points')) {
+          console.log('🔍 MapLibreVisor - Forzando visibilidad de puntos para comuna:', selectedCodigo);
+          map.setLayoutProperty('obras-points', 'visibility', 'visible');
+        }
+      }, 200);
+    }
+  }, [selectedCodigo, mapLoaded]);
 
   // Puntos de obras (clusters vista general) – desactivados por defecto
   useEffect(() => {
@@ -749,14 +792,14 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       // 2. Hay una comuna seleccionada
       // 3. Hay filtros de proyecto activos
       // 4. O si hay pocos puntos (menos de 200) para evitar saturación
+      // 5. NUEVO: Si se hizo clic en un cluster (comuna seleccionada)
       const zoom = map.getZoom();
       const hasEnoughZoom = zoom >= ZOOM_TO_SHOW_POINTS;
       const hasSelectedComuna = !!selectedCodigo;
       const hasProjectFilter = hasProyectoFilter;
       const hasFewPoints = fc.features.length <= 200;
       
-      // Siempre mostrar puntos si hay filtros activos o si el zoom es suficiente
-      // O si hay pocos puntos para evitar saturación
+      // NUEVO: Si hay una comuna seleccionada (cluster clickeado), mostrar puntos inmediatamente
       const shouldShow = hasEnoughZoom || hasSelectedComuna || hasProjectFilter || hasFewPoints;
         if (map.getLayer(ptsLayer)) {
           map.setLayoutProperty(ptsLayer, 'visibility', shouldShow ? 'visible' : 'none');
@@ -767,14 +810,30 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           console.log('🔍 MapLibreVisor - Aplicando filtro para comuna:', selectedCodigo);
           // Filtrar por comunaCodigo usando diferentes formatos posibles
           const codigoStr = String(selectedCodigo);
+          const nombreComuna = codigoToComuna[selectedCodigo] || '';
+          
+          // NUEVO: Crear filtro más robusto que maneje diferentes formatos
           filter = [
             'any',
+            // Formato: "07"
             ['==', ['get', 'comunaCodigo'], codigoStr],
-            ['==', ['get', 'comunaCodigo'], `${codigoStr} - ${codigoToComuna[selectedCodigo] || ''}`],
-            ['==', ['get', 'comunaCodigo'], `${codigoStr.padStart(2, '0')} - ${codigoToComuna[selectedCodigo] || ''}`],
-            ['==', ['get', 'comunaCodigo'], `${codigoStr.replace(/^0+/, '')} - ${codigoToComuna[selectedCodigo] || ''}`]
+            // Formato: "07 - Comuna"
+            ['==', ['get', 'comunaCodigo'], `${codigoStr} - ${nombreComuna}`],
+            // Formato: "7 - Comuna" (sin cero inicial)
+            ['==', ['get', 'comunaCodigo'], `${codigoStr.replace(/^0+/, '')} - ${nombreComuna}`],
+            // Formato: "07 - Comuna" (con cero inicial)
+            ['==', ['get', 'comunaCodigo'], `${codigoStr.padStart(2, '0')} - ${nombreComuna}`],
+            // Formato: solo nombre de comuna
+            ['==', ['get', 'comunaCodigo'], nombreComuna],
+            // Formato: "Comuna" (sin código)
+            ['==', ['get', 'comunaCodigo'], nombreComuna],
+            // NUEVO: Buscar por substring que contenga el código
+            ['in', codigoStr, ['get', 'comunaCodigo']],
+            // NUEVO: Buscar por substring que contenga el nombre
+            ['in', nombreComuna, ['get', 'comunaCodigo']]
           ];
-          console.log('🔍 MapLibreVisor - Filtro aplicado para comuna:', selectedCodigo);
+          console.log('🔍 MapLibreVisor - Filtro aplicado para comuna:', selectedCodigo, 'nombre:', nombreComuna);
+          console.log('🔍 MapLibreVisor - Filtro completo:', filter);
         }
         
         console.log('🔍 MapLibreVisor - Filtro aplicado:', filter);
@@ -800,22 +859,36 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
                   console.log('🔍 MapLibreVisor - Features de puntos:', resolvedData.features.length);
                   console.log('🔍 MapLibreVisor - Primer feature de puntos:', resolvedData.features[0]);
                   
-                  // Verificar las propiedades del primer feature
-                  const firstFeature = resolvedData.features[0];
-                  if (firstFeature && firstFeature.properties) {
-                    console.log('🔍 MapLibreVisor - Propiedades del primer feature:', firstFeature.properties);
-                    
-                    // Verificar si tiene comunaCodigo
-                    const comunaCodigo = firstFeature.properties.comunaCodigo || 
-                                       firstFeature.properties['COMUNA O CORREGIMIENTO'] || 
-                                       firstFeature.properties.comuna || 
-                                       firstFeature.properties.CODIGO;
-                    console.log('🔍 MapLibreVisor - comunaCodigo del primer feature:', comunaCodigo);
-                    
-                    // Verificar si el filtro está funcionando
-                    console.log('🔍 MapLibreVisor - Verificando filtro...');
-                    console.log('🔍 MapLibreVisor - selectedCodigo:', selectedCodigo);
-                    console.log('🔍 MapLibreVisor - comunaCodigo matches selectedCodigo:', comunaCodigo === selectedCodigo);
+                    // Verificar las propiedades del primer feature
+                    const firstFeature = resolvedData.features[0];
+                    if (firstFeature && firstFeature.properties) {
+                      console.log('🔍 MapLibreVisor - Propiedades del primer feature:', firstFeature.properties);
+                      
+                      // Verificar si tiene comunaCodigo
+                      const comunaCodigo = firstFeature.properties.comunaCodigo || 
+                                         firstFeature.properties['COMUNA O CORREGIMIENTO'] || 
+                                         firstFeature.properties.comuna || 
+                                         firstFeature.properties.CODIGO;
+                      console.log('🔍 MapLibreVisor - comunaCodigo del primer feature:', comunaCodigo);
+                      
+                      // NUEVO: Mostrar algunos features de ejemplo para debugging
+                      console.log('🔍 MapLibreVisor - Primeros 5 features comunaCodigo:');
+                      resolvedData.features.slice(0, 5).forEach((feature, index) => {
+                        const codigo = feature.properties?.comunaCodigo || 'N/A';
+                        console.log(`  Feature ${index}: ${codigo}`);
+                      });
+                      
+                      // Verificar si el filtro está funcionando
+                      console.log('🔍 MapLibreVisor - Verificando filtro...');
+                      console.log('🔍 MapLibreVisor - selectedCodigo:', selectedCodigo);
+                      console.log('🔍 MapLibreVisor - comunaCodigo matches selectedCodigo:', comunaCodigo === selectedCodigo);
+                      
+                      // NUEVO: Verificar si hay features que coincidan con el selectedCodigo
+                      const matchingFeatures = resolvedData.features.filter(f => {
+                        const codigo = f.properties?.comunaCodigo || '';
+                        return codigo.includes(selectedCodigo) || codigo.includes(codigoToComuna[selectedCodigo] || '');
+                      });
+                      console.log('🔍 MapLibreVisor - Features que coinciden con selectedCodigo:', matchingFeatures.length);
                     
                     // Verificar la visibilidad de la capa
                     const layerVisibility = map.getLayoutProperty(ptsLayer, 'visibility');
@@ -840,6 +913,15 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       applyVisibilityAndFilter();
       (map as any).off('zoomend', applyVisibilityAndFilter as any);
       (map as any).on('zoomend', applyVisibilityAndFilter as any);
+      
+      // NUEVO: Forzar actualización cuando se selecciona una comuna
+      if (selectedCodigo) {
+        console.log('🔍 MapLibreVisor - Comuna seleccionada, forzando visibilidad de puntos:', selectedCodigo);
+        // Aplicar visibilidad inmediatamente
+        setTimeout(() => {
+          applyVisibilityAndFilter();
+        }, 100);
+      }
 
       // Interacciones sobre puntos individuales
       (map as any).off('mouseenter', ptsLayer);

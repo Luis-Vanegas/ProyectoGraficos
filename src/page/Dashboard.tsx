@@ -177,6 +177,7 @@ const Dashboard = () => {
     console.log('🔍 Dashboard - opciones recalculando...');
     console.log('🔍 Dashboard - rows.length:', rows.length);
     console.log('🔍 Dashboard - filters:', filters);
+    console.log('🔍 Dashboard - FILTROS RELACIONADOS ACTIVADOS: Las opciones se calculan dinámicamente');
     return getFilterOptions(rows, filters);
   }, [rows, filters]);
   const combinedFilters = useMemo(() => {
@@ -350,14 +351,12 @@ const Dashboard = () => {
     console.log('🔍 handleFilterChange - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 handleFilterChange - newFilters antes de clean:', newFilters);
+    console.log('🔍 handleFilterChange - newFilters:', newFilters);
 
-    // TEMPORALMENTE DESHABILITADO: Limpia filtros dependientes automáticamente
-    // const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 handleFilterChange - newFilters (sin clean):', newFilters);
-    console.log('🔍 handleFilterChange - newFilters.proyecto:', newFilters.proyecto);
+    // NUEVO: Los filtros ahora se relacionan automáticamente
+    // Las opciones se recalculan dinámicamente en el useMemo de 'opciones'
     setFilters(newFilters);
-    console.log('🔍 handleFilterChange - setFilters llamado');
+    console.log('🔍 handleFilterChange - setFilters llamado - Filtros relacionados activados');
   };
 
   // ============================================================================

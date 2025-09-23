@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 import { F } from '../dataConfig';
 // import type * as GeoJSON from 'geojson';
@@ -7,7 +8,7 @@ import {
   kpis,
   buildTwoSeriesDataset,
   getFilterOptions,
-  cleanDependentFilters,
+  // cleanDependentFilters, // TEMPORALMENTE DESHABILITADO
   type Row,
   type Filters,
   computeVigencias
@@ -21,19 +22,7 @@ import VigenciasTable from '../components/VigenciasTable';
 import HeaderIcons from '../components/HeaderIcons';
 import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 
-// ============================================================================
-// PALETA DE COLORES CORPORATIVOS - ALCALDÍA DE MEDELLÍN
-// ============================================================================
-const CORPORATE_COLORS = {
-  primary: '#79BC99',      // Verde principal - usado para elementos destacados
-  secondary: '#4E8484',    // Verde azulado - usado para elementos secundarios
-  accent: '#3B8686',       // Verde oscuro - usado para acentos y textos importantes
-  white: '#FFFFFF',        // Blanco puro - usado para fondos y textos claros
-  lightGray: '#F8F9FA',    // Gris claro - usado para fondos secundarios
-  darkGray: '#2C3E50',     // Gris oscuro - usado para textos principales
-  mediumGray: '#6C757D',   // Gris medio - usado para textos secundarios
-  border: '#E9ECEF'        // Gris borde - usado para separadores y bordes
-};
+//
 
 // ============================================================================
 // UTILIDAD: CONVERTIR HSL A HEX PARA GENERAR COLORES DISTINTOS ILIMITADOS
@@ -52,10 +41,23 @@ const hslToHex = (h: number, s: number, l: number): string => {
   return `#${f(0)}${f(8)}${f(4)}`;
 };
 
+// 
+
+// 
+
 // ============================================================================
-// COMPONENTE PRINCIPAL DEL DASHBOARD - ESCENARIOS DEPORTIVOS
+// COMPONENTE PRINCIPAL DEL DASHBOARD
 // ============================================================================
-type UIFilters = Filters & {
+type UIFilters = {
+  proyecto?: string[];
+  comuna?: string[];
+  dependencia?: string[];
+  tipo?: string[];
+  estadoDeLaObra?: string[];
+  contratista?: string[];
+  desde?: string; // 'YYYY' o 'YYYY-MM'
+  hasta?: string; // 'YYYY' o 'YYYY-MM'
+  // Campos UI para construir fechas sin romper tipado
   desdeDia?: string;
   desdeMes?: string;
   desdeAnio?: string;
@@ -71,6 +73,27 @@ const EscenariosDeportivosDashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
+  
+  // Función para contar filtros activos (que no sean undefined o vacíos)
+  const getActiveFiltersCount = (filters: UIFilters): number => {
+    return Object.keys(filters).filter(key => {
+      const value = filters[key as keyof UIFilters];
+      return value !== undefined && value !== '';
+    }).length;
+  };
+  
+  // Logging para rastrear cambios de estado
+  useEffect(() => {
+    console.log('🔍 EscenariosDeportivosDashboard - filters cambiaron:', filters);
+    console.log('🔍 EscenariosDeportivosDashboard - filters.proyecto:', filters.proyecto);
+    console.log('🔍 EscenariosDeportivosDashboard - filters.comuna:', filters.comuna);
+    console.log('🔍 EscenariosDeportivosDashboard - filters.dependencia:', filters.dependencia);
+    console.log('🔍 EscenariosDeportivosDashboard - filters.tipo:', filters.tipo);
+    console.log('🔍 EscenariosDeportivosDashboard - filters.estadoDeLaObra:', filters.estadoDeLaObra);
+    console.log('🔍 EscenariosDeportivosDashboard - filters.contratista:', filters.contratista);
+  }, [filters]);
+  const [isMobileStack, setIsMobileStack] = useState(false);
+  const prefersReduced = useReducedMotion?.() ?? false;
 
   // ============================================================================
   // EFECTOS Y CARGA DE DATOS
@@ -79,17 +102,37 @@ const EscenariosDeportivosDashboard = () => {
     (async () => {
       try {
         const sres = await fetch('/api/sheets');
+        
+        if (!sres.ok) {
+          throw new Error(`Error ${sres.status}: No se pudo cargar /api/sheets`);
+        }
+        
         const { sheets } = await sres.json();
         const hoja = sheets.includes('Obras') ? 'Obras' : sheets[0];
+        
         const dres = await fetch(`/api/data?sheet=${encodeURIComponent(hoja)}`);
+        
+        if (!dres.ok) {
+          throw new Error(`Error ${dres.status}: No se pudo cargar /api/data`);
+        }
+        
         const { rows } = await dres.json();
         setRows(rows);
         setStatus(`${rows.length} filas cargadas exitosamente`);
       } catch (e) {
-        console.error('Error al cargar datos:', e);
-        setStatus('Error: No se pudieron cargar los datos');
+        setStatus(`Error: ${e instanceof Error ? e.message : 'Error desconocido'}`);
       }
     })();
+  }, []);
+
+  // Detecta móvil para forzar KPIs en columna
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 480px)');
+    const apply = () => setIsMobileStack(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
   }, []);
 
 
@@ -118,7 +161,14 @@ const EscenariosDeportivosDashboard = () => {
   
   // Función para combinar los campos de fecha en formato YYYY-MM-DD
   const combineDateFields = (filters: UIFilters): Filters => {
-    const newFilters: UIFilters = { ...filters };
+    const newFilters: Filters = { 
+      proyecto: filters.proyecto,
+      comuna: filters.comuna,
+      dependencia: filters.dependencia,
+      tipo: filters.tipo,
+      estadoDeLaObra: filters.estadoDeLaObra,
+      contratista: filters.contratista
+    };
     
     // Combinar fecha desde
     if (filters.desdeDia && filters.desdeMes && filters.desdeAnio) {
@@ -133,9 +183,25 @@ const EscenariosDeportivosDashboard = () => {
     return newFilters;
   };
 
-  const opciones = useMemo(() => getFilterOptions(escenarioDeportivoRows, filters), [escenarioDeportivoRows, filters]);
-  const combinedFilters = useMemo(() => combineDateFields(filters), [filters]);
-  const filtered = useMemo(() => applyFilters(escenarioDeportivoRows, combinedFilters), [escenarioDeportivoRows, combinedFilters]);
+  const opciones = useMemo(() => {
+    console.log('🔍 EscenariosDeportivosDashboard - opciones recalculando...');
+    console.log('🔍 EscenariosDeportivosDashboard - escenarioDeportivoRows.length:', escenarioDeportivoRows.length);
+    console.log('🔍 EscenariosDeportivosDashboard - filters:', filters);
+    console.log('🔍 EscenariosDeportivosDashboard - FILTROS RELACIONADOS ACTIVADOS: Las opciones se calculan dinámicamente');
+    return getFilterOptions(escenarioDeportivoRows, filters);
+  }, [escenarioDeportivoRows, filters]);
+  const combinedFilters = useMemo(() => {
+    return combineDateFields(filters);
+  }, [filters]);
+  const filtered = useMemo(() => {
+    console.log('🔍 EscenariosDeportivosDashboard - filtered calculation:');
+    console.log('🔍 EscenariosDeportivosDashboard - escenarioDeportivoRows.length:', escenarioDeportivoRows.length);
+    console.log('🔍 EscenariosDeportivosDashboard - combinedFilters:', combinedFilters);
+    const result = applyFilters(escenarioDeportivoRows, combinedFilters);
+    console.log('🔍 EscenariosDeportivosDashboard - filtered result length:', result.length);
+    console.log('🔍 EscenariosDeportivosDashboard - filtered first 3:', result.slice(0, 3));
+    return result;
+  }, [escenarioDeportivoRows, combinedFilters]);
   const k = useMemo(() => kpis(filtered), [filtered]);
   const vigencias = useMemo(() => {
     const rows = computeVigencias(filtered);
@@ -144,41 +210,19 @@ const EscenariosDeportivosDashboard = () => {
   }, [filtered]);
 
   // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
-  // Dataset para el gráfico principal de análisis (ComboBars)
   const comboDataset = useMemo(() => {
-    if (!F.costoTotalActualizado || !F.presupuestoEjecutado || !F.nombre) return [];
-    
-    // Filtrar datos válidos antes de construir el dataset
-    const validData = filtered.filter(row => {
-      const nombre = row[F.nombre!];
-      const costo = row[F.costoTotalActualizado!];
-      const presupuesto = row[F.presupuestoEjecutado!];
-      
-      return nombre && 
-             nombre !== '' && 
-             nombre !== 'Sin información' &&
-             (costo !== null && costo !== undefined) &&
-             (presupuesto !== null && presupuesto !== undefined);
-    });
-    
-    if (validData.length === 0) {
-      console.log('No hay datos válidos para ComboBars');
-      return [];
-    }
-    
-    const dataset = buildTwoSeriesDataset(
-      validData,
+    if (!F.costoTotalActualizado || !F.presupuestoEjecutado) return [];
+    // Dataset por nombre de la obra
+    return buildTwoSeriesDataset(
+      filtered,
       F.nombre,
       F.costoTotalActualizado,
       F.presupuestoEjecutado,
       15
     );
-    
-    console.log('ComboBars dataset:', dataset);
-    return dataset;
   }, [filtered]);
 
-  // Datos para el gráfico SimpleBarChart (SVG nativo)
+  // Datos para el nuevo gráfico SimpleBarChart
   const simpleChartData = useMemo(() => {
     if (!comboDataset || comboDataset.length <= 1) return [];
     
@@ -189,72 +233,15 @@ const EscenariosDeportivosDashboard = () => {
         label: String(label).substring(0, 20) + (String(label).length > 20 ? '...' : ''), // Truncar etiquetas largas
         value1: Number(value1) || 0,
         value2: Number(value2) || 0,
+        color1: '#2E8B57', // Verde esmeralda para Inversión Total
+        color2: '#FF6B35'  // Naranja coral para Presupuesto Ejecutado
       };
     });
   }, [comboDataset]);
 
-  // Variables no utilizadas comentadas para evitar errores de build
-  /*
-  const avanceDataset = useMemo(() => {
-    if (!F.avance2024 || !F.avance2025 || !F.avance2026 || !F.avance2027) return [];
-    
-    const avanceData = filtered.reduce((acc, row) => {
-      const dependencia = F.dependencia ? String(row[F.dependencia] ?? 'Sin Dependencia') : 'Sin Dependencia';
-      
-      if (!acc[dependencia]) {
-        acc[dependencia] = {
-          '2024': 0,
-          '2025': 0,
-          '2026': 0,
-          '2027': 0
-        };
-      }
-      
-      // Sumar avances por año
-      if (F.avance2024) acc[dependencia]['2024'] += parseFloat(String(row[F.avance2024] ?? 0)) || 0;
-      if (F.avance2025) acc[dependencia]['2025'] += parseFloat(String(row[F.avance2025] ?? 0)) || 0;
-      if (F.avance2026) acc[dependencia]['2026'] += parseFloat(String(row[F.avance2026] ?? 0)) || 0;
-      if (F.avance2027) acc[dependencia]['2027'] += parseFloat(String(row[F.avance2027] ?? 0)) || 0;
-      
-      return acc;
-    }, {} as Record<string, Record<string, number>>);
-    
-    return Object.entries(avanceData).map(([dependencia, avances]) => ({
-      name: dependencia,
-      ...avances
-    }));
-  }, [filtered]);
-
-  const presupuestoDataset = useMemo(() => {
-    if (!F.presupuestoEjecutado2024 || !F.presupuestoEjecutado2025 || !F.presupuestoEjecutado2026 || !F.presupuestoEjecutado2027) return [];
-    
-    const presupuestoData = filtered.reduce((acc, row) => {
-      const dependencia = F.dependencia ? String(row[F.dependencia] ?? 'Sin Dependencia') : 'Sin Dependencia';
-      
-      if (!acc[dependencia]) {
-        acc[dependencia] = {
-          '2024': 0,
-          '2025': 0,
-          '2026': 0,
-          '2027': 0
-        };
-      }
-      
-      // Sumar presupuestos por año
-      if (F.presupuestoEjecutado2024) acc[dependencia]['2024'] += parseFloat(String(row[F.presupuestoEjecutado2024] ?? 0)) || 0;
-      if (F.presupuestoEjecutado2025) acc[dependencia]['2025'] += parseFloat(String(row[F.presupuestoEjecutado2025] ?? 0)) || 0;
-      if (F.presupuestoEjecutado2026) acc[dependencia]['2026'] += parseFloat(String(row[F.presupuestoEjecutado2026] ?? 0)) || 0;
-      if (F.presupuestoEjecutado2027) acc[dependencia]['2027'] += parseFloat(String(row[F.presupuestoEjecutado2027] ?? 0)) || 0;
-      
-      return acc;
-    }, {} as Record<string, Record<string, number>>);
-    
-    return Object.entries(presupuestoData).map(([dependencia, presupuestos]) => ({
-      name: dependencia,
-      ...presupuestos
-    }));
-  }, [filtered]);
-
+  // ============================================================================
+  // CLASIFICACIÓN DE OBRAS
+  // ============================================================================
   const entregadas = useMemo(() => {
     return filtered.filter(r => {
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
@@ -286,7 +273,6 @@ const EscenariosDeportivosDashboard = () => {
       F.descripcionDelRiesgo && String(r[F.descripcionDelRiesgo] ?? '').trim().length > 0
     );
   }, [filtered]);
-  */
 
   // ============================================================================
   // DATOS PARA EL MAPA - ORGANIZADOS POR DEPENDENCIA
@@ -298,8 +284,6 @@ const EscenariosDeportivosDashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas (Escenarios Deportivos):', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas (Escenarios Deportivos):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -318,17 +302,25 @@ const EscenariosDeportivosDashboard = () => {
   // MAPEO DE COLORES ÚNICOS POR DEPENDENCIA (SIN REPETICIONES)
   // ============================================================================
   const dependencyColorMap = useMemo(() => {
-    const dependencias = Object.keys(mapData).sort();
+    // ✅ ARREGLADO: Obtener dependencias directamente de las obras filtradas
+    const dependencias = Array.from(new Set(
+      filtered.map(r => F.dependencia ? String(r[F.dependencia] ?? 'Sin Dependencia') : 'Sin Dependencia')
+    )).sort();
+    
+    
     const total = dependencias.length || 1;
     const saturation = 72; // 0-100
     const lightness = 38;  // 0-100 (más bajo = más oscuro)
-    const colorMap: Record<string, string> = {};
-    dependencias.forEach((dep, idx) => {
+    
+    // Retornar como array de objetos para poder usar .map()
+    return dependencias.map((dep, idx) => {
       const hue = Math.round((idx * 360) / total);
-      colorMap[dep] = hslToHex(hue, saturation, lightness);
+      return {
+        dependency: dep,
+        color: hslToHex(hue, saturation, lightness)
+      };
     });
-    return colorMap;
-  }, [mapData]);
+  }, [filtered]);
 
   const showLegend = true;
 
@@ -336,22 +328,21 @@ const EscenariosDeportivosDashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 EscenariosDeportivosDashboard - handleFilterChange - INICIANDO');
-    console.log('🔍 EscenariosDeportivosDashboard - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 EscenariosDeportivosDashboard - filters actuales:', filters);
+    console.log('🔍 handleFilterChange - INICIANDO');
+    console.log('🔍 handleFilterChange - filterKey:', filterKey, 'value:', value);
+    console.log('🔍 handleFilterChange - filters actuales:', filters);
     
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 EscenariosDeportivosDashboard - newValue:', newValue);
+    console.log('🔍 handleFilterChange - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 EscenariosDeportivosDashboard - newFilters antes de clean:', newFilters);
+    console.log('🔍 handleFilterChange - newFilters:', newFilters);
 
-    // Limpia filtros dependientes automáticamente
-    const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 EscenariosDeportivosDashboard - cleanedFilters:', cleanedFilters);
-    setFilters(cleanedFilters);
-    console.log('🔍 EscenariosDeportivosDashboard - setFilters llamado');
+    // NUEVO: Los filtros ahora se relacionan automáticamente
+    // Las opciones se recalculan dinámicamente en el useMemo de 'opciones'
+    setFilters(newFilters);
+    console.log('🔍 handleFilterChange - setFilters llamado - Filtros relacionados activados');
   };
 
   // ============================================================================
@@ -360,10 +351,14 @@ const EscenariosDeportivosDashboard = () => {
   return (
     <div className="dashboard-container">
       {/* Navegación superior */}
-      <Navigation showBackButton={true} title="Dashboard - Escenarios Deportivos" />
-      
-      {/* Iconos del header */}
-      <HeaderIcons rows={rows} filtered={filtered} />
+      <Navigation showBackButton={true} title="Escenarios Deportivos" />
+
+      {/* Iconos de alerta y calendario */}
+      <HeaderIcons 
+        rows={rows} 
+        filtered={filtered} 
+        // onShowLearningPanel={() => setShowLearningPanel(true)}
+      />
 
       {/* Contenedor principal del dashboard */}
       <div className="dashboard-content">
@@ -379,8 +374,8 @@ const EscenariosDeportivosDashboard = () => {
               <div className="spinner-ring"></div>
             </div>
             <div className="loading-text">
-              <h3>Cargando datos de Escenarios Deportivos...</h3>
-              <p>Por favor espera mientras se procesan las obras deportivas</p>
+              <h3>Cargando datos del proyecto...</h3>
+              <p>Por favor espera mientras se procesan las obras</p>
             </div>
           </div>
         )}
@@ -389,7 +384,46 @@ const EscenariosDeportivosDashboard = () => {
              SECCIÓN DE FILTROS - PRIMERA POSICIÓN
          ======================================================================== */}
         <div className="filters-section">
-          <div className="filters-container">
+          <div className="filters-actions">
+            <div className="filters-status">
+              {getActiveFiltersCount(filters) > 0 ? (
+                <span className="filters-active">
+                  <span className="status-icon">🔍</span>
+                  Filtros activos ({getActiveFiltersCount(filters)})
+                </span>
+              ) : (
+                <span className="filters-all">
+                  <span className="status-icon">📊</span>
+                  Mostrando todos los datos
+                </span>
+              )}
+            </div>
+            <button
+              className="clear-filters-btn"
+              onClick={() => setFilters({})}
+              title="Borrar todos los filtros"
+              disabled={getActiveFiltersCount(filters) === 0}
+            >
+              <span className="btn-icon" aria-hidden>✖</span>
+              Borrar filtros
+            </button>
+          </div>
+          {/* Primera fila de filtros */}
+          <div className="filters-container filters-row-main">
+            {/* Filtro: Proyectos estratégicos */}
+            {F.proyectoEstrategico && (
+              <ImprovedMultiSelect
+                label="PROYECTOS ESTRATÉGICOS"
+                options={opciones.proyectos}
+                selectedValues={filters.proyecto || []}
+                onSelectionChange={(values) => {
+                  console.log('🔍 EscenariosDeportivosDashboard - ImprovedMultiSelect onSelectionChange:', values);
+                  handleFilterChange('proyecto', values);
+                }}
+                placeholder="Todos los proyectos"
+              />
+            )}
+
             {/* Filtro: Dependencia */}
             {F.dependencia && (
               <ImprovedMultiSelect
@@ -413,7 +447,10 @@ const EscenariosDeportivosDashboard = () => {
                 placeholder="Todas las comunas"
               />
             )}
+          </div>
 
+          {/* Segunda fila de filtros */}
+          <div className="filters-container filters-row-secondary">
             {/* Filtro: Tipo de Intervención */}
             {F.tipoDeIntervecion && (
               <ImprovedMultiSelect
@@ -446,15 +483,16 @@ const EscenariosDeportivosDashboard = () => {
               onSelectionChange={(values) => handleFilterChange('estadoDeLaObra', values)}
               placeholder="Todos los estados"
             />
+          </div>
 
-            {/* Filtros de fecha */}
+          {/* Tercera fila - Filtros de fecha */}
             {(F.fechaRealDeEntrega || F.fechaEstimadaDeEntrega) && (
-              <>
+            <div className="filters-container filters-row-dates">
                 <div className="filter-group date-filter-group">
-                  <label className="filter-label">Fecha desde</label>
+                <label className="filter-label">FECHA DESDE</label>
                   <div className="date-inputs">
                     <select
-                      className="filter-select date-day"
+                    className="filter-select date-select"
                       value={filters.desdeDia ?? ''}
                       onChange={e => setFilters(f => ({ ...f, desdeDia: e.target.value || undefined }))}
                     >
@@ -466,7 +504,7 @@ const EscenariosDeportivosDashboard = () => {
                       ))}
                     </select>
                     <select
-                      className="filter-select date-month"
+                    className="filter-select date-select"
                       value={filters.desdeMes ?? ''}
                       onChange={e => setFilters(f => ({ ...f, desdeMes: e.target.value || undefined }))}
                     >
@@ -485,7 +523,7 @@ const EscenariosDeportivosDashboard = () => {
                       <option value="12">Diciembre</option>
                     </select>
                     <select
-                      className="filter-select date-year"
+                    className="filter-select date-select"
                       value={filters.desdeAnio ?? ''}
                       onChange={e => setFilters(f => ({ ...f, desdeAnio: e.target.value || undefined }))}
                     >
@@ -496,11 +534,12 @@ const EscenariosDeportivosDashboard = () => {
                     </select>
                   </div>
                 </div>
+
                 <div className="filter-group date-filter-group">
-                  <label className="filter-label">Fecha hasta</label>
+                <label className="filter-label">FECHA HASTA</label>
                   <div className="date-inputs">
                     <select
-                      className="filter-select date-day"
+                    className="filter-select date-select"
                       value={filters.hastaDia ?? ''}
                       onChange={e => setFilters(f => ({ ...f, hastaDia: e.target.value || undefined }))}
                     >
@@ -512,7 +551,7 @@ const EscenariosDeportivosDashboard = () => {
                       ))}
                     </select>
                     <select
-                      className="filter-select date-month"
+                    className="filter-select date-select"
                       value={filters.hastaMes ?? ''}
                       onChange={e => setFilters(f => ({ ...f, hastaMes: e.target.value || undefined }))}
                     >
@@ -531,7 +570,7 @@ const EscenariosDeportivosDashboard = () => {
                       <option value="12">Diciembre</option>
                     </select>
                     <select
-                      className="filter-select date-year"
+                    className="filter-select date-select"
                       value={filters.hastaAnio ?? ''}
                       onChange={e => setFilters(f => ({ ...f, hastaAnio: e.target.value || undefined }))}
                     >
@@ -542,9 +581,8 @@ const EscenariosDeportivosDashboard = () => {
                     </select>
                   </div>
                 </div>
-              </>
+            </div>
             )}
-          </div>
         </div>
 
         {/* ========================================================================
@@ -552,22 +590,34 @@ const EscenariosDeportivosDashboard = () => {
          ======================================================================== */}
         <div className="kpis-section">
           <div className="kpis-container">
-            {/* Fila única: 5 KPIs compactos */}
-            <div className="kpis-grid kpis-row-5">
+            {/* Fila única: 6 KPIs organizados con animación */}
+            {(() => {
+              const container = {
+                hidden: { opacity: 0 },
+                show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.04 } }
+              } as const;
+              const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } } as const;
+              const gridProps = prefersReduced ? {} : { variants: container, initial: 'hidden', animate: 'show' };
+              const childProps = prefersReduced ? {} : { variants: item };
+              return (
+                <motion.div className="kpis-grid kpis-row-7" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined} {...gridProps}>
+                  <motion.div {...childProps}>
               <Kpi 
                 label="Total escenarios deportivos" 
                 value={k.totalObras} 
-                trend="neutral"
               />
+                  </motion.div>
+                  <motion.div {...childProps}>
               <Kpi 
-                label="Inversión total deportiva" 
+                      label="Inversión total" 
                 value={k.invTotal} 
                 format="money" 
                 abbreviate 
                 digits={1}
                 subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
-                trend="up"
               />
+                  </motion.div>
+                  <motion.div {...childProps}>
               <Kpi 
                 label="Presupuesto ejecutado" 
                 value={k.ejec} 
@@ -575,21 +625,41 @@ const EscenariosDeportivosDashboard = () => {
                 abbreviate
                 digits={1}
                 subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
-                trend="up"
-              />
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Presupuesto 2024-2027" 
+                      value={k.valorCuatrienio2024_2027} 
+                      format="money"
+                      abbreviate
+                      digits={1}
+                      subtitle={`${Math.round(k.porcentajeCuatrienio2024_2027 * 100)}% de la inversión total`}
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
               <Kpi 
                 label="Escenarios entregados" 
                 value={k.entregadas} 
                 subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
-                trend="up"
-              />
-              <Kpi 
-                label="Alertas deportivas" 
-                value={k.alertas}
-                trend={k.alertas > 0 ? 'down' : 'neutral'}
-                subtitle={k.alertas > 0 ? 'Atención requerida' : 'Sin alertas'}
-              />
-            </div>
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Alertas" 
+                      value={k.alertasEncontradas}
+                    />
+                  </motion.div>
+                  <motion.div {...childProps}>
+                    <Kpi 
+                      label="Sin coordenadas" 
+                      value={k.sinUbicacion}
+                      subtitle="Escenarios sin ubicación"
+                    />
+                  </motion.div>
+                </motion.div>
+              );
+            })()}
           </div>
         </div>
 
@@ -597,38 +667,87 @@ const EscenariosDeportivosDashboard = () => {
              PANEL PRINCIPAL DEL MAPA - TERCERA POSICIÓN
          ======================================================================== */}
         <div className="map-main-panel">
-          
-          {/* Leyenda del mapa con colores por dependencia (opcional) */}
-          {showLegend && (
-          <div className="map-legend">
-            <h4>Leyenda por Dependencia - Escenarios Deportivos:</h4>
-            <div className="legend-items">
-              {Object.keys(mapData).map((dependencia) => (
-                <div key={dependencia} className="legend-item">
-                  <div 
-                    className="legend-color" 
-                      style={{ backgroundColor: dependencyColorMap[dependencia] }}
-                  ></div>
-                  <span className="legend-text">{dependencia}</span>
+          <div className="map-container">
+            <div className="map-legend-compact">
+              <div className="legend-header">
+                <h3>Dependencias</h3>
+                <span className="legend-count">{dependencyColorMap.length} dependencias</span>
+              </div>
+              <div className="legend-chips">
+                {dependencyColorMap.map(({ dependency, color }) => (
+                  <div key={dependency} className="legend-chip" style={{ backgroundColor: color }}>
+                    <span className="chip-text">{dependency}</span>
                 </div>
               ))}
             </div>
           </div>
-          )}
-          
-          {/* Mapa principal: responsive y conectado a filtros externos */}
-          <div style={{ height: '60vh', minHeight: 380, width: '100%' }}>
-            <MapLibreVisor height={'100%'} query={new URLSearchParams({
-              ...(filters.estadoDeLaObra ? { estado: String(filters.estadoDeLaObra) } : {}),
-              ...(filters.dependencia ? { dependencia: String(filters.dependencia) } : {}),
+            <div className="map-content">
+              {(() => {
+                const mapQuery = new URLSearchParams();
+                
+                // Manejar filtros que pueden ser arrays o strings
+                if (combinedFilters.estadoDeLaObra) {
+                  if (Array.isArray(combinedFilters.estadoDeLaObra)) {
+                    combinedFilters.estadoDeLaObra.forEach(val => mapQuery.append('estadoDeLaObra', val));
+                  } else {
+                    mapQuery.set('estadoDeLaObra', String(combinedFilters.estadoDeLaObra));
+                  }
+                }
+                
+                if (combinedFilters.dependencia) {
+                  if (Array.isArray(combinedFilters.dependencia)) {
+                    combinedFilters.dependencia.forEach(val => mapQuery.append('dependencia', val));
+                  } else {
+                    mapQuery.set('dependencia', String(combinedFilters.dependencia));
+                  }
+                }
+                
               // Filtro específico para escenarios deportivos
-              proyectoEstrategico: 'Escenarios Deportivos',
-              ...(filters.comuna ? { comunaNombre: String(filters.comuna) } : {}),
-              ...(filters.tipo ? { tipo: String(filters.tipo) } : {}),
-              ...(filters.contratista ? { contratista: String(filters.contratista) } : {}),
-              ...(combinedFilters.desde ? { desde: String(combinedFilters.desde) } : {}),
-              ...(combinedFilters.hasta ? { hasta: String(combinedFilters.hasta) } : {}),
-            })} />
+                mapQuery.set('proyectoEstrategico', 'Escenarios Deportivos');
+                
+                if (combinedFilters.comuna) {
+                  if (Array.isArray(combinedFilters.comuna)) {
+                    combinedFilters.comuna.forEach(val => mapQuery.append('comuna', val));
+                  } else {
+                    mapQuery.set('comuna', String(combinedFilters.comuna));
+                  }
+                }
+                
+                if (combinedFilters.tipo) {
+                  if (Array.isArray(combinedFilters.tipo)) {
+                    combinedFilters.tipo.forEach(val => mapQuery.append('tipo', val));
+                  } else {
+                    mapQuery.set('tipo', String(combinedFilters.tipo));
+                  }
+                }
+                
+                if (combinedFilters.contratista) {
+                  if (Array.isArray(combinedFilters.contratista)) {
+                    combinedFilters.contratista.forEach(val => mapQuery.append('contratista', val));
+                  } else {
+                    mapQuery.set('contratista', String(combinedFilters.contratista));
+                  }
+                }
+                
+                if (combinedFilters.desde) {
+                  mapQuery.set('desde', String(combinedFilters.desde));
+                }
+                
+                if (combinedFilters.hasta) {
+                  mapQuery.set('hasta', String(combinedFilters.hasta));
+                }
+                
+                const obrasParaMapa = filtered.map(row => ({ ...row, id: String(row.id || row.ID || '') }));
+                
+                return (
+                  <MapLibreVisor 
+                    height={'100%'} 
+                    query={mapQuery} 
+                    filteredObras={obrasParaMapa}
+                  />
+                );
+              })()}
+            </div>
           </div>
         </div>
 
@@ -647,7 +766,7 @@ const EscenariosDeportivosDashboard = () => {
           {simpleChartData.length > 0 && (
             <div className="main-chart-section">
               <SimpleBarChart
-                title="Inversión Total vs Presupuesto Ejecutado - Escenarios Deportivos"
+                title="Inversión Total vs Presupuesto Ejecutado"
                 data={simpleChartData}
                 seriesNames={['Inversión Total', 'Presupuesto Ejecutado']}
                 width={1200}
@@ -676,13 +795,13 @@ const EscenariosDeportivosDashboard = () => {
         ======================================================================== */
         .dashboard-container {
           min-height: 100vh;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%);
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: #00233D;
+          font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .dashboard-content {
-          padding: 120px 20px 20px 20px;
-          max-width: 1600px;
+          padding: 100px 16px 16px 16px;
+          max-width: 1400px;
           margin: 0 auto;
         }
 
@@ -695,10 +814,10 @@ const EscenariosDeportivosDashboard = () => {
           align-items: center;
           justify-content: center;
           height: 300px; /* Altura fija para el indicador de carga */
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: var(--white);
           border-radius: 20px;
           box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
-          border: 2px solid ${CORPORATE_COLORS.primary};
+          border: 2px solid var(--primary-green);
           margin-bottom: 30px;
         }
 
@@ -714,23 +833,23 @@ const EscenariosDeportivosDashboard = () => {
           width: 100%;
           height: 100%;
           border: 4px solid transparent;
-          border-top-color: ${CORPORATE_COLORS.primary};
+          border-top-color: var(--primary-green);
           border-radius: 50%;
           animation: spin 1.5s linear infinite;
         }
 
         .spinner-ring:nth-child(1) {
-          border-top-color: ${CORPORATE_COLORS.primary};
+          border-top-color: var(--primary-green);
           animation-delay: -0.8s;
         }
 
         .spinner-ring:nth-child(2) {
-          border-top-color: ${CORPORATE_COLORS.secondary};
+          border-top-color: var(--primary-blue);
           animation-delay: -0.4s;
         }
 
         .spinner-ring:nth-child(3) {
-          border-top-color: ${CORPORATE_COLORS.accent};
+          border-top-color: var(--secondary-blue);
           animation-delay: 0s;
         }
 
@@ -741,38 +860,138 @@ const EscenariosDeportivosDashboard = () => {
 
         .loading-text {
           text-align: center;
-          color: ${CORPORATE_COLORS.darkGray};
+          color: var(--text-dark);
         }
 
         .loading-text h3 {
           font-size: 1.2rem;
           font-weight: 600;
           margin-bottom: 8px;
-          color: ${CORPORATE_COLORS.accent};
+          color: var(--secondary-blue);
         }
 
         .loading-text p {
           font-size: 0.9rem;
-          color: ${CORPORATE_COLORS.mediumGray};
+          color: var(--text-light);
         }
 
         /* ========================================================================
             SECCIÓN DE FILTROS - DISEÑO MEJORADO
         ======================================================================== */
         .filters-section {
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: #FFFFFF;
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 18px;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+          border: 1px solid #E9ECEF;
+        }
+
+        .filters-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .filters-status {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .filters-active {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: #FFB6C1;
+          border: 1px solid #FF6B6B;
           border-radius: 20px;
-          padding: 30px;
-          margin-bottom: 30px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
-          border: 2px solid ${CORPORATE_COLORS.primary};
+          color: #D63031;
+          font-size: 0.85rem;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(255, 107, 107, 0.15);
+        }
+
+        .filters-all {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: #C8E6C9;
+          border: 1px solid #4CAF50;
+          border-radius: 20px;
+          color: #2E7D32;
+          font-size: 0.85rem;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
+        }
+
+        .filters-status .status-icon {
+          font-size: 1rem;
+        }
+
+        .clear-filters-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1px solid var(--primary-green);
+          background: #ffffff;
+          color: var(--secondary-blue);
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 6px rgba(121, 188, 153, 0.08);
+        }
+
+        .clear-filters-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          border-color: var(--primary-blue);
+          box-shadow: 0 6px 16px rgba(121, 188, 153, 0.18);
+        }
+
+        .clear-filters-btn:disabled {
+          background: #F8F9FA;
+          color: var(--text-light);
+          border-color: #E9ECEF;
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .clear-filters-btn:disabled:hover {
+          transform: none;
+          box-shadow: 0 1px 6px rgba(121, 188, 153, 0.08);
+        }
+
+        .clear-filters-btn .btn-icon {
+          display: inline-flex;
+          width: 18px;
+          height: 18px;
+          align-items: center;
+          justify-content: center;
         }
 
         .filters-container {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 20px;
+          gap: 14px;
           align-items: end;
+          margin-bottom: 12px;
+        }
+
+        .filters-row-main {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .filters-row-secondary {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .filters-row-dates {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 30px;
         }
 
         .filter-group {
@@ -784,78 +1003,106 @@ const EscenariosDeportivosDashboard = () => {
 
         .filter-label {
           font-weight: 600;
-          color: ${CORPORATE_COLORS.primary};
-          font-size: 0.95rem;
+          color: var(--primary-green);
+          font-size: 0.9rem;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.4px;
         }
 
         .filter-select, .filter-input {
-          padding: 14px 16px;
-          border: 2px solid ${CORPORATE_COLORS.primary};
-          border-radius: 12px;
-          font-size: 1rem;
-          transition: all 0.3s ease;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          color: ${CORPORATE_COLORS.darkGray};
-          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.1);
+          padding: 12px 14px;
+          border: 1px solid var(--primary-green);
+          border-radius: 10px;
+          font-size: 0.95rem;
+          transition: all 0.25s ease;
+          background: var(--white);
+          color: var(--text-dark);
+          box-shadow: 0 1px 6px rgba(121, 188, 153, 0.08);
           width: 100%;
           box-sizing: border-box;
+          min-height: 48px;
+          display: flex;
+          align-items: center;
+        }
+
+        /* Estilo especial para cuando el filtro está en "Todos" */
+        .filter-select:has(option[value=""]:checked),
+        .filter-select[value=""] {
+          background: #E9ECEF;
+          border-color: var(--text-light);
+          color: var(--text-light);
+          font-style: italic;
+        }
+
+        /* Estilo para opciones seleccionadas */
+        .filter-select option:checked {
+          background: var(--primary-green);
+          color: white;
+          font-weight: 600;
+        }
+
+        /* Estilo para la opción "Todos" */
+        .filter-select option[value=""] {
+          background: #F8F9FA;
+          color: var(--text-light);
+          font-style: italic;
+          font-weight: 500;
         }
 
         .filter-select:focus, .filter-input:focus {
           outline: none;
-          border-color: ${CORPORATE_COLORS.accent};
+          border-color: var(--secondary-blue);
           box-shadow: 0 0 0 4px rgba(59, 134, 134, 0.25);
           transform: translateY(-2px);
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
         }
 
         .filter-select:hover, .filter-input:hover {
-          border-color: ${CORPORATE_COLORS.secondary};
+          border-color: var(--primary-blue);
           transform: translateY(-1px);
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
         }
 
         /* ========================================================================
             SECCIÓN DE KPIs - DISEÑO MEJORADO
         ======================================================================== */
         .kpis-section {
-          margin-bottom: 40px;
-          padding: 30px;
-          background: linear-gradient(135deg, rgba(212, 230, 241, 0.3) 0%, rgba(232, 244, 248, 0.3) 100%);
-          border-radius: 25px;
-          border: 1px solid rgba(121, 188, 153, 0.2);
+          margin-bottom: 22px;
+          padding: 20px;
+          background: rgba(232, 244, 248, 0.35);
+          border-radius: 18px;
+          border: 1px solid rgba(121, 188, 153, 0.25);
         }
 
         .kpis-container {
           display: flex;
           flex-direction: column;
-          gap: 30px;
+          gap: 16px;
         }
 
         .kpis-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 18px;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 14px;
+          align-items: stretch;
         }
 
-        /* Estilos para las tarjetas de KPI - Colores corporativos */
+        /* Estilos para las tarjetas de KPI - Colores exactos del usuario */
         .kpis-grid .kpi {
-          background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%) !important;
-          color: white !important;
-          border-radius: 20px !important;
-          padding: 25px !important;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.25) !important;
-          border: 2px solid rgba(255, 255, 255, 0.2) !important;
-          transition: all 0.3s ease !important;
+          background: #98C73B !important;
+          color: #FFFFFF !important;
+          border-radius: 16px !important;
+          padding: 16px !important;
+          box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
+          border: none !important;
+          transition: all 0.25s ease !important;
           position: relative !important;
           overflow: hidden !important;
         }
 
         .kpis-grid .kpi:hover {
           transform: translateY(-5px) !important;
-          box-shadow: 0 15px 35px rgba(121, 188, 153, 0.4) !important;
+          box-shadow: 0 15px 35px rgba(152, 199, 59, 0.4) !important;
           border-color: rgba(255, 255, 255, 0.4) !important;
         }
 
@@ -866,12 +1113,12 @@ const EscenariosDeportivosDashboard = () => {
           left: 0 !important;
           right: 0 !important;
           height: 4px !important;
-          background: linear-gradient(90deg, #3B8686, #79BC99, #4E8484) !important;
+          background: var(--primary-green) !important;
         }
 
         /* Estilos para el contenido de los KPIs */
         .kpis-grid .kpi .kpi-label {
-          font-size: 0.9rem !important;
+          font-size: 0.85rem !important;
           font-weight: 600 !important;
           color: rgba(255, 255, 255, 0.9) !important;
           text-transform: uppercase !important;
@@ -880,7 +1127,7 @@ const EscenariosDeportivosDashboard = () => {
         }
 
         .kpis-grid .kpi .kpi-value {
-          font-size: 1.6rem !important;
+          font-size: 1.4rem !important;
           font-weight: 700 !important;
           color: #FFFFFF !important;
           margin-bottom: 5px !important;
@@ -893,17 +1140,41 @@ const EscenariosDeportivosDashboard = () => {
           font-size: 0.85rem !important;
           color: rgba(255, 255, 255, 0.8) !important;
           font-weight: 500 !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
         }
 
         /* Estilos específicos para cada fila de KPIs */
-        .kpis-row-1 { grid-template-columns: repeat(2, 1fr); }
+        .kpis-row-1 { 
+          grid-template-columns: repeat(1, 1fr);
+          max-width: 500px;
+          margin: 0 auto;
+        }
         .kpis-row-2 { grid-template-columns: repeat(2, 1fr); }
         .kpis-row-5 { grid-template-columns: repeat(5, 1fr); }
+        .kpis-row-6 { grid-template-columns: repeat(6, 1fr); }
+        .kpis-row-7 { grid-template-columns: repeat(7, 1fr); }
 
         .kpis-row-3 {
           grid-template-columns: repeat(1, 1fr);
           max-width: 400px;
           margin: 0 auto;
+        }
+
+        /* ========================================================================
+            LAYOUT PRINCIPAL
+        ======================================================================== */
+        .main-content {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 30px;
+        }
+
+        .left-column, .right-column {
+          display: flex;
+          flex-direction: column;
+          gap: 30px;
         }
 
         /* ========================================================================
@@ -913,29 +1184,28 @@ const EscenariosDeportivosDashboard = () => {
           margin-bottom: 40px;
         }
 
-        .charts-grid {
+        .tables-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
           gap: 30px;
-          margin-bottom: 30px;
+          margin-top: 30px;
         }
-
 
         /* ========================================================================
             TARJETAS DE CONTENIDO
         ======================================================================== */
         .chart-card, .table-card {
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: #FFFFFF;
           border-radius: 20px;
           padding: 30px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+          border: 1px solid #98C73B;
           transition: all 0.3s ease;
         }
 
         .chart-card:hover, .table-card:hover {
           transform: translateY(-5px);
-          box-shadow: 0 15px 35px rgba(121, 188, 153, 0.2);
+          box-shadow: 0 15px 35px rgba(152, 199, 59, 0.2);
         }
 
         /* ========================================================================
@@ -944,15 +1214,15 @@ const EscenariosDeportivosDashboard = () => {
         .map-legend {
           margin-bottom: 25px;
           padding: 20px;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: var(--white);
           border-radius: 15px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
         }
 
         .map-legend h4 {
           margin: 0 0 20px 0;
-          color: ${CORPORATE_COLORS.accent};
+          color: var(--secondary-blue);
           font-size: 1.1rem;
           font-weight: 600;
         }
@@ -968,9 +1238,9 @@ const EscenariosDeportivosDashboard = () => {
           align-items: center;
           gap: 12px;
           padding: 8px 12px;
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
           border-radius: 10px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           box-shadow: 0 2px 8px rgba(121, 188, 153, 0.08);
           transition: all 0.3s ease;
         }
@@ -978,21 +1248,136 @@ const EscenariosDeportivosDashboard = () => {
         .legend-item:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 15px rgba(121, 188, 153, 0.15);
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: var(--white);
         }
 
         .legend-color {
           width: 18px;
           height: 18px;
           border-radius: 50%;
-          border: 2px solid ${CORPORATE_COLORS.primary};
+          border: 2px solid var(--primary-green);
           box-shadow: 0 2px 6px rgba(121, 188, 153, 0.3);
         }
 
         .legend-text {
           font-size: 0.9rem;
-          color: ${CORPORATE_COLORS.darkGray};
+          color: var(--text-dark);
           font-weight: 500;
+        }
+
+        /* =====================
+           Leyenda compacta (chips)
+           ===================== */
+        .map-legend-compact {
+          padding: 10px 12px;
+          border-radius: 12px;
+          margin-bottom: 12px;
+        }
+        .legend-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+        }
+        .legend-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: #ffffff;
+          border: 1px solid var(--primary-green);
+          color: var(--text-dark);
+          font-size: 12px;
+          line-height: 1;
+          white-space: nowrap;
+          max-width: 100%;
+        }
+        .legend-chip .legend-label {
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .legend-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          border: 2px solid var(--primary-green);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          flex: 0 0 auto;
+        }
+        @media (max-width: 1200px) {
+          .legend-chip { font-size: 11px; padding: 5px 8px; }
+          .legend-dot { width: 9px; height: 9px; }
+        }
+        @media (max-width: 768px) {
+          .map-legend-compact { padding: 8px 10px; }
+          .legend-chips { gap: 6px; }
+          .legend-chip { font-size: 10px; padding: 4px 7px; }
+          .legend-dot { width: 8px; height: 8px; }
+        }
+        @media (max-width: 480px) {
+          .legend-chip { font-size: 9.5px; padding: 4px 6px; }
+          .legend-dot { width: 7px; height: 7px; }
+        }
+
+        /* ========================================================================
+            CONTENEDOR DEL MAPA
+        ======================================================================== */
+        .map-container {
+          width: 100%;
+          height: 600px;
+          border-radius: 15px;
+          overflow: hidden;
+          border: 1px solid rgba(0,0,0,0.08);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+          position: relative;
+        }
+
+        .map-content {
+          width: 100%;
+          height: 100%;
+          border-radius: 15px;
+        }
+
+        .map-content .leaflet-container {
+          width: 100% !important;
+          height: 100% !important;
+          border-radius: 15px;
+        }
+
+        .map-content .responsive-map {
+          width: 100% !important;
+          height: 100% !important;
+        }
+
+        /* ========================================================================
+            SECCIÓN DEL GRÁFICO PRINCIPAL
+        ======================================================================== */
+        .main-chart-section {
+          margin-bottom: 30px;
+          padding: 20px;
+          background: var(--white);
+          border-radius: 20px;
+          border: 1px solid var(--primary-green);
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+          overflow: hidden;
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .main-chart-section .simple-chart-container {
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          padding: 0;
+          width: 100%;
+          max-width: 100%;
+        }
+
+        /* Hacer que el gráfico ocupe todo el ancho disponible */
+        .main-chart-section .simple-chart-container .chart-svg {
+          width: 100%;
+          max-width: 100%;
         }
 
         /* ========================================================================
@@ -1001,12 +1386,12 @@ const EscenariosDeportivosDashboard = () => {
         .status-indicator {
           text-align: center;
           padding: 25px;
-          color: ${CORPORATE_COLORS.mediumGray};
+          color: var(--text-light);
           font-style: italic;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
+          background: var(--white);
           border-radius: 15px;
           margin-top: 30px;
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          border: 1px solid var(--primary-green);
           box-shadow: 0 4px 15px rgba(121, 188, 153, 0.1);
         }
 
@@ -1016,25 +1401,31 @@ const EscenariosDeportivosDashboard = () => {
         }
 
         /* ========================================================================
+            SCROLL SUAVE Y ORGANIZACIÓN
+        ======================================================================== */
+        .dashboard-content {
+          scroll-behavior: smooth;
+          overflow-x: hidden;
+        }
+
+        .dashboard-content > * {
+          scroll-margin-top: 100px;
+        }
+
+        /* ========================================================================
             DISEÑO RESPONSIVE
         ======================================================================== */
         @media (max-width: 1200px) {
           .kpis-row-5 { grid-template-columns: repeat(4, 1fr); }
-          .filters-container {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          .charts-grid {
+          .kpis-row-6 { grid-template-columns: repeat(4, 1fr); }
+          .kpis-row-7 { grid-template-columns: repeat(4, 1fr); }
+          .main-content {
             grid-template-columns: 1fr;
           }
-        }
-
-        @media (max-width: 1024px) {
-          .charts-grid {
-            grid-template-columns: 1fr;
-            gap: 25px;
-          }
-          .tables-grid {
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+          
+          .main-chart-section {
+            padding: 15px;
+            margin-bottom: 25px;
           }
         }
 
@@ -1047,6 +1438,8 @@ const EscenariosDeportivosDashboard = () => {
             padding: 20px;
             margin-bottom: 20px;
           }
+
+          .filters-actions { margin-bottom: 10px; }
 
           .filters-container {
             grid-template-columns: 1fr;
@@ -1068,26 +1461,30 @@ const EscenariosDeportivosDashboard = () => {
             border-radius: 10px;
           }
 
-          .kpis-section {
-            padding: 20px;
-            margin-bottom: 25px;
-          }
+          .kpis-section { padding: 16px; margin-bottom: 18px; }
 
           .kpis-container {
-            gap: 20px;
+            gap: 12px;
           }
 
-          .kpis-grid { grid-template-columns: 1fr; gap: 15px; }
+          .kpis-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
           .kpis-row-5 { grid-template-columns: repeat(2, 1fr); }
+          .kpis-row-6 { grid-template-columns: repeat(2, 1fr); }
+          .kpis-row-7 { grid-template-columns: repeat(2, 1fr); }
 
           .kpis-grid .kpi {
-            padding: 20px !important;
+            padding: 14px !important;
           }
 
-          .kpis-grid .kpi .kpi-value { font-size: 1.4rem !important; }
+          .kpis-grid .kpi .kpi-value { font-size: 1.25rem !important; }
 
           .kpis-grid .kpi .kpi-label {
-            font-size: 0.8rem !important;
+            font-size: 0.78rem !important;
+          }
+
+          .map-main-panel {
+            padding: 20px;
+            margin-bottom: 25px;
           }
 
           .map-legend {
@@ -1109,6 +1506,10 @@ const EscenariosDeportivosDashboard = () => {
             padding: 6px 10px;
           }
 
+          .map-container {
+            height: 400px;
+          }
+
           .chart-card, .table-card {
             padding: 20px;
           }
@@ -1117,16 +1518,17 @@ const EscenariosDeportivosDashboard = () => {
             margin-bottom: 25px;
           }
 
-          .charts-grid {
-            grid-template-columns: 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-          }
-
           .tables-grid {
             grid-template-columns: 1fr;
             gap: 20px;
             margin-top: 20px;
+          }
+
+          /* Estilos específicos para el gráfico principal en móviles */
+          .main-chart-section {
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 15px;
           }
         }
 
@@ -1139,6 +1541,8 @@ const EscenariosDeportivosDashboard = () => {
             padding: 15px;
             margin-bottom: 15px;
           }
+
+          .filters-actions { margin-bottom: 10px; }
 
           .filters-container {
             gap: 12px;
@@ -1159,24 +1563,31 @@ const EscenariosDeportivosDashboard = () => {
             border-radius: 8px;
           }
 
-          .kpis-section {
-            padding: 15px;
-            margin-bottom: 20px;
-          }
+          .kpis-section { padding: 12px; margin-bottom: 14px; }
 
-          .kpis-container { gap: 15px; }
+          .kpis-container { gap: 10px; }
 
-          .kpis-grid { gap: 12px; }
-          .kpis-row-5 { grid-template-columns: 1fr; }
+          .kpis-grid { gap: 14px; grid-template-columns: 1fr !important; }
+          .kpis-row-5 { grid-template-columns: 1fr !important; }
+          .kpis-row-6 { grid-template-columns: 1fr !important; }
+          .kpis-row-7 { grid-template-columns: 1fr !important; }
 
           .kpis-grid .kpi {
-            padding: 18px !important;
+            padding: 12px !important;
           }
 
-          .kpis-grid .kpi .kpi-value { font-size: 1.3rem !important; }
+          .kpis-grid .kpi .kpi-value { font-size: 1.15rem !important; }
 
           .kpis-grid .kpi .kpi-label {
-            font-size: 0.75rem !important;
+            font-size: 0.72rem !important;
+          }
+
+          /* Ocultar subtítulos en móviles pequeños para ahorrar espacio */
+          .kpis-grid .kpi .kpi-subtitle { display: none !important; }
+
+          .map-main-panel {
+            padding: 15px;
+            margin-bottom: 20px;
           }
 
           .map-legend {
@@ -1206,6 +1617,10 @@ const EscenariosDeportivosDashboard = () => {
             font-size: 0.8rem;
           }
 
+          .map-container {
+            height: 350px;
+          }
+
           .chart-card, .table-card {
             padding: 15px;
           }
@@ -1214,14 +1629,57 @@ const EscenariosDeportivosDashboard = () => {
             margin-bottom: 20px;
           }
 
-          .charts-grid {
-            gap: 15px;
-            margin-bottom: 15px;
-          }
-
           .tables-grid {
             gap: 15px;
             margin-top: 15px;
+          }
+
+          /* Estilos específicos para el gráfico principal en móviles pequeños */
+          .main-chart-section {
+            padding: 8px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .dashboard-content {
+            padding: 75px 5px 5px 5px;
+          }
+
+          .filters-section {
+            padding: 12px;
+          }
+
+          .kpis-section {
+            padding: 12px;
+          }
+
+          .map-main-panel {
+            padding: 12px;
+          }
+
+          .map-container {
+            height: 300px;
+          }
+
+          .chart-card, .table-card {
+            padding: 12px;
+          }
+
+          .kpis-grid .kpi {
+            padding: 15px !important;
+          }
+
+          .kpis-grid .kpi .kpi-value {
+            font-size: 1.4rem !important;
+          }
+
+          /* Estilos específicos para el gráfico principal en pantallas muy pequeñas */
+          .main-chart-section {
+            padding: 6px;
+            margin-bottom: 12px;
+            border-radius: 10px;
           }
         }
 
@@ -1231,6 +1689,10 @@ const EscenariosDeportivosDashboard = () => {
           grid-template-columns: repeat(3, 1fr);
           gap: 12px;
           align-items: end;
+        }
+
+        .date-select {
+          min-width: 0;
         }
 
         /* Contenedor específico para filtros de fecha */
@@ -1315,6 +1777,86 @@ const EscenariosDeportivosDashboard = () => {
           
           .date-inputs {
             justify-content: center;
+          }
+        }
+
+        /* ========================================================================
+             ESTILOS PARA FILTROS ORGANIZADOS EN FILAS
+         ======================================================================== */
+        
+        /* Contenedor de filtros organizados en filas */
+        .filters-container {
+          /* Mantener grilla definida arriba */
+          width: 100%;
+        }
+
+        /* Fila de filtros */
+        .filters-row {
+          display: grid;
+          gap: 20px;
+          width: 100%;
+        }
+
+        /* Primera fila: 4 columnas */
+        .filters-row-1 {
+          grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* Segunda fila: 3 columnas */
+        .filters-row-2 {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* Filtro de fechas: ocupar 1 columna en desktop, 2 en md si caben */
+        .date-filter-group {
+          grid-column: span 1;
+        }
+
+        /* Contenedor de rango de fechas */
+        .date-range-inputs {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        /* Grupo de entrada de fecha */
+        .date-input-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* Etiqueta de fecha */
+        .date-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #2c3e50;
+          min-width: 45px;
+        }
+
+        /* Responsive para tablets */
+        @media (max-width: 1200px) {
+          .filters-row-main,
+          .filters-row-secondary {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          .filters-row-dates {
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+        }
+
+        /* Responsive para móviles */
+        @media (max-width: 768px) {
+          .filters-row-main,
+          .filters-row-secondary,
+          .filters-row-dates {
+            grid-template-columns: 1fr;
+          }
+          
+          .filters-container {
+            margin-bottom: 15px;
           }
         }
       `}</style>
