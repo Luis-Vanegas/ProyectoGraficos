@@ -71,7 +71,7 @@
   background: var(--card-hover) !important;
 }
 
-/* Tarjetas KPI - Colores exactos del usuario */
+/* Tarjetas KPI - Colores exactos del usuario (solo para .kpis-grid, no para .kpis-main-row) */
 .kpis-grid .kpi,
 .kpis-grid .kpi-card {
   background: #98C73B !important;
@@ -79,6 +79,12 @@
   border-radius: 16px !important;
   box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
   border: none !important;
+}
+
+/* Permitir que los estilos específicos del Dashboard sobrescriban los globales */
+.main-dashboard-section .kpis-main-row .kpi {
+  background: inherit !important;
+  box-shadow: inherit !important;
 }
 
 .kpis-grid .kpi .kpi-value,

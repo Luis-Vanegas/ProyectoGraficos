@@ -109,7 +109,6 @@ const JardinesBuenComienzoDashboard = () => {
              proyectoRow.includes('infancia');
     });
     
-    console.log(`Jardines Buen Comienzo: ${filtered.length} obras de ${rows.length} total`);
     return filtered;
   }, [rows]);
 
@@ -293,8 +292,6 @@ const JardinesBuenComienzoDashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas (Jardines Buen Comienzo):', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas (Jardines Buen Comienzo):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -331,22 +328,15 @@ const JardinesBuenComienzoDashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 JardinesBuenComienzoDashboard - handleFilterChange - INICIANDO');
-    console.log('🔍 JardinesBuenComienzoDashboard - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 JardinesBuenComienzoDashboard - filters actuales:', filters);
     
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 JardinesBuenComienzoDashboard - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 JardinesBuenComienzoDashboard - newFilters antes de clean:', newFilters);
 
     // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 JardinesBuenComienzoDashboard - cleanedFilters:', cleanedFilters);
     setFilters(cleanedFilters);
-    console.log('🔍 JardinesBuenComienzoDashboard - setFilters llamado');
   };
 
   // ============================================================================

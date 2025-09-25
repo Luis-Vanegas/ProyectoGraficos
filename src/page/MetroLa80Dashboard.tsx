@@ -108,7 +108,6 @@ const MetroLa80Dashboard = () => {
              proyectoRow.includes('80');
     });
     
-    console.log(`Metro de La 80: ${filtered.length} obras de ${rows.length} total`);
     return filtered;
   }, [rows]);
 
@@ -233,8 +232,6 @@ const MetroLa80Dashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas (Metro de La 80):', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas (Metro de La 80):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -271,22 +268,15 @@ const MetroLa80Dashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 MetroLa80Dashboard - handleFilterChange - INICIANDO');
-    console.log('🔍 MetroLa80Dashboard - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 MetroLa80Dashboard - filters actuales:', filters);
     
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 MetroLa80Dashboard - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 MetroLa80Dashboard - newFilters antes de clean:', newFilters);
 
     // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 MetroLa80Dashboard - cleanedFilters:', cleanedFilters);
     setFilters(cleanedFilters);
-    console.log('🔍 MetroLa80Dashboard - setFilters llamado');
   };
 
   // ============================================================================

@@ -108,7 +108,6 @@ const EscuelasInteligentesDashboard = () => {
              proyectoRow.includes('educativo');
     });
     
-    console.log(`Escuelas Inteligentes: ${filtered.length} obras de ${rows.length} total`);
     return filtered;
   }, [rows]);
 
@@ -294,8 +293,6 @@ const EscuelasInteligentesDashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas (Escuelas Inteligentes):', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas (Escuelas Inteligentes):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -332,22 +329,15 @@ const EscuelasInteligentesDashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 EscuelasInteligentesDashboard - handleFilterChange - INICIANDO');
-    console.log('🔍 EscuelasInteligentesDashboard - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 EscuelasInteligentesDashboard - filters actuales:', filters);
     
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 EscuelasInteligentesDashboard - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 EscuelasInteligentesDashboard - newFilters antes de clean:', newFilters);
 
     // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 EscuelasInteligentesDashboard - cleanedFilters:', cleanedFilters);
     setFilters(cleanedFilters);
-    console.log('🔍 EscuelasInteligentesDashboard - setFilters llamado');
   };
 
   // ============================================================================

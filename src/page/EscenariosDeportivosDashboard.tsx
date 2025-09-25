@@ -55,6 +55,7 @@ type UIFilters = {
   tipo?: string[];
   estadoDeLaObra?: string[];
   contratista?: string[];
+  nombre?: string[];
   desde?: string; // 'YYYY' o 'YYYY-MM'
   hasta?: string; // 'YYYY' o 'YYYY-MM'
   // Campos UI para construir fechas sin romper tipado
@@ -84,13 +85,7 @@ const EscenariosDeportivosDashboard = () => {
   
   // Logging para rastrear cambios de estado
   useEffect(() => {
-    console.log('🔍 EscenariosDeportivosDashboard - filters cambiaron:', filters);
-    console.log('🔍 EscenariosDeportivosDashboard - filters.proyecto:', filters.proyecto);
-    console.log('🔍 EscenariosDeportivosDashboard - filters.comuna:', filters.comuna);
-    console.log('🔍 EscenariosDeportivosDashboard - filters.dependencia:', filters.dependencia);
-    console.log('🔍 EscenariosDeportivosDashboard - filters.tipo:', filters.tipo);
-    console.log('🔍 EscenariosDeportivosDashboard - filters.estadoDeLaObra:', filters.estadoDeLaObra);
-    console.log('🔍 EscenariosDeportivosDashboard - filters.contratista:', filters.contratista);
+    // Filtros actualizados
   }, [filters]);
   const [isMobileStack, setIsMobileStack] = useState(false);
   const prefersReduced = useReducedMotion?.() ?? false;
@@ -151,7 +146,6 @@ const EscenariosDeportivosDashboard = () => {
              proyectoRow.includes('deportivos');
     });
     
-    console.log(`Escenarios Deportivos: ${filtered.length} obras de ${rows.length} total`);
     return filtered;
   }, [rows]);
 
@@ -184,22 +178,13 @@ const EscenariosDeportivosDashboard = () => {
   };
 
   const opciones = useMemo(() => {
-    console.log('🔍 EscenariosDeportivosDashboard - opciones recalculando...');
-    console.log('🔍 EscenariosDeportivosDashboard - escenarioDeportivoRows.length:', escenarioDeportivoRows.length);
-    console.log('🔍 EscenariosDeportivosDashboard - filters:', filters);
-    console.log('🔍 EscenariosDeportivosDashboard - FILTROS RELACIONADOS ACTIVADOS: Las opciones se calculan dinámicamente');
     return getFilterOptions(escenarioDeportivoRows, filters);
   }, [escenarioDeportivoRows, filters]);
   const combinedFilters = useMemo(() => {
     return combineDateFields(filters);
   }, [filters]);
   const filtered = useMemo(() => {
-    console.log('🔍 EscenariosDeportivosDashboard - filtered calculation:');
-    console.log('🔍 EscenariosDeportivosDashboard - escenarioDeportivoRows.length:', escenarioDeportivoRows.length);
-    console.log('🔍 EscenariosDeportivosDashboard - combinedFilters:', combinedFilters);
     const result = applyFilters(escenarioDeportivoRows, combinedFilters);
-    console.log('🔍 EscenariosDeportivosDashboard - filtered result length:', result.length);
-    console.log('🔍 EscenariosDeportivosDashboard - filtered first 3:', result.slice(0, 3));
     return result;
   }, [escenarioDeportivoRows, combinedFilters]);
   const k = useMemo(() => kpis(filtered), [filtered]);
@@ -329,21 +314,14 @@ const EscenariosDeportivosDashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 handleFilterChange - INICIANDO');
-    console.log('🔍 handleFilterChange - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 handleFilterChange - filters actuales:', filters);
-    
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 handleFilterChange - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 handleFilterChange - newFilters:', newFilters);
 
     // NUEVO: Los filtros ahora se relacionan automáticamente
     // Las opciones se recalculan dinámicamente en el useMemo de 'opciones'
     setFilters(newFilters);
-    console.log('🔍 handleFilterChange - setFilters llamado - Filtros relacionados activados');
   };
 
   // ============================================================================
@@ -418,7 +396,6 @@ const EscenariosDeportivosDashboard = () => {
                 options={opciones.proyectos}
                 selectedValues={filters.proyecto || []}
                 onSelectionChange={(values) => {
-                  console.log('🔍 EscenariosDeportivosDashboard - ImprovedMultiSelect onSelectionChange:', values);
                   handleFilterChange('proyecto', values);
                 }}
                 placeholder="Todos los proyectos"
@@ -446,6 +423,17 @@ const EscenariosDeportivosDashboard = () => {
                 onSelectionChange={(values) => handleFilterChange('comuna', values)}
                 disabled={opciones.comunas.length === 0}
                 placeholder="Todas las comunas"
+              />
+            )}
+            {/* Filtro: Obra (Nombre) */}
+            {F.nombre && (
+              <ImprovedMultiSelect
+                label="NOMBRE DE LA OBRA"
+                options={opciones.nombres}
+                selectedValues={filters.nombre || []}
+                onSelectionChange={(values) => handleFilterChange('nombre', values)}
+                disabled={opciones.nombres.length === 0}
+                placeholder="Todas las obras"
               />
             )}
           </div>

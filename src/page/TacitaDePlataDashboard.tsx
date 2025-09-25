@@ -229,8 +229,6 @@ const TacitaDePlataDashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas (Tacita de Plata):', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas (Tacita de Plata):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -267,22 +265,15 @@ const TacitaDePlataDashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 TacitaDePlataDashboard - handleFilterChange - INICIANDO');
-    console.log('🔍 TacitaDePlataDashboard - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 TacitaDePlataDashboard - filters actuales:', filters);
     
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 TacitaDePlataDashboard - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 TacitaDePlataDashboard - newFilters antes de clean:', newFilters);
 
     // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 TacitaDePlataDashboard - cleanedFilters:', cleanedFilters);
     setFilters(cleanedFilters);
-    console.log('🔍 TacitaDePlataDashboard - setFilters llamado');
   };
 
   // ============================================================================

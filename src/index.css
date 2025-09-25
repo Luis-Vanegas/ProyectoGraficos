@@ -46,8 +46,8 @@
 *::before,
 *::after { box-sizing: border-box; }
 
-html, body, #root { height: 100%; }
-body { margin: 0; background:#00233D; color:#eaeaea; font-family: 'Metropolis', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+html, body, #root { height: 100%; width: 100%; }
+body { margin: 0; background:#00233D; color:#eaeaea; font-family: 'Metropolis', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; overflow-x: hidden; }
 /* Popups de MapLibre: mejorar contraste del texto */
 .maplibregl-popup-content { color: #111827 !important; }
 .maplibregl-popup-tip { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); }
@@ -61,6 +61,12 @@ body { margin: 0; background:#00233D; color:#eaeaea; font-family: 'Metropolis', 
   padding-inline: var(--pad);
   display: grid;
   gap: var(--g);
+}
+
+/* Permitir que consultar-obra-container use todo el ancho */
+.consultar-obra-container {
+  width: 100% !important;
+  max-width: none !important;
 }
 
 h1 { 
@@ -160,8 +166,8 @@ h1 {
   max-width: 350px;
 }
 
-/* tarjeta KPI: label arriba, valor abajo */
-.kpi{
+/* tarjeta KPI: label arriba, valor abajo (solo para .kpis-grid, no para .kpis-main-row) */
+.kpis-grid .kpi{
   display:grid;
   grid-template-rows: auto 1fr auto;
   gap: 8px;
@@ -174,6 +180,13 @@ h1 {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+}
+
+/* Permitir que los estilos específicos del Dashboard sobrescriban los globales */
+.main-dashboard-section .kpis-main-row .kpi {
+  background: inherit !important;
+  box-shadow: inherit !important;
+  border: inherit !important;
 }
 
 /* Línea superior decorativa */

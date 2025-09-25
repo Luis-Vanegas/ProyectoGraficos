@@ -290,8 +290,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       return { centroids: emptyFC, counts: {} as Record<string, number> };
     }
     const counts: Record<string, number> = {};
-    console.log('🔍 MapLibreVisor - obrasEnriquecidas en conteos:', obrasEnriquecidas?.length || 0);
-    console.log('🔍 MapLibreVisor - limites features:', limites?.features?.length || 0);
     
     if (obrasEnriquecidas && Array.isArray(obrasEnriquecidas)) {
       let obrasConCoordenadas = 0;
@@ -321,35 +319,28 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
             obrasConCoordenadas++;
             // Contar obras con coordenadas válidas
             counts[codigoStr] = (counts[codigoStr] ?? 0) + 1;
-            console.log('🔍 MapLibreVisor - obra con coordenadas:', o.id, 'codigo:', codigoStr, 'count:', counts[codigoStr]);
           } else {
             obrasSinCoordenadas++;
             // Para obras sin coordenadas, usar un código especial
             const codigoSinCoordenadas = codigoStr === '99 - Varias' ? '99 - Varias' : `${codigoStr} - Sin coordenadas`;
             counts[codigoSinCoordenadas] = (counts[codigoSinCoordenadas] ?? 0) + 1;
-            console.log('🔍 MapLibreVisor - obra sin coordenadas:', o.id, 'codigo:', codigoStr, 'codigo especial:', codigoSinCoordenadas);
           }
         } else {
           if (tieneCoordenadas) {
             obrasConCoordenadas++;
-            console.log('🔍 MapLibreVisor - obra con coordenadas pero sin codigo:', o.id);
           } else {
             obrasSinCoordenadas++;
-            console.log('🔍 MapLibreVisor - obra sin coordenadas ni codigo:', o.id);
           }
         }
       }
       
-      console.log(`🔍 MapLibreVisor - Resumen: ${obrasConCoordenadas} con coordenadas, ${obrasSinCoordenadas} sin coordenadas`);
     }
     
-    console.log('🔍 MapLibreVisor - counts finales:', counts);
     
     // Log de los límites disponibles
     if (limites && limites.features) {
-      console.log('🔍 MapLibreVisor - límites disponibles:');
-      limites.features.forEach((f: any) => {
-        console.log(`  - ${f.properties.CODIGO}: ${f.properties.NOMBRE}`);
+      limites.features.forEach((_f: any) => {
+        // Límites disponibles
       });
     }
     
@@ -357,7 +348,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       type: 'FeatureCollection',
       features: limites.features ? (limites.features as LimiteFeature[]).map((f) => {
         const codigo = f.properties.CODIGO;
-        const nombre = f.properties.NOMBRE;
         
         // Calcular el centroide de manera más robusta
         let p;
@@ -372,26 +362,21 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           
           // Verificar que el centroide sea válido
           if (!p || !p.geometry || !p.geometry.coordinates) {
-            console.log(`🔍 MapLibreVisor - Centroide inválido para ${codigo} (${nombre})`);
             return null;
           }
           
           // Verificar que las coordenadas sean válidas
           const [lon, lat] = p.geometry.coordinates;
           if (isNaN(lon) || isNaN(lat) || lon === 0 || lat === 0) {
-            console.log(`🔍 MapLibreVisor - Coordenadas inválidas para ${codigo} (${nombre}):`, [lon, lat]);
             return null;
           }
           
           // Verificar que las coordenadas estén dentro de los límites de Medellín
           if (lat < 6.0 || lat > 6.4 || lon < -75.7 || lon > -75.4) {
-            console.log(`🔍 MapLibreVisor - Coordenadas fuera de límites para ${codigo} (${nombre}):`, [lon, lat]);
             return null;
           }
           
-          console.log(`🔍 MapLibreVisor - Centroide calculado para ${codigo} (${nombre}):`, [lon, lat]);
         } catch (error) {
-          console.log(`🔍 MapLibreVisor - Error calculando centroide para ${codigo} (${nombre}):`, error);
           return null;
         }
         
@@ -412,7 +397,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           }
         }
         
-        console.log(`🔍 MapLibreVisor - Feature ${codigo} (${f.properties.NOMBRE}): count = ${count}`);
         
         return { type: 'Feature', geometry: p.geometry, properties: { CODIGO: f.properties.CODIGO, NOMBRE: f.properties.NOMBRE, count } } as GeoJSON.Feature;
       }).filter(f => f !== null) : []
@@ -456,14 +440,8 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     }
 
     if (!map.getSource(centroidsSrc)) {
-      console.log('🔍 MapLibreVisor - Creando fuente de centroides...');
-      console.log('🔍 MapLibreVisor - conteos.centroids:', conteos.centroids);
-      console.log('🔍 MapLibreVisor - conteos.counts:', conteos.counts);
-      console.log('🔍 MapLibreVisor - primera feature:', conteos.centroids.features[0]);
       map.addSource(centroidsSrc, { type: 'geojson', data: conteos.centroids });
-      console.log('🔍 MapLibreVisor - Agregando capa de círculos...');
       map.addLayer({ id: centroidsLayer, type: 'circle', source: centroidsSrc, paint: { 'circle-radius': 18, 'circle-color': '#F77F26', 'circle-stroke-color': '#00000033', 'circle-stroke-width': 3 } });
-      console.log('🔍 MapLibreVisor - Agregando capa de texto...');
       // ✅ ARREGLADO: Asegurar que el texto siempre se muestre, incluso si count es 0
       map.addLayer({ 
         id: centroidsText, 
@@ -481,26 +459,17 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
         }, 
         paint: { 'text-color': '#fff' } 
       });
-      console.log('🔍 MapLibreVisor - Capas de centroides creadas exitosamente');
     } else {
-      console.log('🔍 MapLibreVisor - Actualizando datos de centroides...');
-      console.log('🔍 MapLibreVisor - conteos.counts al actualizar:', conteos.counts);
-      console.log('🔍 MapLibreVisor - conteos.centroids al actualizar:', conteos.centroids);
       
       // Verificar que la fuente existe antes de actualizar
       const source = map.getSource(centroidsSrc) as GeoJSONSource;
       if (source) {
-        console.log('🔍 MapLibreVisor - Fuente encontrada, actualizando...');
         source.setData(conteos.centroids);
-        console.log('🔍 MapLibreVisor - Datos actualizados exitosamente');
         
         // Forzar la actualización de las capas después de un breve delay
         setTimeout(() => {
-          console.log('🔍 MapLibreVisor - Forzando actualización de capas...');
           
           // Verificar el estado actual de las capas
-          const currentVisibility = map.getLayoutProperty(centroidsLayer, 'visibility');
-          console.log('🔍 MapLibreVisor - Visibilidad actual:', currentVisibility);
           
           // Forzar re-renderizado de las capas
           map.setLayoutProperty(centroidsLayer, 'visibility', 'none');
@@ -509,40 +478,27 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           map.setLayoutProperty(centroidsText, 'visibility', 'visible');
           
           // Verificar que las capas están visibles
-          const newVisibility = map.getLayoutProperty(centroidsLayer, 'visibility');
-          console.log('🔍 MapLibreVisor - Nueva visibilidad:', newVisibility);
           
           // Verificar el estado de la fuente después de la actualización
           const sourceData = (map.getSource(centroidsSrc) as GeoJSONSource).getData();
-          console.log('🔍 MapLibreVisor - Datos de la fuente después de actualizar:', sourceData);
           
           // Si es una promesa, esperar a que se resuelva
           if (sourceData && typeof sourceData.then === 'function') {
-            console.log('🔍 MapLibreVisor - Esperando a que se resuelva la promesa...');
             sourceData.then((resolvedData: any) => {
-              console.log('🔍 MapLibreVisor - Datos resueltos:', resolvedData);
               
               // Verificar que los features tienen count reales
               if (resolvedData && resolvedData.features) {
-                console.log('🔍 MapLibreVisor - Verificando features resueltos...');
-                resolvedData.features.forEach((feature: any, index: number) => {
-                  if (index < 5) { // Solo mostrar los primeros 5
-                    console.log(`🔍 MapLibreVisor - Feature ${index}:`, {
-                      properties: feature.properties,
-                      count: feature.properties?.count
-                    });
+                resolvedData.features.forEach((_feature: any, _index: number) => {
+                  if (_index < 5) { // Solo mostrar los primeros 5
                   }
                 });
               }
-            }).catch((error: any) => {
-              console.log('🔍 MapLibreVisor - Error al resolver promesa:', error);
+            }).catch((_error: any) => {
             });
           }
           
-          console.log('🔍 MapLibreVisor - Capas actualizadas');
         }, 100);
       } else {
-        console.log('🔍 MapLibreVisor - ERROR: Fuente no encontrada');
       }
     }
 
@@ -554,13 +510,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       const nombre = f?.properties && (f.properties as any).NOMBRE as string;
       const count = f?.properties && (f.properties as any).count as number;
       
-      console.log('🔍 MapLibreVisor - Click en cluster naranja:', {
-        feature: f,
-        codigo: codigo,
-        nombre: nombre,
-        count: count,
-        properties: f?.properties
-      });
       
       setSelectedCodigo(codigo || null);
       if (onComunaChange) onComunaChange(codigo || null);
@@ -571,12 +520,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
         const currentZoom = map.getZoom();
         const targetZoom = Math.min(currentZoom + 3, 16); // Zoom máximo de 16
         
-        console.log('🔍 MapLibreVisor - Expandiendo cluster:', {
-          currentZoom,
-          targetZoom,
-          codigo,
-          nombre
-        });
         
         // Hacer zoom al centro del cluster
         map.easeTo({
@@ -633,13 +576,11 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   // NUEVO: Reaccionar a cambios en selectedCodigo para mostrar puntos
   useEffect(() => {
     if (mapLoaded && selectedCodigo) {
-      console.log('🔍 MapLibreVisor - selectedCodigo cambió, actualizando visibilidad:', selectedCodigo);
       
       // Forzar actualización de visibilidad después de un breve delay
       setTimeout(() => {
         const map = mapRef.current;
         if (map && map.getLayer('obras-points')) {
-          console.log('🔍 MapLibreVisor - Forzando visibilidad de puntos para comuna:', selectedCodigo);
           map.setLayoutProperty('obras-points', 'visibility', 'visible');
         }
       }, 200);
@@ -677,7 +618,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
             const isValidLon = lonNum >= -75.7 && lonNum <= -75.4;
             
             if (!isValidLat || !isValidLon) {
-              console.log('🔍 MapLibreVisor - Coordenadas fuera de límites:', { lat: latNum, lon: lonNum, id: o.id });
               return null; // Excluir puntos fuera de límites
             }
             
@@ -781,7 +721,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
         map.fitBounds([[limitedBbox[0], limitedBbox[1]], [limitedBbox[2], limitedBbox[3]]], { padding: 60, duration: 600 });
         }
               } catch (error) {
-      console.log('🔍 MapLibreVisor - Error al ajustar vista:', error);
               }
 
       // Mostrar puntos con lógica mejorada
@@ -807,7 +746,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
         // Crear filtro para mostrar solo puntos de la comuna seleccionada
         let filter: any = ['boolean', true];
         if (selectedCodigo) {
-          console.log('🔍 MapLibreVisor - Aplicando filtro para comuna:', selectedCodigo);
           // Filtrar por comunaCodigo usando diferentes formatos posibles
           const codigoStr = String(selectedCodigo);
           const nombreComuna = codigoToComuna[selectedCodigo] || '';
@@ -832,80 +770,44 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
             // NUEVO: Buscar por substring que contenga el nombre
             ['in', nombreComuna, ['get', 'comunaCodigo']]
           ];
-          console.log('🔍 MapLibreVisor - Filtro aplicado para comuna:', selectedCodigo, 'nombre:', nombreComuna);
-          console.log('🔍 MapLibreVisor - Filtro completo:', filter);
         }
         
-        console.log('🔍 MapLibreVisor - Filtro aplicado:', filter);
         
         // Verificar que la capa existe y tiene datos
         const layer = map.getLayer(ptsLayer);
         if (layer) {
-          console.log('🔍 MapLibreVisor - Capa de puntos encontrada');
           const source = map.getSource('obras-src');
           if (source) {
-            console.log('🔍 MapLibreVisor - Fuente de puntos encontrada');
             const sourceData = (source as GeoJSONSource).getData();
-            console.log('🔍 MapLibreVisor - Datos de fuente de puntos:', sourceData);
             
             // Si es una promesa, esperar a que se resuelva
             if (sourceData && typeof sourceData.then === 'function') {
-              console.log('🔍 MapLibreVisor - Esperando a que se resuelva la promesa de puntos...');
               sourceData.then((resolvedData: any) => {
-                console.log('🔍 MapLibreVisor - Datos de puntos resueltos:', resolvedData);
                 
                 // Verificar que los features tienen datos
                 if (resolvedData && resolvedData.features) {
-                  console.log('🔍 MapLibreVisor - Features de puntos:', resolvedData.features.length);
-                  console.log('🔍 MapLibreVisor - Primer feature de puntos:', resolvedData.features[0]);
                   
                     // Verificar las propiedades del primer feature
                     const firstFeature = resolvedData.features[0];
                     if (firstFeature && firstFeature.properties) {
-                      console.log('🔍 MapLibreVisor - Propiedades del primer feature:', firstFeature.properties);
                       
                       // Verificar si tiene comunaCodigo
-                      const comunaCodigo = firstFeature.properties.comunaCodigo || 
-                                         firstFeature.properties['COMUNA O CORREGIMIENTO'] || 
-                                         firstFeature.properties.comuna || 
-                                         firstFeature.properties.CODIGO;
-                      console.log('🔍 MapLibreVisor - comunaCodigo del primer feature:', comunaCodigo);
                       
                       // NUEVO: Mostrar algunos features de ejemplo para debugging
-                      console.log('🔍 MapLibreVisor - Primeros 5 features comunaCodigo:');
-                      resolvedData.features.slice(0, 5).forEach((feature: any, index: number) => {
-                        const codigo = feature.properties?.comunaCodigo || 'N/A';
-                        console.log(`  Feature ${index}: ${codigo}`);
-                      });
                       
                       // Verificar si el filtro está funcionando
-                      console.log('🔍 MapLibreVisor - Verificando filtro...');
-                      console.log('🔍 MapLibreVisor - selectedCodigo:', selectedCodigo);
-                      console.log('🔍 MapLibreVisor - comunaCodigo matches selectedCodigo:', comunaCodigo === selectedCodigo);
                       
                       // NUEVO: Verificar si hay features que coincidan con el selectedCodigo
-                      const matchingFeatures = resolvedData.features.filter((f: any) => {
-                        const codigo = f.properties?.comunaCodigo || '';
-                        const sel = selectedCodigo || '';
-                        const alt = sel ? (codigoToComuna as Record<string, string>)[sel] || '' : '';
-                        return (sel && codigo.includes(sel)) || (alt && codigo.includes(alt));
-                      });
-                      console.log('🔍 MapLibreVisor - Features que coinciden con selectedCodigo:', matchingFeatures.length);
                     
                     // Verificar la visibilidad de la capa
-                    const layerVisibility = map.getLayoutProperty(ptsLayer, 'visibility');
-                    console.log('🔍 MapLibreVisor - Visibilidad de la capa de puntos:', layerVisibility);
                   }
                 }
-              }).catch((error: any) => {
-                console.log('🔍 MapLibreVisor - Error al resolver promesa de puntos:', error);
+              }).catch((_error: any) => {
               });
             }
           } else {
-            console.log('🔍 MapLibreVisor - ERROR: Fuente de puntos no encontrada');
           }
         } else {
-          console.log('🔍 MapLibreVisor - ERROR: Capa de puntos no encontrada');
         }
         
           (map as any).setFilter(ptsLayer, filter);
@@ -918,7 +820,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       
       // NUEVO: Forzar actualización cuando se selecciona una comuna
       if (selectedCodigo) {
-        console.log('🔍 MapLibreVisor - Comuna seleccionada, forzando visibilidad de puntos:', selectedCodigo);
         // Aplicar visibilidad inmediatamente
         setTimeout(() => {
           applyVisibilityAndFilter();
@@ -953,19 +854,6 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       const obra = obrasEnriquecidas && Array.isArray(obrasEnriquecidas) ? obrasEnriquecidas.find(o => o.id === p.id) || null : null;
       const { nombre } = p;
       
-      console.log('🔍 MapLibreVisor - Click en punto individual:', {
-        id: p.id,
-        nombre: nombre,
-        obra: obra,
-        comunaCodigo: obra?.comunaCodigo,
-        comunaNombre: (obra as any)?.comunaNombre,
-        dependencia: (obra as any)?.[getFieldNames.dependencia],
-        porcentaje: (obra as any)?.[getFieldNames.porcentaje],
-        imagenUrl: (obra as any)?.imagenUrl,
-        alertaPresencia: (obra as any)?.[getFieldNames.alertaPresencia],
-        // Log de todos los campos disponibles para debugging
-        allFields: obra ? Object.keys(obra) : 'No obra found'
-      });
       map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 15), duration: 600 });
       if (clickPopupRef.current) clickPopupRef.current.remove();
       

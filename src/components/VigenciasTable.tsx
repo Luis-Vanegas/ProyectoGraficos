@@ -1,4 +1,4 @@
-import { nf } from '../utils/utils/metrics';
+import { nf, cf } from '../utils/utils/metrics';
 import type { VigenciaRow } from '../utils/utils/metrics';
 
 type Props = {
@@ -6,25 +6,14 @@ type Props = {
   title?: string;
 };
 
-function formatMoneyAbbr(value: number): string {
+function formatMoneyCOP(value: number): string {
   if (!Number.isFinite(value) || value === 0) return '$0';
-  const abs = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  // Unidades coloquiales en español: mil millones ~ billón (1e12) para CO abreviamos como bill.
-  if (abs >= 1_000_000_000_000) {
-    return `${sign}$${(abs / 1_000_000_000_000).toFixed(2)} bill.`;
+  // Mostrar valor real en COP con separadores (sin abreviaturas)
+  try {
+    return cf.format(value);
+  } catch {
+    return `$${nf.format(Math.round(value))}`;
   }
-  if (abs >= 1_000_000_000) {
-    return `${sign}$${(abs / 1_000_000_000).toFixed(2)} mil M`;
-  }
-  if (abs >= 1_000_000) {
-    return `${sign}$${(abs / 1_000_000).toFixed(2)} M`; // millones
-  }
-  if (abs >= 1_000) {
-    return `${sign}$${(abs / 1_000).toFixed(2)} mil`;
-  }
-  return `${sign}$${nf.format(abs)}`;
 }
 
 export default function VigenciasTable({ data, title }: Props) {
@@ -53,9 +42,9 @@ export default function VigenciasTable({ data, title }: Props) {
               <tr key={row.year}>
                 <td className="vig-year">{row.year}</td>
                 <td className="vig-num">{nf.format(row.estimatedCount)}</td>
-                <td className="vig-money">{formatMoneyAbbr(row.estimatedInvestment)}</td>
+                <td className="vig-money">{formatMoneyCOP(row.estimatedInvestment)}</td>
                 <td className="vig-num">{nf.format(row.realCount)}</td>
-                <td className="vig-money">{formatMoneyAbbr(row.realInvestment)}</td>
+                <td className="vig-money">{formatMoneyCOP(row.realInvestment)}</td>
               </tr>
             ))}
           </tbody>

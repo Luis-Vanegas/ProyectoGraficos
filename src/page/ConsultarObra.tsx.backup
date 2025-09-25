@@ -8,17 +8,13 @@ import {
   type Row
 } from '../utils/utils/metrics';
 import Navigation from '../components/Navigation';
-import GanttChartModern from '../components/GanttChartModern';
+import GanttChart from '../components/GanttChart';
 import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
-
-// Importar las imágenes de las comunas
-import comuna1Image from '../assets/comuna1.jpeg';
-import comuna3Image from '../assets/comuna3.jpg';
 
 export default function ConsultarObra() {
   const [rows, setRows] = useState<Row[]>([]);
   const [filters, setFilters] = useState<Filters>({});
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
   // Carga inicial
   useEffect(() => {
@@ -67,46 +63,36 @@ export default function ConsultarObra() {
     setFilters({});
   }, []);
 
-
-
-  // Función para obtener el icono apropiado según el tipo de dato
-  const getIconForField = (fieldType: string) => {
-    const iconMap: { [key: string]: string } = {
-      'comuna': '📍',
-      'empleos': '👥',
-      'area': '📏',
-      'intervencion': '🔧',
-      'espacio': '🏞️',
-      'contratista': '🏗️',
-      'dependencia': '🏛️',
-      'alerta': '⚠️',
-      'criterio': '📋'
-    };
-    return iconMap[fieldType] || '📊';
+  // Función para calcular la fecha de entrega real corregida
+  const calcularEntregaRealCorregida = (data: Row | null): Date | null => {
+    if (!data) return null;
+    
+    const fechaRealEntrega = data[F.fechaRealDeEntrega];
+    const fechaFinRealEjecucion = data[F.fechaFinRealEjecucionObra];
+    
+    // Convertir fechas a objetos Date si son strings
+    const fechaRealEntregaDate = fechaRealEntrega ? new Date(fechaRealEntrega) : null;
+    const fechaFinRealEjecucionDate = fechaFinRealEjecucion ? new Date(fechaFinRealEjecucion) : null;
+    
+    // Fecha de referencia: 1 de enero de 2000
+    const fechaReferencia = new Date(2000, 0, 1);
+    
+    // Lógica: si FECHA REAL DE ENTREGA es 2000-01-01 y fecha_fin_real_ejecucion_obra no es 2000-01-01,
+    // entonces usar fecha_fin_real_ejecucion_obra, sino usar FECHA REAL DE ENTREGA
+    if (fechaRealEntregaDate && 
+        fechaRealEntregaDate.getTime() === fechaReferencia.getTime() && 
+        fechaFinRealEjecucionDate && 
+        fechaFinRealEjecucionDate.getTime() !== fechaReferencia.getTime()) {
+      return fechaFinRealEjecucionDate;
+    }
+    
+    return fechaRealEntregaDate;
   };
 
-  // Función para obtener la imagen de la comuna
-  const getComunaImage = (comunaName: string) => {
-    const comunaImages: { [key: string]: string } = {
-      '01 - Popular': comuna1Image,
-      '03 - Manrique': comuna3Image,
-      'Popular': comuna1Image,
-      'Manrique': comuna3Image,
-      // Agregar más comunas según tengas las imágenes
-    };
-    
-    // Buscar por nombre exacto o por coincidencia parcial
-    const exactMatch = comunaImages[comunaName];
-    if (exactMatch) return exactMatch;
-    
-    // Buscar coincidencia parcial
-    const partialMatch = Object.keys(comunaImages).find(key => 
-      comunaName.toLowerCase().includes(key.toLowerCase()) || 
-      key.toLowerCase().includes(comunaName.toLowerCase())
-    );
-    
-    return partialMatch ? comunaImages[partialMatch] : null;
-  };
+  // Calcular la fecha de entrega real corregida para los datos actuales
+  const entregaRealCorregida = useMemo(() => {
+    return calcularEntregaRealCorregida(currentData || null);
+  }, [currentData]);
 
 
   // Datos para gráficos de etapas (donas)
@@ -202,8 +188,6 @@ export default function ConsultarObra() {
       className="consultar-obra-container"
       style={{
         minHeight: '100vh',
-        width: '100%',
-        display: 'block',
         background: 'linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%)',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
       }}
@@ -321,14 +305,233 @@ export default function ConsultarObra() {
 
       {/* Contenido principal */}
       <div className="main-content">
-        {/* Layout principal con dos columnas */}
-        <div className="main-layout">
-          {/* Columna izquierda - Fechas y Descripción */}
-          <div className="left-column">
+        {/* Descripción del proyecto */}
+        <div className="project-selection-section">
+          <div className="description-section">
+            <label className="description-label">Descripción</label>
+            <div className="description-content">
+              {currentData ? (
+                <p>
+                  {String(currentData[F.descripcion] ?? 'Sin descripción')}
+                </p>
+              ) : (
+                <p>Usa el botón de filtros para seleccionar un proyecto u obra.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sección de detalles del proyecto */}
+        <div 
+          className="project-details-section"
+        >
+          <div className="details-grid">
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Comuna / Corregimiento</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.comunaOCorregimiento] ?? '01 - Popular') : '01 - Popular'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '85%'}}></div>
+              </div>
+            </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Empleos generados</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.empleosGenerados] ?? '6298') : '6298'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '75%'}}></div>
+              </div>
+            </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Área Construida m2</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.areaConstruida] ?? '498573') : '498573'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '90%'}}></div>
+                  </div>
+                </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Tipo de intervención</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.tipoDeIntervecion] ?? 'Restitución') : 'Restitución'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '60%'}}></div>
+                  </div>
+                </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Área espacio público m2</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.areaEspacioPublico] ?? '272517') : '272517'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '80%'}}></div>
+                  </div>
+                </div>
+            
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Contratista</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.contratistaOperador] ?? 'No especificado') : 'No especificado'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '70%'}}></div>
+                  </div>
+                </div>
+
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Dependencia</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.dependencia] ?? 'Agencia de Educación Superior de Medell...') : 'Agencia de Educación Superior de Medell...'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '95%'}}></div>
+                  </div>
+                </div>
+
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Alerta</span>
+              <span className="detail-value">
+                {currentData ? String(currentData[F.descripcionDelRiesgo] ?? 'Sin alertas') : 'Sin alertas'}
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '30%'}}></div>
+              </div>
+            </div>
+
+            <div 
+              className="detail-item"
+              style={{
+                background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)',
+                border: '1px solid #79BC99',
+                borderRadius: '10px',
+                padding: '15px',
+                boxShadow: '0 4px 15px rgba(121, 188, 153, 0.1)'
+              }}
+            >
+              <span className="detail-label" style={{color: '#2d3748', fontWeight: '600'}}>Criterio técnico</span>
+              <span className="detail-value">
+                No especificado
+              </span>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{width: '50%'}}></div>
+                  </div>
+                </div>
+          </div>
+        </div>
+
+        {/* Sección de resumen financiero */}
+        <div 
+          className="financial-overview-section"
+        >
+          <div className="financial-cards">
+            <div className="financial-card total-investment">
+              <div className="financial-label">INVERSIÓN TOTAL</div>
+              <div className="financial-value">
+                {currentData ? 
+                  `$${((Number(currentData[F.costoTotalActualizado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
+                  '$10,69 bill.'
+                }
+            </div>
+          </div>
+
+            <div className="financial-card budget-executed">
+              <div className="financial-label">PRESUPUESTO EJECUTADO</div>
+              <div className="financial-value">
+                {currentData ? 
+                  `$${((Number(currentData[F.presupuestoEjecutado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
+                  '$2.29 bill.'
+                }
+              </div>
+            </div>
+            </div>
+          </div>
+
         {/* Sección de fechas de entrega */}
-            <div className="delivery-dates-section-left">
+        <div 
+          className="delivery-dates-section"
+        >
           <h3 className="delivery-dates-title" style={{color: '#2d3748', fontWeight: '600'}}>Fechas de Entrega</h3>
-              <div className="delivery-dates-grid-left">
+          <div className="delivery-dates-grid">
             <div className="delivery-date-card estimated">
               <div className="delivery-date-label">FECHA ESTIMADA DE ENTREGA</div>
               <div className="delivery-date-value">
@@ -340,9 +543,9 @@ export default function ConsultarObra() {
                   }) : 
                   'No especificada'
                 }
-          </div>
-        </div>
-
+              </div>
+            </div>
+            
             <div className="delivery-date-card real">
               <div className="delivery-date-label">FECHA REAL DE ENTREGA</div>
               <div className="delivery-date-value">
@@ -357,182 +560,33 @@ export default function ConsultarObra() {
               </div>
             </div>
             
+            <div className="delivery-date-card corrected">
+              <div className="delivery-date-label">ENTREGA REAL</div>
+              <div className="delivery-date-value">
+                {entregaRealCorregida ? 
+                  entregaRealCorregida.toLocaleDateString('es-CO', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }) : 
+                  'No disponible'
+                }
               </div>
-            </div>
-            
-            {/* Descripción debajo de las fechas */}
-            <div className="description-card">
-              <div className="card-header">
-                <span className="detail-icon">{getIconForField('criterio')}</span>
-                <span className="card-title">Descripción</span>
-                  </div>
-              <div className="description-content-new">
-              {currentData ? (
-                  String(currentData[F.descripcion] ?? 'Sin descripción')
-              ) : (
-                  'Usa el botón de filtros para seleccionar un proyecto u obra.'
-              )}
-                </div>
-                  </div>
-                </div>
-            
-          {/* Columna derecha - Detalles y métricas */}
-          <div className="right-column">
-            {/* Sección de métricas financieras */}
-            <div className="financial-section">
-              <div className="financial-card total-investment">
-                <div className="financial-label">INVERSIÓN TOTAL</div>
-                <div className="financial-value">
-                  {currentData ? 
-                    `$${((Number(currentData[F.costoTotalActualizado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
-                    '$10,69 bill.'
-                  }
-                  </div>
-                </div>
-              <div className="financial-card budget-executed">
-                <div className="financial-label">PRESUPUESTO EJECUTADO</div>
-                <div className="financial-value">
-                  {currentData ? 
-                    `$${((Number(currentData[F.presupuestoEjecutado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
-                    '$2.29 bill.'
-                  }
-                  </div>
-                </div>
-              <div className="financial-card budget-2024-2025">
-                <div className="financial-label">PRESUPUESTO 2024-2025</div>
-                <div className="financial-value">
-                  {currentData ? 
-                    `$${((Number(currentData[F.costoTotalActualizado] ?? 0) * 1.15 / 1000000000).toFixed(2))} bill.` : 
-                    '$12.29 bill.'
-                  }
-                </div>
-                  </div>
-                </div>
-
-              {/* Grid de detalles organizados */}
-              <div className="details-grid-new">
-                {/* Comuna con imagen */}
-                <div className="detail-card">
-                  <div className="detail-header">
-                    <div className="comuna-image-container">
-                      {(() => {
-                        const comunaName = currentData ? String(currentData[F.comunaOCorregimiento] ?? '01 - Popular') : '01 - Popular';
-                        const imageSrc = getComunaImage(comunaName);
-                        
-                        if (imageSrc) {
-                          return (
-                            <img 
-                              src={imageSrc} 
-                              alt={`Comuna ${comunaName}`} 
-                              className="comuna-image"
-                              onError={(e) => {
-                                console.log('Error loading image:', imageSrc);
-                                e.currentTarget.style.display = 'none';
-                              }}
-                              onLoad={() => console.log('Image loaded successfully:', imageSrc)}
-                            />
-                          );
-                        } else {
-                          console.log('No image found for comuna:', comunaName);
-                          return <span className="detail-icon">{getIconForField('comuna')}</span>;
-                        }
-                      })()}
-              </div>
-                    <span className="detail-label">Comuna / Corregimiento</span>
-            </div>
-                  <div className="detail-value">
-                {currentData ? String(currentData[F.comunaOCorregimiento] ?? '01 - Popular') : '01 - Popular'}
-                  </div>
-                </div>
-            
-                {/* Empleos generados */}
-                <div className="detail-card">
-                  <div className="detail-header">
-                    <span className="detail-icon">{getIconForField('empleos')}</span>
-                    <span className="detail-label">Empleos generados</span>
-                  </div>
-                  <div className="detail-value">
-                {currentData ? String(currentData[F.empleosGenerados] ?? '6298') : '6298'}
-          </div>
-        </div>
-
-                {/* Área Construida */}
-                <div className="detail-card">
-                  <div className="detail-header">
-                    <span className="detail-icon">{getIconForField('area')}</span>
-                    <span className="detail-label">Área Construida m2</span>
-                  </div>
-                  <div className="detail-value">
-                {currentData ? String(currentData[F.areaConstruida] ?? '498573') : '498573'}
-            </div>
-          </div>
-
-                {/* Tipo de intervención */}
-                <div className="detail-card">
-                  <div className="detail-header">
-                    <span className="detail-icon">{getIconForField('intervencion')}</span>
-                    <span className="detail-label">Tipo de intervención</span>
-              </div>
-                  <div className="detail-value">
-                {currentData ? String(currentData[F.tipoDeIntervecion] ?? 'Restitución') : 'Restitución'}
-            </div>
-            </div>
-
-                {/* Área espacio público */}
-                <div className="detail-card">
-                  <div className="detail-header">
-                    <span className="detail-icon">{getIconForField('espacio')}</span>
-                    <span className="detail-label">Área espacio público m2</span>
-                  </div>
-                  <div className="detail-value">
-                {currentData ? String(currentData[F.areaEspacioPublico] ?? '272517') : '272517'}
-            </div>
-          </div>
-
-                {/* Contratista */}
-                <div className="detail-card">
-                  <div className="detail-header">
-                    <span className="detail-icon">{getIconForField('contratista')}</span>
-                    <span className="detail-label">Contratista</span>
-                  </div>
-                  <div className="detail-value">
-                {currentData ? String(currentData[F.contratistaOperador] ?? 'No especificado') : 'No especificado'}
-              </div>
-            </div>
-            
-                {/* Dependencia */}
-                <div className="detail-card">
-                  <div className="detail-header">
-                    <span className="detail-icon">{getIconForField('dependencia')}</span>
-                    <span className="detail-label">Dependencia</span>
-              </div>
-                  <div className="detail-value">
-                {currentData ? String(currentData[F.dependencia] ?? 'Agencia de Educación Superior de Medell...') : 'Agencia de Educación Superior de Medell...'}
-              </div>
-            </div>
-            
-                {/* Alerta */}
-                <div className="detail-card">
-                  <div className="detail-header">
-                    <span className="detail-icon">{getIconForField('alerta')}</span>
-                    <span className="detail-label">Alerta</span>
-              </div>
-                  <div className="detail-value">
-                {currentData ? String(currentData[F.descripcionDelRiesgo] ?? 'Sin alertas') : 'Sin alertas'}
-              </div>
-            </div>
-            
+              <div className="delivery-date-note">
+                {entregaRealCorregida && currentData && currentData[F.fechaRealDeEntrega] && 
+                 new Date(currentData[F.fechaRealDeEntrega] as string).getTime() === new Date(2000, 0, 1).getTime() ? 
+                  'Calculada automáticamente' : 
+                  'Fecha original'
+                }
               </div>
             </div>
           </div>
         </div>
 
-
-
-        {/* Contenedor para las secciones inferiores */}
-        <div className="bottom-sections-container">
         {/* Sección de etapas con gráficos de dona */}
-          <div className="stages-section">
+        <div 
+          className="stages-section"
+        >
           <h3 className="stages-title" style={{color: '#2d3748', fontWeight: '600'}}>Etapas</h3>
           <div className="stages-grid">
             {stagesData.map((stage, index) => (
@@ -548,10 +602,12 @@ export default function ConsultarObra() {
         </div>
 
         {/* Gráfico de Gantt */}
-          <div className="gantt-section">
+        <div 
+          className="gantt-section"
+        >
           <h3 className="gantt-title" style={{color: '#2d3748', fontWeight: '600'}}>Cronograma del Proyecto</h3>
           <div className="gantt-container">
-            <GanttChartModern 
+            <GanttChart 
               rows={currentData ? [currentData] : []} 
               limit={10}
               mode="phase"
@@ -559,33 +615,24 @@ export default function ConsultarObra() {
             </div>
           </div>
         </div>
-          {/* Estilos CSS */}
-        <style>{`
-        html, body {
-          overflow-x: hidden !important;
-        }
+      </div>
 
+      {/* Estilos CSS profesionales y responsive */}
+      <style>{`
         .consultar-obra-container {
           min-height: 100vh !important;
-          width: 100% !important;
-          display: block !important;
-          margin: 0 !important;
-          padding: 0 !important;
           background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%) !important;
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-          box-sizing: border-box !important;
         }
 
         .main-content {
-          width: 100%;
-          display: block;
-          padding: 95px 10px 15px 10px;
-          box-sizing: border-box;
-          margin: 0;
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 100px 20px 20px 20px;
         }
 
         /* ========================================================================
-            SECCION DE FILTROS - DISENO MEJORADO
+            SECCIÓN DE FILTROS - DISEÑO MEJORADO
         ======================================================================== */
         /* Drawer lateral de filtros */
         .filters-drawer {
@@ -795,169 +842,7 @@ export default function ConsultarObra() {
         }
 
         /* ========================================================================
-            NUEVO LAYOUT PRINCIPAL - DISENO PROFESIONAL
-        ======================================================================== */
-        .main-layout {
-          display: grid;
-          grid-template-columns: minmax(260px, 22%) 1fr;
-          gap: 20px;
-          margin-bottom: 0px;
-          align-items: start;
-          width: 100%;
-          box-sizing: border-box;
-          grid-auto-rows: min-content;
-        }
-
-        .left-column {
-          display: flex;
-          flex-direction: column;
-          gap: 0;
-          align-self: start;
-        }
-
-        .right-column {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-          width: 100%;
-          min-width: 0;
-          align-self: start;
-        }
-
-        /* Sección de fechas en columna izquierda */
-        .delivery-dates-section-left {
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-radius: 10px;
-          padding: 12px;
-          box-shadow: 0 6px 20px rgba(121, 188, 153, 0.1);
-          border: 1px solid #79BC99;
-          margin-bottom: 8px;
-          flex-shrink: 0;
-        }
-
-        .delivery-dates-grid-left {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 8px;
-          width: 100%;
-        }
-
-        /* Tarjeta de descripción mejorada */
-        .description-card {
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-          border-radius: 12px;
-          padding: 12px;
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-          border: 1px solid #e9ecef;
-          display: flex;
-          flex-direction: column;
-          height: auto;
-          flex: 1;
-        }
-
-        .card-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 15px;
-          padding-bottom: 15px;
-          border-bottom: 2px solid #e9ecef;
-        }
-
-        .card-title {
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: #2d3748;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .description-content-new {
-          font-size: 0.85rem;
-          line-height: 1.4;
-          color: #4a5568;
-          text-align: justify;
-          flex: 1;
-          padding-top: 8px;
-          padding-right: 8px;
-        }
-
-        /* Sección financiera mejorada */
-        .financial-section {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 15px;
-          margin-bottom: 20px;
-          width: 100%;
-        }
-
-        .financial-card {
-          background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%);
-          color: white;
-          border-radius: 10px;
-          padding: 14px;
-          text-align: center;
-          box-shadow: 0 6px 20px rgba(121, 188, 153, 0.25);
-          transition: transform 0.3s ease;
-        }
-
-        .financial-card:hover {
-          transform: translateY(-3px);
-        }
-
-        .financial-card.budget-executed {
-          background: linear-gradient(135deg, #3B8686 0%, #2E8B57 100%);
-        }
-
-        .financial-card.budget-2024-2025 {
-          background: linear-gradient(135deg, #2E8B57 0%, #228B22 100%);
-        }
-
-        .financial-label {
-          font-size: 0.8rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          margin-bottom: 8px;
-          opacity: 0.9;
-        }
-
-        .financial-value {
-          font-size: 1.5rem;
-          font-weight: 700;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Grid de detalles mejorado */
-        .details-grid-new {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
-          width: 100%;
-          align-content: start;
-          grid-auto-rows: min-content;
-        }
-
-        .detail-card {
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-          border-radius: 10px;
-          padding: 10px;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e9ecef;
-          transition: all 0.3s ease;
-          display: flex;
-          flex-direction: column;
-          height: auto;
-        }
-
-        .detail-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-          border-color: #79BC99;
-        }
-
-        /* ========================================================================
-            SECCION DE SELECCION DE PROYECTOS - MANTENIDA PARA COMPATIBILIDAD
+            SECCIÓN DE SELECCIÓN DE PROYECTOS
         ======================================================================== */
         .project-selection-section {
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%) !important;
@@ -1036,7 +921,7 @@ export default function ConsultarObra() {
         }
 
         /* ========================================================================
-            SECCION DE DETALLES DEL PROYECTO
+            SECCIÓN DE DETALLES DEL PROYECTO
         ======================================================================== */
         .project-details-section {
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
@@ -1077,63 +962,20 @@ export default function ConsultarObra() {
           font-size: 1rem !important;
         }
 
-        /* Estilos mejorados para los headers con iconos */
-        .detail-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
-          padding-bottom: 6px;
-          border-bottom: 1px solid #e9ecef;
-        }
-
-        .detail-icon {
-          font-size: 1.1rem;
-          color: #79BC99;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 24px;
-          height: 24px;
-          background: rgba(121, 188, 153, 0.1);
-          border-radius: 5px;
-        }
-
-        .detail-label {
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #4a5568;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .detail-value {
-          font-size: 0.95rem;
-          font-weight: 600;
-          color: #2d3748;
-          line-height: 1.3;
-        }
-
-        /* Estilos mejorados para las imágenes de comunas */
-        .comuna-image-container {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          overflow: hidden;
-          border: 2px solid #79BC99;
-          background: rgba(121, 188, 153, 0.1);
-          flex-shrink: 0;
-        }
-
-        .comuna-image {
+        .progress-bar {
           width: 100%;
+          height: 8px;
+          background: rgba(121, 188, 153, 0.2);
+          border-radius: 4px;
+          overflow: hidden;
+          margin-top: 8px;
+        }
+
+        .progress-fill {
           height: 100%;
-          object-fit: cover;
-          object-position: center;
-          display: block;
+          background: linear-gradient(90deg, #79BC99 0%, #4E8484 100%);
+          border-radius: 4px;
+          transition: width 0.3s ease;
         }
 
         /* ========================================================================
@@ -1220,7 +1062,7 @@ export default function ConsultarObra() {
         }
 
         /* ========================================================================
-            SECCION DE RESUMEN FINANCIERO
+            SECCIÓN DE RESUMEN FINANCIERO
         ======================================================================== */
         .financial-overview-section {
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
@@ -1276,8 +1118,15 @@ export default function ConsultarObra() {
         }
 
         /* ========================================================================
-            SECCION DE FECHAS DE ENTREGA
+            SECCIÓN DE FECHAS DE ENTREGA
         ======================================================================== */
+        .delivery-dates-section {
+          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 6px 20px rgba(121, 188, 153, 0.1);
+          border: 1px solid #79BC99;
+        }
 
         .delivery-dates-title {
           margin: 0 0 18px 0 !important;
@@ -1291,13 +1140,14 @@ export default function ConsultarObra() {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 15px;
-          width: 100%;
+          max-width: 800px;
+          margin: 0 auto;
         }
 
         .delivery-date-card {
           text-align: center;
-          padding: 12px 10px;
-          border-radius: 10px;
+          padding: 18px 15px;
+          border-radius: 12px;
           box-shadow: 0 3px 12px rgba(0,0,0,0.08);
           transition: transform 0.3s ease;
           position: relative;
@@ -1348,32 +1198,20 @@ export default function ConsultarObra() {
         }
 
         /* ========================================================================
-            CONTENEDOR DE SECCIONES INFERIORES
-        ======================================================================== */
-        .bottom-sections-container {
-          width: 100%;
-          margin: 15px auto 0 auto;
-          box-sizing: border-box;
-        }
-
-        /* ========================================================================
-            SECCION DE ETAPAS
+            SECCIÓN DE ETAPAS
         ======================================================================== */
         .stages-section {
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-radius: 12px;
-          padding: 18px;
+          border-radius: 15px;
+          padding: 25px;
           box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
           border: 1px solid #79BC99;
-          width: 100%;
-          margin-bottom: 15px;
-          box-sizing: border-box;
         }
 
         .stages-title {
-          margin: 0 0 15px 0 !important;
+          margin: 0 0 25px 0 !important;
           color: #2d3748 !important;
-          font-size: 1.3rem !important;
+          font-size: 1.5rem !important;
           font-weight: 600 !important;
           text-align: center !important;
         }
@@ -1381,8 +1219,9 @@ export default function ConsultarObra() {
         .stages-grid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          gap: 10px;
-          width: 100%;
+          gap: 15px;
+          max-width: 1000px;
+          margin: 0 auto;
         }
 
         .stage-card {
@@ -1459,22 +1298,20 @@ export default function ConsultarObra() {
         }
 
         /* ========================================================================
-            SECCION DE GANTT
+            SECCIÓN DE GANTT
         ======================================================================== */
         .gantt-section {
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-radius: 12px;
-          padding: 18px;
+          border-radius: 15px;
+          padding: 25px;
           box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
           border: 1px solid #79BC99;
-          width: 100%;
-          box-sizing: border-box;
         }
 
         .gantt-title {
-          margin: 0 0 15px 0 !important;
+          margin: 0 0 25px 0 !important;
           color: #2d3748 !important;
-          font-size: 1.3rem !important;
+          font-size: 1.5rem !important;
           font-weight: 600 !important;
           text-align: center !important;
         }
@@ -1485,120 +1322,15 @@ export default function ConsultarObra() {
         }
 
         /* ========================================================================
-            DISENO RESPONSIVE COMPLETO Y OPTIMIZADO
+            DISEÑO RESPONSIVE COMPLETO Y OPTIMIZADO
         ======================================================================== */
-        
-        /* ========================================================================
-            RESPONSIVE DESIGN PARA NUEVO LAYOUT
-        ======================================================================== */
-        
-        /* Pantallas muy grandes (1600px+) */
-        @media (min-width: 1600px) {
-          .main-layout {
-            grid-template-columns: minmax(280px, 20%) 1fr;
-            gap: 25px;
-          }
-          
-          .details-grid-new {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-          }
-          
-          .financial-section {
-            gap: 18px;
-          }
-          
-          .right-column {
-            gap: 25px;
-          }
-        }
-        
-        /* Desktop estándar (1200px-1600px) */
-        @media (min-width: 1200px) and (max-width: 1599px) {
-          .main-layout {
-            grid-template-columns: minmax(270px, 25%) 1fr;
-            gap: 22px;
-          }
-          
-          .details-grid-new {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
-          }
-          
-          .financial-section {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-          }
-          
-          .right-column {
-            gap: 22px;
-          }
-        }
-
-        /* Tablets landscape (1000px-1200px) */
-        @media (min-width: 1000px) and (max-width: 1199px) {
-          .main-layout {
-            grid-template-columns: minmax(250px, 30%) 1fr;
-            gap: 20px;
-          }
-          
-          .details-grid-new {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-          }
-          
-          .financial-section {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-          }
-          
-          .financial-card {
-            padding: 12px;
-          }
-          
-          .financial-value {
-            font-size: 1.4rem;
-          }
-          
-          .right-column {
-            gap: 18px;
-          }
-        }
-
-        /* Tablets portrait (768px-1000px) */
-        @media (min-width: 768px) and (max-width: 999px) {
-          .main-layout {
-            grid-template-columns: 1fr;
-            gap: 20px;
-          }
-          
-          .description-card {
-            height: auto;
-            padding: 16px;
-          }
-          
-          .financial-section {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 18px;
-          }
-          
-          .details-grid-new {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-          }
-          
-          .right-column {
-            gap: 16px;
-          }
-        }
         
         /* ========================================================================
             TABLETS LANDSCAPE (1024px - 1200px)
         ======================================================================== */
         @media (max-width: 1200px) {
           .main-content {
-            padding: 105px 15px 15px 15px;
+            padding: 90px 15px 15px 15px;
           }
           .layout {
             grid-template-columns: 260px 1fr;
@@ -1645,7 +1377,7 @@ export default function ConsultarObra() {
           .delivery-dates-grid {
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
-            width: 100%;
+            max-width: 700px;
           }
           
           .delivery-date-card {
@@ -1659,7 +1391,7 @@ export default function ConsultarObra() {
           .stages-grid {
             grid-template-columns: repeat(5, 1fr);
             gap: 15px;
-            width: 100%;
+            max-width: 900px;
           }
           
           .stage-card {
@@ -1676,41 +1408,7 @@ export default function ConsultarObra() {
         ======================================================================== */
         @media (max-width: 1024px) {
           .main-content {
-            padding: 100px 12px 12px 12px;
-          }
-          
-          .main-layout {
-            grid-template-columns: 1fr;
-            gap: 25px;
-            min-height: auto;
-          }
-          
-          .description-card {
-            padding: 22px;
-            height: auto;
-          }
-          
-          .description-content-new {
-            font-size: 1rem;
-          }
-          
-          .financial-section {
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-          }
-          
-          .financial-card {
-            padding: 18px;
-          }
-          
-          .financial-value {
-            font-size: 1.7rem;
-          }
-          
-          .details-grid-new {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            padding: 85px 12px 12px 12px;
           }
           .filters-drawer {
             width: min(580px, 95vw);
@@ -1794,7 +1492,7 @@ export default function ConsultarObra() {
           .stages-grid {
             grid-template-columns: repeat(5, 1fr);
             gap: 12px;
-            width: 100%;
+            max-width: 800px;
           }
           
           .stage-card {
@@ -1818,63 +1516,9 @@ export default function ConsultarObra() {
         /* ========================================================================
             MÓVILES LANDSCAPE (480px - 768px)
         ======================================================================== */
-        /* Móviles landscape (480px-768px) */
-        @media (min-width: 480px) and (max-width: 768px) {
+        @media (max-width: 768px) {
           .main-content {
-            padding: 85px 8px 10px 8px;
-          }
-          
-          .main-layout {
-            grid-template-columns: 1fr;
-            gap: 16px;
-          }
-          
-          .description-card {
-            padding: 14px;
-            height: auto;
-          }
-          
-          .card-title {
-            font-size: 0.95rem;
-          }
-          
-          .description-content-new {
-            font-size: 0.85rem;
-            line-height: 1.4;
-          }
-          
-          .financial-section {
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 14px;
-          }
-          
-          .financial-card {
-            padding: 16px;
-          }
-          
-          .financial-value {
-            font-size: 1.5rem;
-          }
-          
-          .details-grid-new {
-            grid-template-columns: 1fr;
-            gap: 12px;
-          }
-          
-          .detail-card {
-            padding: 16px;
-          }
-          
-          .detail-icon {
-            width: 24px;
-            height: 24px;
-            font-size: 1.1rem;
-          }
-          
-          .comuna-image-container {
-            width: 28px;
-            height: 28px;
+            padding: 80px 10px 10px 10px;
           }
           .filters-drawer {
             width: min(500px, 92vw);
@@ -1994,7 +1638,7 @@ export default function ConsultarObra() {
         ======================================================================== */
         @media (max-width: 480px) {
           .main-content {
-            padding: 90px 8px 8px 8px;
+            padding: 75px 8px 8px 8px;
           }
           .filters-drawer {
             width: min(450px, 90vw);
@@ -2224,7 +1868,7 @@ export default function ConsultarObra() {
         ======================================================================== */
         @media (max-width: 320px) {
           .main-content {
-            padding: 85px 4px 4px 4px;
+            padding: 65px 4px 4px 4px;
             gap: 10px;
           }
           .filters-drawer {

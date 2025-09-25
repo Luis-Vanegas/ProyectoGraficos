@@ -107,7 +107,6 @@ const PrimaveraNorteDashboard = () => {
              proyectoRow.includes('urbano');
     });
     
-    console.log(`Primavera Norte: ${filtered.length} obras de ${rows.length} total`);
     return filtered;
   }, [rows]);
 
@@ -232,8 +231,6 @@ const PrimaveraNorteDashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas (Primavera Norte):', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas (Primavera Norte):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -270,22 +267,15 @@ const PrimaveraNorteDashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 PrimaveraNorteDashboard - handleFilterChange - INICIANDO');
-    console.log('🔍 PrimaveraNorteDashboard - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 PrimaveraNorteDashboard - filters actuales:', filters);
     
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 PrimaveraNorteDashboard - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 PrimaveraNorteDashboard - newFilters antes de clean:', newFilters);
 
     // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 PrimaveraNorteDashboard - cleanedFilters:', cleanedFilters);
     setFilters(cleanedFilters);
-    console.log('🔍 PrimaveraNorteDashboard - setFilters llamado');
   };
 
   // ============================================================================

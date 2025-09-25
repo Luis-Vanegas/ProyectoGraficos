@@ -8,6 +8,8 @@ import {
   kpis,
   buildTwoSeriesDataset,
   getFilterOptions,
+  // toNumber,
+  extractYearFrom,
   // cleanDependentFilters, // TEMPORALMENTE DESHABILITADO
   type Row,
   type Filters,
@@ -58,6 +60,7 @@ type UIFilters = {
   tipo?: string[];
   estadoDeLaObra?: string[];
   contratista?: string[];
+  nombre?: string[];
   desde?: string; // 'YYYY' o 'YYYY-MM'
   hasta?: string; // 'YYYY' o 'YYYY-MM'
   // Campos UI para construir fechas sin romper tipado
@@ -87,13 +90,7 @@ const Dashboard = () => {
   
   // Logging para rastrear cambios de estado
   useEffect(() => {
-    console.log('🔍 Dashboard - filters cambiaron:', filters);
-    console.log('🔍 Dashboard - filters.proyecto:', filters.proyecto);
-    console.log('🔍 Dashboard - filters.comuna:', filters.comuna);
-    console.log('🔍 Dashboard - filters.dependencia:', filters.dependencia);
-    console.log('🔍 Dashboard - filters.tipo:', filters.tipo);
-    console.log('🔍 Dashboard - filters.estadoDeLaObra:', filters.estadoDeLaObra);
-    console.log('🔍 Dashboard - filters.contratista:', filters.contratista);
+    // Filtros actualizados
   }, [filters]);
   const [isMobileStack, setIsMobileStack] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -175,28 +172,78 @@ const Dashboard = () => {
   };
 
   const opciones = useMemo(() => {
-    console.log('🔍 Dashboard - opciones recalculando...');
-    console.log('🔍 Dashboard - rows.length:', rows.length);
-    console.log('🔍 Dashboard - filters:', filters);
-    console.log('🔍 Dashboard - FILTROS RELACIONADOS ACTIVADOS: Las opciones se calculan dinámicamente');
     return getFilterOptions(rows, filters);
   }, [rows, filters]);
   const combinedFilters = useMemo(() => {
     return combineDateFields(filters);
   }, [filters]);
   const filtered = useMemo(() => {
-    console.log('🔍 Dashboard - filtered calculation:');
-    console.log('🔍 Dashboard - rows.length:', rows.length);
-    console.log('🔍 Dashboard - combinedFilters:', combinedFilters);
     const result = applyFilters(rows, combinedFilters);
-    console.log('🔍 Dashboard - filtered result length:', result.length);
-    console.log('🔍 Dashboard - filtered first 3:', result.slice(0, 3));
     return result;
   }, [rows, combinedFilters]);
   const k = useMemo(() => kpis(filtered), [filtered]);
   const vigencias = useMemo(() => {
     const rows = computeVigencias(filtered);
     const only = rows.filter(r => r.year >= 2024 && r.year <= 2027);
+    try {
+      // Log comparativo para validar con Power BI
+      // year, estimatedCount, estimatedInvestment, realCount, realInvestment
+      // Inversión real corresponde a Presupuesto ejecutado
+
+      // Log de depuración para "Inversión estimada" 2024
+      const debug2024 = filtered.filter(r => {
+        // Buscar AÑO DE ENTREGA directamente o calcularlo
+        const añoEntrega = r['AÑO DE ENTREGA'] ? extractYearFrom(r['AÑO DE ENTREGA']) : null;
+        if (añoEntrega === 2024) return true;
+        
+        // Fallback: calcular desde fecha estimada
+        const fechaEstimada = F.fechaEstimadaDeEntrega ? String(r[F.fechaEstimadaDeEntrega] ?? '') : '';
+        const yearMatch = fechaEstimada.match(/\b(\d{4})\b/);
+        return yearMatch && Number(yearMatch[1]) === 2024;
+      });
+      console.log(`📊 Obras con AÑO DE ENTREGA = 2024: ${debug2024.length}`);
+      
+      // const sumaCostoCorregido = debug2024.reduce((sum, r) => {
+      //   const costo = r['Costo total actualizado corregido'] ? 
+      //     toNumber(r['Costo total actualizado corregido']) : 
+      //     (F.costoTotalActualizado ? toNumber(r[F.costoTotalActualizado]) : 0);
+      //   return sum + costo;
+      // }, 0);
+      
+      // Mostrar algunas obras de ejemplo
+      
+      // Debug para "Inversión real" 2024
+      const debugReal2024 = filtered.filter(r => {
+        const entregada = String((F.obraEntregada ? r[F.obraEntregada] : '') ?? '').toLowerCase().trim();
+        if (entregada !== 'si' && entregada !== 'sí') return false;
+        
+        const añoReal = r['AÑO DE ENTREGA REAL'] ? extractYearFrom(r['AÑO DE ENTREGA REAL']) : null;
+        if (añoReal === 2024) return true;
+        
+        // Fallback: calcular desde fecha real
+        const fechaReal = F.fechaRealDeEntrega ? String(r[F.fechaRealDeEntrega] ?? '') : '';
+        const yearMatch = fechaReal.match(/\b(\d{4})\b/);
+        return yearMatch && Number(yearMatch[1]) === 2024;
+      });
+      
+      console.log(`📊 Obras entregadas con AÑO DE ENTREGA REAL = 2024: ${debugReal2024.length}`);
+      
+      const sumaPresupuestoEjecutado = debugReal2024.reduce((sum, r) => {
+        return sum + Number(r[F.presupuestoEjecutado] ?? 0);
+      }, 0);
+      console.log(`💰 Suma PRESUPUESTO EJECUTADO: ${sumaPresupuestoEjecutado}`);
+      console.log(`🎯 Valor esperado Power BI: 172,10 mil M`);
+      
+      // Mostrar ejemplos de presupuesto ejecutado
+      console.log('📋 Primeras 3 obras entregadas 2024:', debugReal2024.slice(0, 3).map(r => ({
+        nombre: r[F.nombre],
+        añoReal: r['AÑO DE ENTREGA REAL'],
+        presupuestoEjecutado: r[F.presupuestoEjecutado],
+        obraEntregada: r[F.obraEntregada]
+      })));
+    } catch (error) {
+      console.error('Error en debug de vigencias:', error);
+    }
     return only.sort((a, b) => a.year - b.year);
   }, [filtered]);
 
@@ -314,7 +361,6 @@ const Dashboard = () => {
   // ============================================================================
   // (Marcadores individuales no usados en modo por comuna)
 
-  const showLegend = true;
   // Normalizar nombre de comuna (acepta "15 - Guayabal" o "Guayabal")
   // const normalizeComuna = (value: string): string => {
   //   const str = String(value ?? '').trim();
@@ -343,21 +389,14 @@ const Dashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 handleFilterChange - INICIANDO');
-    console.log('🔍 handleFilterChange - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 handleFilterChange - filters actuales:', filters);
-    
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 handleFilterChange - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 handleFilterChange - newFilters:', newFilters);
 
     // NUEVO: Los filtros ahora se relacionan automáticamente
     // Las opciones se recalculan dinámicamente en el useMemo de 'opciones'
     setFilters(newFilters);
-    console.log('🔍 handleFilterChange - setFilters llamado - Filtros relacionados activados');
   };
 
   // ============================================================================
@@ -446,7 +485,6 @@ const Dashboard = () => {
                 options={opciones.proyectos}
                 selectedValues={filters.proyecto || []}
                 onSelectionChange={(values) => {
-                  console.log('🔍 Dashboard - ImprovedMultiSelect onSelectionChange:', values);
                   handleFilterChange('proyecto', values);
                 }}
                 placeholder="Todos los proyectos"
@@ -474,6 +512,17 @@ const Dashboard = () => {
                 onSelectionChange={(values) => handleFilterChange('comuna', values)}
                 disabled={opciones.comunas.length === 0}
                 placeholder="Todas las comunas"
+              />
+            )}
+            {/* Filtro: Obra (Nombre) */}
+            {F.nombre && (
+              <ImprovedMultiSelect
+                label="NOMBRE DE LA OBRA"
+                options={opciones.nombres}
+                selectedValues={filters.nombre || []}
+                onSelectionChange={(values) => handleFilterChange('nombre', values)}
+                disabled={opciones.nombres.length === 0}
+                placeholder="Todas las obras"
               />
             )}
           </div>
@@ -621,11 +670,11 @@ const Dashboard = () => {
         {isFiltersOpen && <div className="filters-backdrop" onClick={() => setIsFiltersOpen(false)} />}
 
         {/* ========================================================================
-             SECCIÓN DE KPIs - SEGUNDA POSICIÓN
+             SECCIÓN DE KPIs - DISEÑO COMO EN LA IMAGEN
          ======================================================================== */}
-        <div className="kpis-section">
-          <div className="kpis-container">
-            {/* Fila única: 6 KPIs organizados con animación */}
+        <div className="main-dashboard-section">
+          <div className="kpis-main-grid">
+            {/* Fila única: 7 KPIs organizados con animación */}
             {(() => {
               const container = {
                 hidden: { opacity: 0 },
@@ -635,66 +684,105 @@ const Dashboard = () => {
               const gridProps = prefersReduced ? {} : { variants: container, initial: 'hidden', animate: 'show' };
               const childProps = prefersReduced ? {} : { variants: item };
               return (
-                <motion.div className="kpis-grid kpis-row-7" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined} {...gridProps}>
+                <motion.div className="kpis-main-row" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined} {...gridProps}>
+          {/* 1. TOTAL OBRAS */}
+          <motion.div {...childProps}>
+            <div className="kpi-green-1">
+              <Kpi 
+                label="TOTAL OBRAS" 
+                value={k.totalObras}
+              />
+            </div>
+          </motion.div>
+          {/* 2. OBRAS ENTREGADAS */}
+          <motion.div {...childProps}>
+            <div className="kpi-green-2">
+              <Kpi 
+                label="OBRAS ENTREGADAS" 
+                value={k.entregadas} 
+                subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
+              />
+            </div>
+          </motion.div>
+                  {/* 3. INVERSIÓN TOTAL - DINERO */}
                   <motion.div {...childProps}>
-                    <Kpi 
-                      label="Total obras" 
-                      value={k.totalObras} 
-                    />
+                    <div className="kpi-blue-3">
+                      <Kpi 
+                        label="INVERSIÓN TOTAL" 
+                        value={k.invTotal} 
+                        format="money" 
+                        abbreviate 
+                        digits={1}
+                        subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
+                      />
+                    </div>
                   </motion.div>
+                  {/* 4. PRESUPUESTO EJECUTADO - DINERO */}
                   <motion.div {...childProps}>
-                    <Kpi 
-                      label="Inversión total" 
-                      value={k.invTotal} 
-                      format="money" 
-                      abbreviate 
-                      digits={1}
-                      subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
-                    />
+                    <div className="kpi-blue-4">
+                      <Kpi 
+                        label="PRESUPUESTO EJECUTADO" 
+                        value={k.ejec} 
+                        format="money" 
+                        abbreviate
+                        digits={1}
+                        subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
+                      />
+                    </div>
                   </motion.div>
+                  {/* 5. PRESUPUESTO 2024-2027 - DINERO */}
                   <motion.div {...childProps}>
-                    <Kpi 
-                      label="Presupuesto ejecutado" 
-                      value={k.ejec} 
-                      format="money" 
-                      abbreviate
-                      digits={1}
-                      subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
-                    />
+                    <div className="kpi-blue-5">
+                      <Kpi 
+                        label="PRESUPUESTO 2024-2027" 
+                        value={k.valorCuatrienio2024_2027} 
+                        format="money"
+                        abbreviate
+                        digits={1}
+                        subtitle={`${Math.round(k.porcentajeCuatrienio2024_2027 * 100)}% de la inversión total`}
+                      />
+                    </div>
                   </motion.div>
+                  {/* 6. ALERTAS */}
                   <motion.div {...childProps}>
-                    <Kpi 
-                      label="Presupuesto 2024-2027" 
-                      value={k.valorCuatrienio2024_2027} 
-                      format="money"
-                      abbreviate
-                      digits={1}
-                      subtitle={`${Math.round(k.porcentajeCuatrienio2024_2027 * 100)}% de la inversión total`}
-                    />
+                    <div className="kpi-blue-6">
+                      <Kpi 
+                        label="ALERTAS" 
+                        value={k.alertasEncontradas}
+                      />
+                    </div>
                   </motion.div>
+                  {/* 7. SIN COORDENADAS */}
                   <motion.div {...childProps}>
-                    <Kpi 
-                      label="Obras entregadas" 
-                      value={k.entregadas} 
-                      subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
-                    />
-                  </motion.div>
-                  <motion.div {...childProps}>
-                    <Kpi 
-                      label="Alertas" 
-                      value={k.alertasEncontradas}
-                    />
-                  </motion.div>
-                  <motion.div {...childProps}>
-                    <Kpi 
-                      label="Sin coordenadas" 
-                      value={k.sinUbicacion}
-                      subtitle="Obras sin ubicación"
-                    />
+                    <div className="kpi-blue-7">
+                      <Kpi 
+                        label="SIN COORDENADAS" 
+                        value={k.sinUbicacion}
+                        subtitle="Obras sin ubicación"
+                      />
+                    </div>
                   </motion.div>
                 </motion.div>
               );
             })()}
+          </div>
+
+          {/* Separador visual */}
+          <div className="dashboard-separator"></div>
+
+          {/* Lista de dependencias como en la imagen */}
+          <div className="dependencies-section">
+            <div className="dependencies-list">
+              {Object.keys(mapData).map((dependencia) => (
+                <div key={dependencia} className="dependency-item">
+                  <span
+                    className="dependency-dot"
+                    style={{ backgroundColor: dependencyColorMap[dependencia] }}
+                  />
+                  <span className="dependency-name">{dependencia}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -702,25 +790,6 @@ const Dashboard = () => {
              PANEL PRINCIPAL DEL MAPA - TERCERA POSICIÓN
          ======================================================================== */}
         <div className="map-main-panel">
-          
-          {/* Leyenda compacta (chips) sin título para ahorrar espacio */}
-          {showLegend && (
-          <div className="map-legend map-legend-compact">
-            <div className="legend-chips">
-              {Object.keys(mapData).map((dependencia) => (
-                <div key={dependencia} className="legend-chip" title={dependencia}>
-                  <span
-                    className="legend-dot"
-                    style={{ backgroundColor: dependencyColorMap[dependencia] }}
-                  />
-                  <span className="legend-label">{dependencia}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          )}
-          
-
           
           {/* Mapa principal: responsive y conectado a filtros externos */}
           <div style={{ height: '60vh', minHeight: 380, width: '100%' }}>
@@ -787,18 +856,8 @@ const Dashboard = () => {
               
               const obrasParaMapa = filtered.map(row => ({ ...row, id: String(row.id || row.ID || '') }));
               
-              // Calcular obras con y sin coordenadas
-              const obrasConCoordenadas = obrasParaMapa.filter(o => {
-                const lat = F.latitud ? parseFloat(String((o as Row)[F.latitud] ?? '')) : null;
-                const lng = F.longitud ? parseFloat(String((o as Row)[F.longitud] ?? '')) : null;
-                return lat && lng && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
-              });
               
-              const obrasSinCoordenadas = obrasParaMapa.length - obrasConCoordenadas.length;
               
-              console.log('🔍 Dashboard - obrasParaMapa:', obrasParaMapa.length);
-              console.log('🔍 Dashboard - obrasConCoordenadas:', obrasConCoordenadas.length);
-              console.log('🔍 Dashboard - obrasSinCoordenadas:', obrasSinCoordenadas);
               
               return <MapLibreVisor height={'100%'} query={mapQuery} filteredObras={obrasParaMapa} />;
             })()}
@@ -896,7 +955,7 @@ const Dashboard = () => {
         ======================================================================== */
         .dashboard-container {
           min-height: 100vh;
-          background: #00233D;
+          background: #94caf3;
           font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -1487,7 +1546,88 @@ const Dashboard = () => {
         }
 
         /* ========================================================================
-            SECCIÓN DE KPIs - DISEÑO MEJORADO
+            SECCIÓN PRINCIPAL DEL DASHBOARD - DISEÑO COMO EN LA IMAGEN
+        ======================================================================== */
+        .main-dashboard-section {
+          margin-bottom: 30px;
+          background: #2C3E50;
+          border-radius: 20px;
+          padding: 30px;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .kpis-main-grid {
+          margin-bottom: 30px;
+        }
+
+        .kpis-main-row {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 16px;
+          align-items: stretch;
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        .dashboard-separator {
+          height: 1px;
+          background: linear-gradient(90deg, transparent, #98C73B, transparent);
+          margin: 15px 0;
+          border-radius: 1px;
+        }
+
+        .dependencies-section {
+          background: #E8F4F8;
+          border-radius: 12px;
+          padding: 15px;
+          border: 1px solid rgba(121, 188, 153, 0.3);
+        }
+
+        .dependencies-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-start;
+        }
+
+        .dependency-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 10px;
+          background: #FFFFFF;
+          border-radius: 20px;
+          border: 1px solid rgba(121, 188, 153, 0.2);
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+          transition: all 0.2s ease;
+          white-space: nowrap;
+          max-width: 100%;
+        }
+
+        .dependency-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .dependency-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .dependency-name {
+          font-size: 0.75rem;
+          color: #2C3E50;
+          font-weight: 500;
+          line-height: 1.2;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        /* ========================================================================
+            SECCIÓN DE KPIs - DISEÑO MEJORADO (LEGACY)
         ======================================================================== */
         .kpis-section {
           margin-bottom: 22px;
@@ -1510,7 +1650,7 @@ const Dashboard = () => {
           align-items: stretch;
         }
 
-        /* Estilos para las tarjetas de KPI - Colores exactos del usuario */
+        /* Estilos para las tarjetas de KPI - Solo para .kpis-grid */
         .kpis-grid .kpi {
           background: #98C73B !important;
           color: #FFFFFF !important;
@@ -1523,13 +1663,56 @@ const Dashboard = () => {
           overflow: hidden !important;
         }
 
+        /* Estilos base para KPIs del main-row */
+        .kpis-main-row .kpi {
+          color: #FFFFFF !important;
+          border-radius: 16px !important;
+          padding: 16px !important;
+          border: none !important;
+          transition: all 0.25s ease !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
+
+        /* Estilos específicos para KPIs 1 y 2 (TOTAL OBRAS y OBRAS ENTREGADAS) - AZUL MARINO - MÁXIMA ESPECIFICIDAD */
+        .main-dashboard-section .kpis-main-row .kpi-green-1 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-green-2 .kpi {
+          background: #002945 !important;
+          box-shadow: 0 6px 18px rgba(0, 41, 69, 0.22) !important;
+        }
+
+        .main-dashboard-section .kpis-main-row .kpi-green-1 .kpi:hover,
+        .main-dashboard-section .kpis-main-row .kpi-green-2 .kpi:hover {
+          box-shadow: 0 15px 35px rgba(0, 41, 69, 0.4) !important;
+        }
+
+        /* Estilos específicos para KPIs 3-7 (VERDE) - MÁXIMA ESPECIFICIDAD */
+        .main-dashboard-section .kpis-main-row .kpi-blue-3 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-blue-4 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-blue-5 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-blue-6 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-blue-7 .kpi {
+          background: #98C73B !important;
+          box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
+        }
+
+        .main-dashboard-section .kpis-main-row .kpi-blue-3 .kpi:hover,
+        .main-dashboard-section .kpis-main-row .kpi-blue-4 .kpi:hover,
+        .main-dashboard-section .kpis-main-row .kpi-blue-5 .kpi:hover,
+        .main-dashboard-section .kpis-main-row .kpi-blue-6 .kpi:hover,
+        .main-dashboard-section .kpis-main-row .kpi-blue-7 .kpi:hover {
+          box-shadow: 0 15px 35px rgba(152, 199, 59, 0.4) !important;
+        }
+
+
         .kpis-grid .kpi:hover {
           transform: translateY(-5px) !important;
           box-shadow: 0 15px 35px rgba(152, 199, 59, 0.4) !important;
           border-color: rgba(255, 255, 255, 0.4) !important;
         }
 
-        .kpis-grid .kpi::before {
+        .kpis-grid .kpi::before,
+        .kpis-main-row .kpi::before {
           content: '' !important;
           position: absolute !important;
           top: 0 !important;
@@ -1540,7 +1723,8 @@ const Dashboard = () => {
         }
 
         /* Estilos para el contenido de los KPIs */
-        .kpis-grid .kpi .kpi-label {
+        .kpis-grid .kpi .kpi-label,
+        .kpis-main-row .kpi .kpi-label {
           font-size: 0.85rem !important;
           font-weight: 600 !important;
           color: rgba(255, 255, 255, 0.9) !important;
@@ -1549,7 +1733,8 @@ const Dashboard = () => {
           margin-bottom: 8px !important;
         }
 
-        .kpis-grid .kpi .kpi-value {
+        .kpis-grid .kpi .kpi-value,
+        .kpis-main-row .kpi .kpi-value {
           font-size: 1.4rem !important;
           font-weight: 700 !important;
           color: #FFFFFF !important;
@@ -1559,7 +1744,8 @@ const Dashboard = () => {
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }
 
-        .kpis-grid .kpi .kpi-subtitle {
+        .kpis-grid .kpi .kpi-subtitle,
+        .kpis-main-row .kpi .kpi-subtitle {
           font-size: 0.85rem !important;
           color: rgba(255, 255, 255, 0.8) !important;
           font-weight: 500 !important;
@@ -2053,10 +2239,21 @@ const Dashboard = () => {
         /* ========================================================================
             DISEÑO RESPONSIVE
         ======================================================================== */
+        @media (max-width: 1400px) {
+          .kpis-main-row {
+            grid-template-columns: repeat(6, 1fr);
+            gap: 14px;
+          }
+        }
+        
         @media (max-width: 1200px) {
           .kpis-row-5 { grid-template-columns: repeat(4, 1fr); }
           .kpis-row-6 { grid-template-columns: repeat(4, 1fr); }
           .kpis-row-7 { grid-template-columns: repeat(4, 1fr); }
+          .kpis-main-row { 
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+          }
           .main-content {
             grid-template-columns: 1fr;
           }
@@ -2064,6 +2261,25 @@ const Dashboard = () => {
           .main-chart-section {
             padding: 15px;
             margin-bottom: 25px;
+          }
+
+          .dependencies-list {
+            gap: 6px;
+          }
+
+          .dependency-item {
+            padding: 5px 8px;
+          }
+
+          .dependency-name {
+            font-size: 0.7rem;
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .kpis-main-row {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
           }
         }
 
@@ -2109,6 +2325,32 @@ const Dashboard = () => {
           .kpis-row-5 { grid-template-columns: repeat(2, 1fr); }
           .kpis-row-6 { grid-template-columns: repeat(2, 1fr); }
           .kpis-row-7 { grid-template-columns: repeat(2, 1fr); }
+          .kpis-main-row { 
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+          }
+
+          .main-dashboard-section {
+            padding: 20px;
+            margin-bottom: 25px;
+          }
+
+          .dependencies-list {
+            gap: 5px;
+          }
+
+          .dependency-item {
+            padding: 4px 7px;
+          }
+
+          .dependency-name {
+            font-size: 0.65rem;
+          }
+
+          .dependency-dot {
+            width: 6px;
+            height: 6px;
+          }
 
           .kpis-grid .kpi {
             padding: 14px !important;
@@ -2223,6 +2465,53 @@ const Dashboard = () => {
           .kpis-row-5 { grid-template-columns: 1fr !important; }
           .kpis-row-6 { grid-template-columns: 1fr !important; }
           .kpis-row-7 { grid-template-columns: 1fr !important; }
+          .kpis-main-row { 
+            grid-template-columns: 1fr !important;
+            gap: 6px;
+          }
+          
+          .kpis-main-row .kpi {
+            padding: 12px !important;
+            min-height: 100px !important;
+          }
+          
+          .kpis-main-row .kpi .kpi-label {
+            font-size: 0.75rem !important;
+          }
+          
+          .kpis-main-row .kpi .kpi-value {
+            font-size: 1.2rem !important;
+          }
+          
+          .kpis-main-row .kpi .kpi-subtitle {
+            font-size: 0.7rem !important;
+          }
+
+          .main-dashboard-section {
+            padding: 15px;
+            margin-bottom: 20px;
+          }
+
+          .dependencies-section {
+            padding: 10px;
+          }
+
+          .dependencies-list {
+            gap: 4px;
+          }
+
+          .dependency-item {
+            padding: 3px 6px;
+          }
+
+          .dependency-name {
+            font-size: 0.6rem;
+          }
+
+          .dependency-dot {
+            width: 5px;
+            height: 5px;
+          }
 
           .kpis-grid .kpi {
             padding: 12px !important;
@@ -2531,6 +2820,26 @@ const Dashboard = () => {
           .filters-container {
             margin-bottom: 15px;
           }
+        }
+
+        /* ESTILOS DE PRUEBA - MÁXIMA PRIORIDAD */
+        .main-dashboard-section .kpis-main-row .kpi-green-1 .kpi {
+          background: #002945 !important;
+          box-shadow: 0 6px 18px rgba(0, 41, 69, 0.22) !important;
+        }
+
+        .main-dashboard-section .kpis-main-row .kpi-green-2 .kpi {
+          background: #002945 !important;
+          box-shadow: 0 6px 18px rgba(0, 41, 69, 0.22) !important;
+        }
+
+        .main-dashboard-section .kpis-main-row .kpi-blue-3 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-blue-4 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-blue-5 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-blue-6 .kpi,
+        .main-dashboard-section .kpis-main-row .kpi-blue-7 .kpi {
+          background: #98C73B !important;
+          box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
         }
       `}</style>
     </div>

@@ -228,8 +228,6 @@ const RecreosDashboard = () => {
       return lat && lng && !isNaN(lat) && !isNaN(lng);
     });
 
-    console.log('Obras con coordenadas encontradas (Recreos):', obrasConCoordenadas.length);
-    console.log('Total de obras filtradas (Recreos):', filtered.length);
 
     // Agrupar por dependencia para organización visual por colores
     const groupedByDependency = obrasConCoordenadas.reduce((acc, obra) => {
@@ -266,22 +264,15 @@ const RecreosDashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 RecreosDashboard - handleFilterChange - INICIANDO');
-    console.log('🔍 RecreosDashboard - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 RecreosDashboard - filters actuales:', filters);
     
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 RecreosDashboard - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 RecreosDashboard - newFilters antes de clean:', newFilters);
 
     // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 RecreosDashboard - cleanedFilters:', cleanedFilters);
     setFilters(cleanedFilters);
-    console.log('🔍 RecreosDashboard - setFilters llamado');
   };
 
   // ============================================================================

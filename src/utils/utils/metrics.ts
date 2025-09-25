@@ -2,7 +2,7 @@
 import { F } from '../../dataConfig';
 
 // ⇩ añade al inicio del archivo
-function toNumber(v: unknown): number {
+export function toNumber(v: unknown): number {
   if (v == null) return 0;
   // quita espacios, separadores de miles . o , y deja solo el decimal con punto
   const s = String(v).replace(/\s/g, '')
@@ -137,6 +137,7 @@ export type Filters = {
   tipo?: string[];
   estadoDeLaObra?: string[];
   contratista?: string[];
+  nombre?: string[];
   desde?: string; // 'YYYY' o 'YYYY-MM'
   hasta?: string; // 'YYYY' o 'YYYY-MM'
   // Campos UI para construir fechas sin romper tipado
@@ -156,6 +157,7 @@ export type FilterOptions = {
   tipos: string[];
   estadoDeLaObra: string[];
   contratistas: string[];
+  nombres: string[];
 };
 
 // Obtiene opciones de filtros basadas en datos filtrados
@@ -170,6 +172,7 @@ export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOp
   const filteredExceptTipo = applyFiltersForOptions(rows, { ...currentFilters, tipo: undefined });
   const filteredExceptEstado = applyFiltersForOptions(rows, { ...currentFilters, estadoDeLaObra: undefined });
   const filteredExceptContratista = applyFiltersForOptions(rows, { ...currentFilters, contratista: undefined });
+  const filteredExceptNombre = applyFiltersForOptions(rows, { ...currentFilters, nombre: undefined });
 
   return {
     proyectos: uniques(filteredExceptProyecto, F.proyectoEstrategico),
@@ -178,6 +181,7 @@ export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOp
     tipos: uniques(filteredExceptTipo, F.tipoDeIntervecion),
     estadoDeLaObra: uniques(filteredExceptEstado, F.estadoDeLaObra),
     contratistas: uniques(filteredExceptContratista, F.contratistaOperador),
+    nombres: uniques(filteredExceptNombre, F.nombre),
   };
 }
 
@@ -246,6 +250,7 @@ export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
     inStr(f.tipo)(F.tipoDeIntervecion ? r[F.tipoDeIntervecion] : undefined) &&
     inStr(f.estadoDeLaObra)(F.estadoDeLaObra ? r[F.estadoDeLaObra] : undefined) &&
     inStr(f.contratista)(F.contratistaOperador ? r[F.contratistaOperador] : undefined) &&
+    inStr(f.nombre)(F.nombre ? r[F.nombre] : undefined) &&
     inDateRange(F.fechaEstimadaDeEntrega ? r[F.fechaEstimadaDeEntrega] : undefined)
   );
 }
@@ -701,7 +706,7 @@ export type VigenciaRow = {
   realInvestment: number;
 };
 
-function extractYearFrom(raw: unknown): number | null {
+export function extractYearFrom(raw: unknown): number | null {
   if (raw == null) return null;
   const str = String(raw).trim();
   if (!str || str === 'Sin información' || str === 'undefined') return null;
@@ -712,12 +717,66 @@ function extractYearFrom(raw: unknown): number | null {
   return Number.isFinite(y) ? y : null;
 }
 
-function getObraCosto(r: Row): number {
-  // Usa costo total actualizado; si es 0 o null, usa costo estimado
-  if (!F.costoTotalActualizado && !F.costoEstimadoTotal) return 0;
-  const actualizado = F.costoTotalActualizado ? toNumber(r[F.costoTotalActualizado]) : 0;
-  const estimado = F.costoEstimadoTotal ? toNumber(r[F.costoEstimadoTotal]) : 0;
-  return actualizado === 0 ? estimado : actualizado;
+// Función para calcular "Entrega Real corregida" (replica la lógica de Power BI)
+function getEntregaRealCorregida(row: Row): Date | null {
+  const fechaRealEntrega = F.fechaRealDeEntrega ? new Date(String(row[F.fechaRealDeEntrega] ?? '')) : null;
+  const fechaFinRealEjecucion = F.fechaFinRealEjecucionObra ? new Date(String(row[F.fechaFinRealEjecucionObra] ?? '')) : null;
+  
+  // Fecha de referencia: 1 de enero de 2000
+  const fechaReferencia = new Date(2000, 0, 1);
+  
+  // Si FECHA REAL DE ENTREGA es 2000-01-01 y fecha_fin_real_ejecucion_obra no es 2000-01-01,
+  // entonces usar fecha_fin_real_ejecucion_obra, sino usar FECHA REAL DE ENTREGA
+  if (fechaRealEntrega && 
+      fechaRealEntrega.getTime() === fechaReferencia.getTime() && 
+      fechaFinRealEjecucion && 
+      fechaFinRealEjecucion.getTime() !== fechaReferencia.getTime()) {
+    return fechaFinRealEjecucion;
+  }
+  
+  return fechaRealEntrega;
+}
+
+// Función para extraer año de entrega real (AÑO DE ENTREGA REAL = YEAR(Entrega Real corregida))
+function extractRealDeliveryYear(row: Row): number | null {
+  const entregaCorregida = getEntregaRealCorregida(row);
+  if (!entregaCorregida || isNaN(entregaCorregida.getTime())) return null;
+  return entregaCorregida.getFullYear();
+}
+
+// Función para calcular "Entrega corregida" (para fechas estimadas)
+function getEntregaCorregida(row: Row): Date | null {
+  const fechaEstimadaEntrega = F.fechaEstimadaDeEntrega ? new Date(String(row[F.fechaEstimadaDeEntrega] ?? '')) : null;
+  // Buscar campo equivalente a fecha_fin_real_ejecucion_obra pero para estimadas
+  // Por ahora usar la fecha estimada directamente, pero necesitamos la fórmula exacta
+  return fechaEstimadaEntrega;
+}
+
+// Función para extraer año de entrega estimada (AÑO DE ENTREGA = YEAR(Entrega corregida))
+function extractEstimatedDeliveryYear(row: Row): number | null {
+  const entregaCorregida = getEntregaCorregida(row);
+  if (!entregaCorregida || isNaN(entregaCorregida.getTime())) return null;
+  return entregaCorregida.getFullYear();
+}
+
+// Función eliminada porque no se utiliza actualmente
+// function getObraCosto(r: Row): number {
+//   // Usa costo total actualizado; si es 0 o null, usa costo estimado
+//   if (!F.costoTotalActualizado && !F.costoEstimadoTotal) return 0;
+//   const actualizado = F.costoTotalActualizado ? toNumber(r[F.costoTotalActualizado]) : 0;
+//   const estimado = F.costoEstimadoTotal ? toNumber(r[F.costoEstimadoTotal]) : 0;
+//   return actualizado === 0 ? estimado : actualizado;
+// }
+
+// Valor para "inversión estimada" en vigencias: debe provenir de Costo estimado total
+// Función eliminada porque no se utiliza actualmente
+
+// Valor para "inversión real" en vigencias: debe provenir de Presupuesto ejecutado
+// Si no existe el campo en la configuración, se usa el costo de la obra como respaldo
+function getRealInvestmentValue(r: Row): number {
+  // Solo usar el campo general Presupuesto ejecutado con Number() directo como Power BI
+  if (F.presupuestoEjecutado) return Number(r[F.presupuestoEjecutado] ?? 0);
+  return 0;
 }
 
 function isEntregada(r: Row): boolean {
@@ -742,19 +801,28 @@ export function computeVigencias(rows: Row[]): VigenciaRow[] {
   const realInv = new Map<number, number>();
 
   for (const r of rows) {
-    const yEst = F.fechaEstimadaDeEntrega ? extractYearFrom(r[F.fechaEstimadaDeEntrega]) : null;
-    const yReal = F.fechaRealDeEntrega ? extractYearFrom(r[F.fechaRealDeEntrega]) : null;
+    // Buscar campos específicos de año (si existen en los datos)
+    const yEst = r['AÑO DE ENTREGA'] ? extractYearFrom(r['AÑO DE ENTREGA']) : extractEstimatedDeliveryYear(r);
+    const yReal = r['AÑO DE ENTREGA REAL'] ? extractYearFrom(r['AÑO DE ENTREGA REAL']) : extractRealDeliveryYear(r);
 
+    // Inversión estimada: AÑO DE ENTREGA + Costo total actualizado corregido
     if (yEst != null) {
       years.add(yEst);
       estCount.set(yEst, (estCount.get(yEst) ?? 0) + 1);
-      estInv.set(yEst, (estInv.get(yEst) ?? 0) + getObraCosto(r));
+      // Usar "Costo total actualizado corregido" si existe, sino usar "Costo total actualizado"
+      // Con Number() directo como Power BI
+      const costoCorregido = r['Costo total actualizado corregido'] ? 
+        Number(r['Costo total actualizado corregido'] ?? 0) : 
+        (F.costoTotalActualizado ? Number(r[F.costoTotalActualizado] ?? 0) : 0);
+      estInv.set(yEst, (estInv.get(yEst) ?? 0) + costoCorregido);
     }
 
+    // Inversión real: AÑO DE ENTREGA REAL + ¿OBRA ENTREGADA? = "si" + PRESUPUESTO EJECUTADO
     if (yReal != null && isEntregada(r)) {
       years.add(yReal);
       realCount.set(yReal, (realCount.get(yReal) ?? 0) + 1);
-      realInv.set(yReal, (realInv.get(yReal) ?? 0) + getObraCosto(r));
+      // Usar PRESUPUESTO EJECUTADO general (no por año)
+      realInv.set(yReal, (realInv.get(yReal) ?? 0) + getRealInvestmentValue(r));
     }
   }
 

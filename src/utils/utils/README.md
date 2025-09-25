@@ -156,11 +156,11 @@ Todas estas métricas están disponibles en el objeto retornado por la función 
 const k = kpis(filtered);
 
 // Acceder a las métricas:
-console.log(k.porcentajePresupuestoEjecutado); // 0.75 (75%)
-console.log(k.porcentajeEntregadas); // 0.33 (33%)
-console.log(k.alertasEncontradas); // 15
-console.log(k.vigencias2024); // 8
-console.log(k.entregadasConfirmadas); // 25
+// k.porcentajePresupuestoEjecutado; // 0.75 (75%)
+// k.porcentajeEntregadas; // 0.33 (33%)
+// k.alertasEncontradas; // 15
+// k.vigencias2024; // 8
+// k.entregadasConfirmadas; // 25
 ```
 
 ## Campos Requeridos

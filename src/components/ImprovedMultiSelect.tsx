@@ -37,11 +37,9 @@ const ImprovedMultiSelect: React.FC<ImprovedMultiSelectProps> = ({
 
   // Callback memoizado para el cambio de selección
   const handleChange = useCallback((newValue: MultiValue<{value: string; label: string}>) => {
-    console.log('🔍 ImprovedMultiSelect - handleChange:', newValue);
     
     // Convertir de vuelta a array de strings
     const newValues = newValue ? newValue.map((option: {value: string; label: string}) => option.value) : [];
-    console.log('🔍 ImprovedMultiSelect - newValues:', newValues);
     
     onSelectionChange(newValues);
   }, [onSelectionChange]);

@@ -13,6 +13,8 @@ type Props = {
   loading?: boolean;
   subtitle?: string; // Para mostrar información adicional como porcentajes
   trend?: 'up' | 'down' | 'neutral'; // Para indicadores de tendencia
+  className?: string; // Para clases CSS adicionales
+  style?: React.CSSProperties; // Para estilos inline
 };
 
 const moneyCompact = new Intl.NumberFormat('es-CO', {
@@ -29,6 +31,8 @@ export default function Kpi({
   abbreviate = false,
   digits = 0,
   subtitle,
+  className = '',
+  style = {},
   // trend = 'neutral'
 }: Props) {
   const prefersReduced = useReducedMotion?.() ?? false;
@@ -54,9 +58,9 @@ export default function Kpi({
     if (format === 'money') {
       // Abreviar solo para montos grandes (>= 1 millón) y cuando se solicite
       if (abbreviate && Math.abs(value) >= 1e6) {
-        return abbreviateNumber(value, Math.max(digits, 1));
+        return `$${abbreviateNumber(value, Math.max(digits, 1))}`;
       }
-      return compactMoney ? moneyCompact.format(value) : cf.format(value);
+      return compactMoney ? moneyCompact.format(value) : `$${cf.format(value)}`;
     }
     if (format === 'pct') return `${(value * 100).toFixed(digits)} %`;
     // Para números no monetarios, mostrar normal por defecto
@@ -66,7 +70,8 @@ export default function Kpi({
 
   return (
     <motion.div
-      className="kpi"
+      className={`kpi ${className}`.trim()}
+      style={style}
       role="figure"
       aria-label={`KPI ${label}: ${fmt}`}
       initial={prefersReduced ? false : { opacity: 0, y: 16 }}
@@ -99,6 +104,7 @@ export default function Kpi({
                 end={value}
                 duration={1.2}
                 separator="."
+                prefix="$"
                 formattingFn={(n) => (compactMoney ? moneyCompact.format(n) : cf.format(n))}
               />
             );
@@ -116,7 +122,7 @@ export default function Kpi({
 const kpiStyles = `
   .kpi {
     background: #98C73B;
-    border-radius: 16px;
+    border-radius: 16px;  
     padding: 20px;
     box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22);
     border: none;
@@ -135,6 +141,38 @@ const kpiStyles = `
     box-shadow: 0 12px 24px rgba(152, 199, 59, 0.3);
   }
 
+  /* Permitir que las clases específicas sobrescriban los estilos por defecto */
+  .kpi-green-1 .kpi,
+  .kpi-green-2 .kpi,
+  .kpi-blue-3 .kpi,
+  .kpi-blue-4 .kpi,
+  .kpi-blue-5 .kpi,
+  .kpi-blue-6 .kpi,
+  .kpi-blue-7 .kpi {
+    background: inherit !important;
+    box-shadow: inherit !important;
+  }
+
+  /* Estilos específicos para las clases del Dashboard - Máxima especificidad */
+  .main-dashboard-section .kpis-main-row .kpi-green-1 .kpi {
+    background: #002945 !important;
+    box-shadow: 0 6px 18px rgba(0, 41, 69, 0.22) !important;
+  }
+
+  .main-dashboard-section .kpis-main-row .kpi-green-2 .kpi {
+    background: #002945 !important;
+    box-shadow: 0 6px 18px rgba(0, 41, 69, 0.22) !important;
+  }
+
+  .main-dashboard-section .kpis-main-row .kpi-blue-3 .kpi,
+  .main-dashboard-section .kpis-main-row .kpi-blue-4 .kpi,
+  .main-dashboard-section .kpis-main-row .kpi-blue-5 .kpi,
+  .main-dashboard-section .kpis-main-row .kpi-blue-6 .kpi,
+  .main-dashboard-section .kpis-main-row .kpi-blue-7 .kpi {
+    background: #98C73B !important;
+    box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
+  }
+
   .kpi::before {
     content: '';
     position: absolute;
@@ -144,6 +182,22 @@ const kpiStyles = `
     height: 4px;
     background: linear-gradient(90deg, #79BC99 0%, #4E8484 100%);
     border-radius: 16px 16px 0 0;
+  }
+
+  /* Quitar la línea verde para todos los KPIs del Dashboard principal */
+  .kpis-main-row .kpi::before {
+    display: none !important;
+  }
+
+  /* Permitir que los estilos del Dashboard sobrescriban los del componente */
+  .kpis-main-row .kpi {
+    background: inherit !important;
+    box-shadow: inherit !important;
+  }
+
+  .kpis-main-row .kpi:hover {
+    transform: inherit !important;
+    box-shadow: inherit !important;
   }
 
   .kpi-header {

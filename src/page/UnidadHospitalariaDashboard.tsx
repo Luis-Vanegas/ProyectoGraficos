@@ -265,22 +265,15 @@ const UnidadHospitalariaDashboard = () => {
   // MANEJADORES DE EVENTOS
   // ============================================================================
   const handleFilterChange = (filterKey: keyof UIFilters, value: string[]) => {
-    console.log('🔍 UnidadHospitalariaDashboard - handleFilterChange - INICIANDO');
-    console.log('🔍 UnidadHospitalariaDashboard - filterKey:', filterKey, 'value:', value);
-    console.log('🔍 UnidadHospitalariaDashboard - filters actuales:', filters);
     
     // Si el array está vacío, limpiar el filtro
     const newValue = value.length === 0 ? undefined : value;
-    console.log('🔍 UnidadHospitalariaDashboard - newValue:', newValue);
     
     const newFilters = { ...filters, [filterKey]: newValue };
-    console.log('🔍 UnidadHospitalariaDashboard - newFilters antes de clean:', newFilters);
 
     // Limpia filtros dependientes automáticamente
     const cleanedFilters = cleanDependentFilters(newFilters, filterKey);
-    console.log('🔍 UnidadHospitalariaDashboard - cleanedFilters:', cleanedFilters);
     setFilters(cleanedFilters);
-    console.log('🔍 UnidadHospitalariaDashboard - setFilters llamado');
   };
 
   // ============================================================================
