@@ -13,8 +13,7 @@ import {
   // cleanDependentFilters, // TEMPORALMENTE DESHABILITADO
   type Row,
   type Filters,
-  computeVigencias,
-  filterByPeriod2024_2027
+  computeVigencias
 } from '../utils/utils/metrics';
 
 import Kpi from '../components/Kpi';
@@ -108,25 +107,35 @@ const Dashboard = () => {
   useEffect(() => {
     (async () => {
       try {
+        console.log('🔄 Iniciando carga de datos...');
+        
         const sres = await fetch('/api/sheets');
+        console.log('📋 Respuesta /api/sheets:', sres.status, sres.ok);
         
         if (!sres.ok) {
           throw new Error(`Error ${sres.status}: No se pudo cargar /api/sheets`);
         }
         
         const { sheets } = await sres.json();
+        console.log('📋 Hojas disponibles:', sheets);
         const hoja = sheets.includes('Obras') ? 'Obras' : sheets[0];
+        console.log('📋 Hoja seleccionada:', hoja);
         
         const dres = await fetch(`/api/data?sheet=${encodeURIComponent(hoja)}`);
+        console.log('📊 Respuesta /api/data:', dres.status, dres.ok);
         
         if (!dres.ok) {
           throw new Error(`Error ${dres.status}: No se pudo cargar /api/data`);
         }
         
         const { rows } = await dres.json();
+        console.log('📊 Datos cargados:', rows.length, 'filas');
+        console.log('📊 Primeras 3 filas:', rows.slice(0, 3));
+        
         setRows(rows);
         setStatus(`${rows.length} filas cargadas exitosamente`);
       } catch (e) {
+        console.error('❌ Error al cargar datos:', e);
         setStatus(`Error: ${e instanceof Error ? e.message : 'Error desconocido'}`);
       }
     })();
@@ -180,17 +189,26 @@ const Dashboard = () => {
   }, [filters]);
   const filtered = useMemo(() => {
     const result = applyFilters(rows, combinedFilters);
+    console.log('🔍 Datos después de aplicar filtros:', result.length, 'de', rows.length, 'total');
     return result;
   }, [rows, combinedFilters]);
 
-  // Filtrar datos por período 2024-2027 para KPIs y métricas
-  const filtered2024_2027 = useMemo(() => {
-    return filterByPeriod2024_2027(filtered);
-  }, [filtered]);
+  // Nota: Se eliminó el filtro por período 2024-2027 para mostrar todas las obras
+  // Los KPIs ahora se calculan sobre todos los datos filtrados
 
-  const k = useMemo(() => kpis(filtered2024_2027), [filtered2024_2027]);
+  // Calcular KPIs sobre TODOS los datos filtrados, no solo 2024-2027
+  const k = useMemo(() => {
+    const result = kpis(filtered); // Cambiado de filtered2024_2027 a filtered
+    console.log('📊 KPIs calculados:', {
+      totalObras: result.totalObras,
+      invTotal: result.invTotal,
+      ejec: result.ejec,
+      pctEjec: result.pctEjec
+    });
+    return result;
+  }, [filtered]); // Cambiado de filtered2024_2027 a filtered
   const vigencias = useMemo(() => {
-    const rows = computeVigencias(filtered2024_2027);
+    const rows = computeVigencias(filtered); // Cambiado de filtered2024_2027 a filtered
     const only = rows.filter(r => r.year >= 2024 && r.year <= 2027);
     try {
       // Log comparativo para validar con Power BI
@@ -198,7 +216,7 @@ const Dashboard = () => {
       // Inversión real corresponde a Presupuesto ejecutado
 
       // Log de depuración para "Inversión estimada" 2024
-      const debug2024 = filtered2024_2027.filter(r => {
+      const debug2024 = filtered.filter(r => {
         // Buscar AÑO DE ENTREGA directamente o calcularlo
         const añoEntrega = r['AÑO DE ENTREGA'] ? extractYearFrom(r['AÑO DE ENTREGA']) : null;
         if (añoEntrega === 2024) return true;
@@ -220,7 +238,7 @@ const Dashboard = () => {
       // Mostrar algunas obras de ejemplo
       
       // Debug para "Inversión real" 2024
-      const debugReal2024 = filtered2024_2027.filter(r => {
+      const debugReal2024 = filtered.filter(r => {
         const entregada = String((F.obraEntregada ? r[F.obraEntregada] : '') ?? '').toLowerCase().trim();
         if (entregada !== 'si' && entregada !== 'sí') return false;
         
@@ -252,7 +270,7 @@ const Dashboard = () => {
       console.error('Error en debug de vigencias:', error);
     }
     return only.sort((a, b) => a.year - b.year);
-  }, [filtered]);
+  }, [filtered]); // Cambiado de filtered2024_2027 a filtered
 
   // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
   const comboDataset = useMemo(() => {

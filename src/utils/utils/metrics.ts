@@ -429,6 +429,28 @@ export function filterByPeriod2024_2027(rows: Row[]): Row[] {
       }
     }
     
+    // Incluir obras que tengan presupuesto ejecutado en el período 2024-2027
+    if (F.presupuestoEjecutadoAdm2024_2027) {
+      const presupuesto2024_2027 = toNumber(row[F.presupuestoEjecutadoAdm2024_2027]);
+      if (presupuesto2024_2027 > 0) return true;
+    }
+    
+    // Incluir obras que tengan avance en cualquiera de los años 2024-2027
+    const avance2024 = F.avance2024 ? toNumber(row[F.avance2024]) : 0;
+    const avance2025 = F.avance2025 ? toNumber(row[F.avance2025]) : 0;
+    const avance2026 = F.avance2026 ? toNumber(row[F.avance2026]) : 0;
+    const avance2027 = F.avance2027 ? toNumber(row[F.avance2027]) : 0;
+    
+    if (avance2024 > 0 || avance2025 > 0 || avance2026 > 0 || avance2027 > 0) return true;
+    
+    // Incluir obras que tengan presupuesto ejecutado en cualquiera de los años 2024-2027
+    const presupuesto2024 = F.presupuestoEjecutado2024 ? toNumber(row[F.presupuestoEjecutado2024]) : 0;
+    const presupuesto2025 = F.presupuestoEjecutado2025 ? toNumber(row[F.presupuestoEjecutado2025]) : 0;
+    const presupuesto2026 = F.presupuestoEjecutado2026 ? toNumber(row[F.presupuestoEjecutado2026]) : 0;
+    const presupuesto2027 = F.presupuestoEjecutado2027 ? toNumber(row[F.presupuestoEjecutado2027]) : 0;
+    
+    if (presupuesto2024 > 0 || presupuesto2025 > 0 || presupuesto2026 > 0 || presupuesto2027 > 0) return true;
+    
     return false;
   });
 }

@@ -186,35 +186,76 @@ export default function ConsultarObra() {
   };
 
 
-  // Datos para gráficos de etapas (donas)
+  // Función para parsear porcentajes (copiada del servidor)
+  const parsePct = (val: any): number => {
+    if (val === undefined || val === null) return 0;
+    if (typeof val === 'number') return Math.max(0, Math.min(100, val));
+    let s = String(val).trim();
+    const sLower = s.toLowerCase();
+    if (sLower.includes('no aplica')) return 0;
+    if (sLower.includes('sin información') || sLower.includes('sin informacion')) return 0;
+    s = s.replace('%', '').replace(/,/g, '.');
+    if (s === '' || sLower === 'n/a') return 0;
+    let n = Number(s);
+    if (!Number.isFinite(n)) return 0;
+    if (n > 0 && n <= 1) n *= 100;
+    return Math.max(0, Math.min(100, n));
+  };
+
+  // Datos para gráficos de etapas (donas) - ahora dinámicos
   const stagesData = useMemo(() => {
     if (!currentData) return [];
     
     const stages = [
       {
+        name: 'Planeación (MGA)',
+        value: parsePct(currentData[F.porcentajePlaneacionMGA]),
+        color: '#2196f3'
+      },
+      {
         name: 'Estudios preliminares',
-        value: 28.63,
-        color: '#4CAF50'
+        value: parsePct(currentData[F.porcentajeEstudiosPreliminares]),
+        color: '#ff9800'
       },
       {
         name: 'Viabilización(DAP)',
-        value: 4.92,
-        color: '#00BCD4'
+        value: parsePct(currentData[F.porcentajeViabilizacionDAP]),
+        color: '#4caf50'
       },
       {
         name: 'Gestión Predial',
-        value: 1.96,
-        color: '#009688'
+        value: parsePct(currentData[F.porcentajeGestionPredial]),
+        color: '#9c27b0'
+      },
+      {
+        name: 'Contratación',
+        value: parsePct(currentData[F.porcentajeContratacion]),
+        color: '#607d8b'
+      },
+      {
+        name: 'Inicio',
+        value: parsePct(currentData[F.porcentajeInicio]),
+        color: '#795548'
       },
       {
         name: 'Diseños',
-        value: 7.22,
-        color: '#8BC34A'
+        value: parsePct(currentData[F.porcentajeDisenos]),
+        color: '#e91e63'
       },
       {
         name: 'Ejecución de Obra',
-        value: 53.58,
-        color: '#4CAF50'
+        value: parsePct(currentData[F.porcentajeEjecucionObra]) || parsePct(currentData[F.presupuestoPorcentajeEjecutado]),
+        color: '#ff5722'
+      },
+      {
+        name: 'Entrega Obra',
+        value: parsePct(currentData[F.porcentajeEntregaObra]),
+        color: '#3f51b5'
+      },
+      {
+        name: 'Liquidación',
+        value: parsePct(currentData[F.porcentajeLiquidacion]),
+        color: '#009688'
       }
     ];
     
