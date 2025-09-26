@@ -4,12 +4,17 @@ import {
   getFilterOptions,
   applyFilters,
   cleanDependentFilters,
+  kpis,
   type Filters,
   type Row
 } from '../utils/utils/metrics';
 import Navigation from '../components/Navigation';
 import GanttChartModern from '../components/GanttChartModern';
 import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
+import NotificationCenter from '../components/NotificationCenter';
+import ProjectProgressIndicator from '../components/ProjectProgressIndicator';
+import { IconButton, Badge } from '@mui/material';
+import { NotificationsActive } from '@mui/icons-material';
 
 // Importar las imágenes de las comunas
 import comuna1Image from '../assets/comuna1.jpeg';
@@ -19,6 +24,9 @@ export default function ConsultarObra() {
   const [rows, setRows] = useState<Row[]>([]);
   const [filters, setFilters] = useState<Filters>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const [notificationCount, setNotificationCount] = useState<number>(0);
+  const [showStages, setShowStages] = useState<boolean>(false);
 
   // Carga inicial
   useEffect(() => {
@@ -41,6 +49,75 @@ export default function ConsultarObra() {
 
   // Filtrar filas según filtros
   const filteredRows = useMemo(() => applyFilters(rows, filters), [rows, filters]);
+
+  // Calcular métricas totales para mostrar el presupuesto ejecutado total
+  const totalMetrics = useMemo(() => kpis(filteredRows), [filteredRows]);
+
+  // Calcular número de notificaciones
+  useEffect(() => {
+    if (!filteredRows || filteredRows.length === 0) {
+      setNotificationCount(0);
+      return;
+    }
+
+    let count = 0;
+
+    // Obras retrasadas
+    const obrasRetrasadas = filteredRows.filter(row => {
+      const fechaEstimada = row[F.fechaEstimadaDeEntrega];
+      const fechaReal = row[F.fechaRealDeEntrega];
+      const estadoObra = String(row[F.estadoDeLaObra] || '').toLowerCase();
+      
+      if (fechaEstimada && fechaReal) {
+        const fechaEst = new Date(fechaEstimada);
+        const fechaRealDate = new Date(fechaReal);
+        return fechaRealDate > fechaEst;
+      }
+      
+      if (fechaEstimada && !fechaReal && !estadoObra.includes('entreg')) {
+        const fechaEst = new Date(fechaEstimada);
+        const hoy = new Date();
+        return fechaEst < hoy;
+      }
+      
+      return false;
+    });
+
+    // Obras por vencer
+    const obrasPorVencer = filteredRows.filter(row => {
+      const fechaEstimada = row[F.fechaEstimadaDeEntrega];
+      const estadoObra = String(row[F.estadoDeLaObra] || '').toLowerCase();
+      
+      if (!fechaEstimada || estadoObra.includes('entreg')) return false;
+      
+      const fechaEst = new Date(fechaEstimada);
+      const hoy = new Date();
+      const diasRestantes = Math.ceil((fechaEst - hoy) / (1000 * 60 * 60 * 24));
+      
+      return diasRestantes <= 30 && diasRestantes > 0;
+    });
+
+    // Obras con presupuesto bajo
+    const obrasPresupuestoBajo = filteredRows.filter(row => {
+      const presupuestoEjecutado = Number(row[F.presupuestoEjecutado]) || 0;
+      const costoTotal = Number(row[F.costoTotalActualizado]) || 0;
+      const estadoObra = String(row[F.estadoDeLaObra] || '').toLowerCase();
+      
+      if (costoTotal === 0 || estadoObra.includes('entreg')) return false;
+      
+      const porcentaje = (presupuestoEjecutado / costoTotal) * 100;
+      return porcentaje < 30 && porcentaje > 0;
+    });
+
+    // Obras con riesgo
+    const obrasConRiesgo = filteredRows.filter(row => {
+      const descripcionRiesgo = row[F.descripcionDelRiesgo];
+      return descripcionRiesgo && String(descripcionRiesgo).trim().length > 0;
+    });
+
+    count = obrasRetrasadas.length + obrasPorVencer.length + obrasPresupuestoBajo.length + obrasConRiesgo.length;
+    setNotificationCount(count);
+  }, [filteredRows]);
 
   // Selección priorizada: obra -> proyecto (toma la primera si hay múltiples)
   const currentData = useMemo(() => {
@@ -210,6 +287,46 @@ export default function ConsultarObra() {
     >
       <Navigation showBackButton={true} title="Consultar Obra" />
       
+      {/* Botón de notificaciones */}
+      <Badge
+        badgeContent={notificationCount}
+        color="error"
+        sx={{
+          position: 'fixed',
+          top: 100,
+          right: 20,
+          zIndex: 1000,
+        }}
+      >
+        <IconButton
+          className="notifications-fab"
+          title="Ver alertas"
+          onClick={() => setShowNotifications(true)}
+          sx={{
+            width: 44,
+            height: 44,
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: 'white',
+            boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)',
+            '&:hover': {
+              transform: 'translateY(-1px)',
+              boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)',
+              background: 'linear-gradient(135deg, #b91c1c 0%, #dc2626 100%)',
+            },
+            '&:active': {
+              transform: 'translateY(0)',
+              boxShadow: '0 1px 4px rgba(220, 38, 38, 0.3)',
+            }
+          }}
+        >
+          <NotificationsActive sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Badge>
+      
       {/* Botón flotante para abrir el panel de filtros */}
       <button
         className={`filters-fab${isSidebarOpen ? ' open' : ''}`}
@@ -360,8 +477,15 @@ export default function ConsultarObra() {
               </div>
             </div>
             
-            {/* Descripción debajo de las fechas */}
-            <div className="description-card">
+            {/* Indicador de avance del proyecto */}
+            <ProjectProgressIndicator 
+              data={currentData} 
+              allData={filteredRows} 
+              onToggleStages={() => setShowStages(!showStages)}
+            />
+
+            {/* Descripción debajo del indicador */}
+            <div className="description-card" style={{ marginTop: '20px' }}>
               <div className="card-header">
                 <span className="detail-icon">{getIconForField('criterio')}</span>
                 <span className="card-title">Descripción</span>
@@ -394,9 +518,9 @@ export default function ConsultarObra() {
                 <div className="financial-value">
                   {currentData ? 
                     `$${((Number(currentData[F.presupuestoEjecutado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
-                    '$2.29 bill.'
+                    `$${(totalMetrics.ejec / 1000000000).toFixed(2)} bill.`
                   }
-                  </div>
+                </div>
                 </div>
               <div className="financial-card budget-2024-2025">
                 <div className="financial-label">PRESUPUESTO 2024-2025</div>
@@ -532,20 +656,22 @@ export default function ConsultarObra() {
         {/* Contenedor para las secciones inferiores */}
         <div className="bottom-sections-container">
         {/* Sección de etapas con gráficos de dona */}
-          <div className="stages-section">
-          <h3 className="stages-title" style={{color: '#2d3748', fontWeight: '600'}}>Etapas</h3>
-          <div className="stages-grid">
-            {stagesData.map((stage, index) => (
-              <div key={index} className="stage-card">
-                <SemicircularGauge 
-                  percentage={stage.value} 
-                  title={stage.name}
-                  color={stage.color}
-                />
-              </div>
-            ))}
+          {showStages && (
+            <div className="stages-section">
+            <h3 className="stages-title" style={{color: '#2d3748', fontWeight: '600'}}>Etapas</h3>
+            <div className="stages-grid">
+              {stagesData.map((stage, index) => (
+                <div key={index} className="stage-card">
+                  <SemicircularGauge 
+                    percentage={stage.value} 
+                    title={stage.name}
+                    color={stage.color}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+          )}
 
         {/* Gráfico de Gantt */}
           <div className="gantt-section">
@@ -666,6 +792,7 @@ export default function ConsultarObra() {
           opacity: 0;
           pointer-events: none;
         }
+
 
         .drawer-header { gap: 8px; position: sticky; top: 0; background: #fff; z-index: 2; padding-top: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
         .drawer-title { margin: 0; font-size: 1rem; color: #2C3E50; font-weight: 700; }
@@ -1280,9 +1407,9 @@ export default function ConsultarObra() {
         ======================================================================== */
 
         .delivery-dates-title {
-          margin: 0 0 18px 0 !important;
+          margin: 0 0 12px 0 !important;
           color: #2d3748 !important;
-          font-size: 1.2rem !important;
+          font-size: 1rem !important;
           font-weight: 600 !important;
           text-align: center !important;
         }
@@ -1296,9 +1423,9 @@ export default function ConsultarObra() {
 
         .delivery-date-card {
           text-align: center;
-          padding: 12px 10px;
-          border-radius: 10px;
-          box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+          padding: 8px 6px;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           transition: transform 0.3s ease;
           position: relative;
           overflow: hidden;
@@ -1324,20 +1451,20 @@ export default function ConsultarObra() {
         }
 
         .delivery-date-label {
-          font-size: 0.75rem;
+          font-size: 0.65rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          margin-bottom: 10px;
+          letter-spacing: 0.3px;
+          margin-bottom: 6px;
           color: #2d3748;
         }
 
         .delivery-date-value {
-          font-size: 1rem;
+          font-size: 0.85rem;
           font-weight: 600;
           color: #2d3748;
-          margin-bottom: 8px;
-          line-height: 1.3;
+          margin-bottom: 6px;
+          line-height: 1.2;
         }
 
         .delivery-date-note {
@@ -2507,7 +2634,51 @@ export default function ConsultarObra() {
             font-weight: 600;
           }
         }
+
+        /* Modal de notificaciones */
+        .notifications-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 2000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .notifications-backdrop {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+        }
+
+        .notifications-content {
+          position: relative;
+          z-index: 2001;
+          max-width: 90vw;
+          max-height: 90vh;
+        }
       `}</style>
+
+      {/* Modal de notificaciones */}
+      {showNotifications && (
+        <div className="notifications-modal">
+          <div className="notifications-backdrop" onClick={() => setShowNotifications(false)} />
+          <div className="notifications-content">
+            <NotificationCenter 
+              data={rows} 
+              onClose={() => setShowNotifications(false)} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

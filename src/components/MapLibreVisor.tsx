@@ -35,6 +35,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   const [obras, setObras] = useState<Obra[]>([]);
   const [selectedCodigo, setSelectedCodigo] = useState<string | null>(null);
   const [selectedObraForGantt, setSelectedObraForGantt] = useState<Obra | null>(null);
+  const [isClusterSelected, setIsClusterSelected] = useState<boolean>(false);
   // Sin filtros internos: los filtros llegan por props.query o por URL externa
   
   // Usar datos filtrados si están disponibles, sino cargar desde API
@@ -528,26 +529,39 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
           duration: 1000
         });
         
-        // Mostrar popup con información del cluster
+        // Mostrar popup compacto con información del cluster
         const popup = new (window as any).maplibregl.Popup({
           closeButton: true,
-          closeOnClick: false
+          closeOnClick: false,
+          maxWidth: '350px',
+          className: 'cluster-popup'
         })
         .setLngLat(e.lngLat)
         .setHTML(`
-          <div style="padding: 10px; font-family: Arial, sans-serif;">
-            <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">${nombre}</h3>
-            <p style="margin: 5px 0; color: #666; font-size: 14px;">
-              <strong>Código:</strong> ${codigo}
-            </p>
-            <p style="margin: 5px 0; color: #666; font-size: 14px;">
-              <strong>Total de obras:</strong> ${count}
-            </p>
-            <p style="margin: 5px 0; color: #666; font-size: 12px;">
-              🔍 Cluster expandido - Verás los puntos individuales
-            </p>
+          <div style="padding: 12px; font-family: Arial, sans-serif; min-width: 250px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+              <h3 style="margin: 0; color: #1f2937; font-size: 16px; font-weight: 700;">${nombre}</h3>
+              <button id="expand-cluster-btn" style="background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; font-weight: 600; transition: background-color 0.2s;">
+                📋 Expandir
+              </button>
+            </div>
+            <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #3b82f6;">
+              <div style="font-size: 13px; color: #374151; margin-bottom: 4px; font-weight: 600;">
+                📊 Total de obras: <span style="color: #1f2937;">${count}</span>
+              </div>
+              <div style="font-size: 12px; color: #059669; font-weight: 500;">
+                🔍 Cluster expandido - Los puntos individuales son visibles
+              </div>
+            </div>
+            <div style="font-size: 11px; color: #6b7280; text-align: center; padding: 6px; background: #f1f5f9; border-radius: 4px;">
+              💡 Haz clic en "Expandir" para ocultar el panel lateral y ver más detalles
+            </div>
           </div>
         `)
+        .on('close', () => {
+          // Mostrar el modal de la derecha nuevamente cuando se cierre el popup del cluster
+          setIsClusterSelected(false);
+        })
         .addTo(map);
         
         // Cerrar popup anterior si existe
@@ -556,12 +570,61 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
         }
         (map as any)._clusterPopup = popup;
         
+        // Agregar funcionalidad al botón expandir
+        setTimeout(() => {
+          const expandBtn = document.getElementById('expand-cluster-btn');
+          if (expandBtn) {
+            expandBtn.addEventListener('click', () => {
+              // Ocultar el modal de la derecha cuando se expande
+              setIsClusterSelected(true);
+              
+              // Crear popup expandido
+              const expandedPopup = new (window as any).maplibregl.Popup({
+                closeButton: true,
+                closeOnClick: false,
+                maxWidth: '400px'
+              })
+              .setLngLat(e.lngLat)
+              .setHTML(`
+                <div style="padding: 12px; font-family: Arial, sans-serif;">
+                  <h3 style="margin: 0 0 12px 0; color: #333; font-size: 16px; font-weight: 600;">${nombre}</h3>
+                  <div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+                    <div style="font-size: 13px; color: #666; margin-bottom: 4px;">
+                      <strong>Código:</strong> ${codigo}
+                    </div>
+                    <div style="font-size: 13px; color: #666; margin-bottom: 4px;">
+                      <strong>Total de obras:</strong> ${count}
+                    </div>
+                    <div style="font-size: 12px; color: #059669; font-weight: 500;">
+                      🔍 Cluster expandido - Verás los puntos individuales
+                    </div>
+                  </div>
+                  <div style="font-size: 11px; color: #9ca3af; text-align: center; padding: 8px; background: #f1f5f9; border-radius: 4px;">
+                    Los puntos individuales de las obras ahora son visibles en el mapa
+                  </div>
+                </div>
+              `)
+              .on('close', () => {
+                // Mostrar el modal de la derecha nuevamente cuando se cierre el popup expandido
+                setIsClusterSelected(false);
+              })
+              .addTo(map);
+              
+              // Cerrar popup compacto y reemplazar con expandido
+              popup.remove();
+              (map as any)._clusterPopup = expandedPopup;
+            });
+          }
+        }, 100);
+        
         // Programar la eliminación del popup después de 3 segundos
         setTimeout(() => {
           if ((map as any)._clusterPopup) {
             (map as any)._clusterPopup.remove();
             (map as any)._clusterPopup = null;
           }
+          // Mostrar el modal de la derecha nuevamente cuando se cierre el popup del cluster
+          setIsClusterSelected(false);
         }, 3000);
       }
     });
@@ -1063,6 +1126,13 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
     });
   }, [mapLoaded, onComunaChange]);
 
+  // Resetear estado de cluster cuando se deselecciona la comuna
+  useEffect(() => {
+    if (!selectedCodigo) {
+      setIsClusterSelected(false);
+    }
+  }, [selectedCodigo]);
+
   // Al seleccionar comuna, ajustar vista a su polígono y limpiar popups hover
   useEffect(() => {
     const map = mapRef.current; if (!map || !limites) return;
@@ -1167,7 +1237,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       <div ref={containerRef} style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
 
       {/* Overlay lateral dentro del mapa */}
-      {selectedCodigo && (
+      {selectedCodigo && !isClusterSelected && (
         <div className="ml-overlay-panel" style={{ position: 'absolute', top: 12, right: 12, width: 520, maxWidth: '95%', maxHeight: 'calc(100% - 24px)', background: '#ffffff', color: '#111827', borderRadius: 14, border: '1px solid #E5E7EB', boxShadow: '0 14px 30px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 5 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%)', borderBottom: '1px solid #E9ECEF', padding: '12px 14px' }}>
             <div style={{ fontWeight: 800, color: '#1F2937', fontSize: 15, letterSpacing: 0.2 }}>Obras en {comunaNombre}</div>

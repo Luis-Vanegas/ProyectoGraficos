@@ -102,6 +102,7 @@ export default function Navigation({ showBackButton = false, title }: Navigation
           gap: 12px;
         }
 
+
         .logo {
           height: 35px;
           width: auto;
