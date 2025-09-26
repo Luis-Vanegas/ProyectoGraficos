@@ -399,6 +399,40 @@ export function topNWithOthers(
   return rest > 0 ? [...top, { name: label, value: rest }] : top;
 }
 
+// Función para filtrar datos por período 2024-2027
+export function filterByPeriod2024_2027(rows: Row[]): Row[] {
+  return rows.filter(row => {
+    // Buscar AÑO DE ENTREGA directamente
+    const añoEntrega = row['AÑO DE ENTREGA'] ? extractYearFrom(row['AÑO DE ENTREGA']) : null;
+    if (añoEntrega && añoEntrega >= 2024 && añoEntrega <= 2027) return true;
+    
+    // Fallback: calcular desde fecha estimada
+    const fechaEstimada = F.fechaEstimadaDeEntrega ? String(row[F.fechaEstimadaDeEntrega] ?? '') : '';
+    const yearMatch = fechaEstimada.match(/\b(\d{4})\b/);
+    if (yearMatch) {
+      const year = Number(yearMatch[1]);
+      if (year >= 2024 && year <= 2027) return true;
+    }
+    
+    // También incluir obras entregadas en el período 2024-2027
+    const entregada = String((F.obraEntregada ? row[F.obraEntregada] : '') ?? '').toLowerCase().trim();
+    if (entregada === 'si' || entregada === 'sí') {
+      const añoReal = row['AÑO DE ENTREGA REAL'] ? extractYearFrom(row['AÑO DE ENTREGA REAL']) : null;
+      if (añoReal && añoReal >= 2024 && añoReal <= 2027) return true;
+      
+      // Fallback: calcular desde fecha real
+      const fechaReal = F.fechaRealDeEntrega ? String(row[F.fechaRealDeEntrega] ?? '') : '';
+      const yearMatchReal = fechaReal.match(/\b(\d{4})\b/);
+      if (yearMatchReal) {
+        const yearReal = Number(yearMatchReal[1]);
+        if (yearReal >= 2024 && yearReal <= 2027) return true;
+      }
+    }
+    
+    return false;
+  });
+}
+
 // KPIs clave (sin any)
 export function kpis(rows: Row[]) {
   const totalObras = rows.length;

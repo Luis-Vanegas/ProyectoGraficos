@@ -13,7 +13,8 @@ import {
   // cleanDependentFilters, // TEMPORALMENTE DESHABILITADO
   type Row,
   type Filters,
-  computeVigencias
+  computeVigencias,
+  filterByPeriod2024_2027
 } from '../utils/utils/metrics';
 
 import Kpi from '../components/Kpi';
@@ -181,9 +182,15 @@ const Dashboard = () => {
     const result = applyFilters(rows, combinedFilters);
     return result;
   }, [rows, combinedFilters]);
-  const k = useMemo(() => kpis(filtered), [filtered]);
+
+  // Filtrar datos por período 2024-2027 para KPIs y métricas
+  const filtered2024_2027 = useMemo(() => {
+    return filterByPeriod2024_2027(filtered);
+  }, [filtered]);
+
+  const k = useMemo(() => kpis(filtered2024_2027), [filtered2024_2027]);
   const vigencias = useMemo(() => {
-    const rows = computeVigencias(filtered);
+    const rows = computeVigencias(filtered2024_2027);
     const only = rows.filter(r => r.year >= 2024 && r.year <= 2027);
     try {
       // Log comparativo para validar con Power BI
@@ -191,7 +198,7 @@ const Dashboard = () => {
       // Inversión real corresponde a Presupuesto ejecutado
 
       // Log de depuración para "Inversión estimada" 2024
-      const debug2024 = filtered.filter(r => {
+      const debug2024 = filtered2024_2027.filter(r => {
         // Buscar AÑO DE ENTREGA directamente o calcularlo
         const añoEntrega = r['AÑO DE ENTREGA'] ? extractYearFrom(r['AÑO DE ENTREGA']) : null;
         if (añoEntrega === 2024) return true;
@@ -213,7 +220,7 @@ const Dashboard = () => {
       // Mostrar algunas obras de ejemplo
       
       // Debug para "Inversión real" 2024
-      const debugReal2024 = filtered.filter(r => {
+      const debugReal2024 = filtered2024_2027.filter(r => {
         const entregada = String((F.obraEntregada ? r[F.obraEntregada] : '') ?? '').toLowerCase().trim();
         if (entregada !== 'si' && entregada !== 'sí') return false;
         

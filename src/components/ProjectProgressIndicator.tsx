@@ -1,35 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
 import {
   Box,
   Card,
   CardContent,
   Typography,
   IconButton,
-  LinearProgress,
-  Chip,
-  Collapse,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Divider
+  Chip
 } from '@mui/material';
 import {
   ExpandMore,
-  ExpandLess,
   CheckCircle,
   Schedule,
   Construction,
   Assignment,
   Business,
-  Build,
-  Timeline,
-  AttachMoney,
   PlayArrow,
   DesignServices,
   Handshake,
-  Receipt
+  Receipt,
+  Timeline
 } from '@mui/icons-material';
 import { F } from '../dataConfig';
 import { type Row } from '../utils/utils/metrics';
@@ -37,9 +26,10 @@ import { type Row } from '../utils/utils/metrics';
 interface ProjectProgressIndicatorProps {
   data: Row | null;
   allData: Row[];
+  onToggleStages?: () => void;
 }
 
-const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProgressIndicatorProps & { onToggleStages?: () => void }) => {
+const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProgressIndicatorProps) => {
 
   // Función para parsear porcentajes (copiada del servidor)
   const parsePct = (val: any): number | null => {
@@ -99,7 +89,7 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProg
       ((aEstudios ? pEstudios : 0) + (aViabili ? pViabili : 0) + (aPredial ? pPredial : 0) + (aContra ? pContra : 0)) / preconApplicable : 
       (prepExtra + conExtra + postExtra) / 3;
     const conPct = conApplicable > 0 ? 
-      ((aInicio ? pInicio : 0) + (aDisenos ? pDisenos : 0) + (aEjec ? pEjec : 0)) / conApplicable : 
+      ((aInicio ? (pInicio || 0) : 0) + (aDisenos ? (pDisenos || 0) : 0) + (aEjec ? (pEjec || 0) : 0)) / conApplicable : 
       (prepExtra + preconExtra + postExtra) / 3;
     const postPct = postApplicable > 0 ? 
       ((aEnt ? pEnt : 0) + (aLiq ? pLiq : 0)) / postApplicable : 

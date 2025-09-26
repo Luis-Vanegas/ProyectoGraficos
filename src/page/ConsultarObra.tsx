@@ -92,7 +92,7 @@ export default function ConsultarObra() {
       
       const fechaEst = new Date(fechaEstimada);
       const hoy = new Date();
-      const diasRestantes = Math.ceil((fechaEst - hoy) / (1000 * 60 * 60 * 24));
+      const diasRestantes = Math.ceil((fechaEst.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
       
       return diasRestantes <= 30 && diasRestantes > 0;
     });

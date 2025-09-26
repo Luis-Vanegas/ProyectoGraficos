@@ -9,7 +9,8 @@ import {
   cleanDependentFilters,
   type Row,
   type Filters,
-  computeVigencias
+  computeVigencias,
+  filterByPeriod2024_2027
 } from '../utils/utils/metrics';
 
 import Kpi from '../components/Kpi';
@@ -135,12 +136,18 @@ const EscuelasInteligentesDashboard = () => {
   const opciones = useMemo(() => getFilterOptions(escuelasInteligentesRows, filters), [escuelasInteligentesRows, filters]);
   const combinedFilters = useMemo(() => combineDateFields(filters), [filters]);
   const filtered = useMemo(() => applyFilters(escuelasInteligentesRows, combinedFilters), [escuelasInteligentesRows, combinedFilters]);
-  const k = useMemo(() => kpis(filtered), [filtered]);
+
+  // Filtrar datos por período 2024-2027 para KPIs y métricas
+  const filtered2024_2027 = useMemo(() => {
+    return filterByPeriod2024_2027(filtered);
+  }, [filtered]);
+
+  const k = useMemo(() => kpis(filtered2024_2027), [filtered2024_2027]);
   const vigencias = useMemo(() => {
-    const rows = computeVigencias(filtered);
+    const rows = computeVigencias(filtered2024_2027);
     const only = rows.filter(r => r.year >= 2024 && r.year <= 2027);
     return only.sort((a, b) => a.year - b.year);
-  }, [filtered]);
+  }, [filtered2024_2027]);
 
   // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
   // Dataset para el gráfico principal de análisis (ComboBars)

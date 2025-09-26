@@ -1,57 +1,61 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   IconButton,
   Badge,
-  List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction,
   Chip,
   Avatar,
   Divider,
   Button,
   Paper,
-  useTheme,
   alpha
 } from '@mui/material';
 import {
-  Notifications,
-  NotificationsActive,
   CheckCircle,
   Warning,
   Error,
   Info,
   Close,
-  Schedule,
-  Construction,
-  Timeline,
-  AttachMoney,
-  LocationOn,
-  Business,
   ReportProblem
 } from '@mui/icons-material';
 import { F } from '../dataConfig';
 import { type Row } from '../utils/utils/metrics';
 
-const NotificationCenter = ({ data, onClose }) => {
-  const [notifications, setNotifications] = useState([]);
+interface Notification {
+  id: string;
+  type: 'error' | 'warning' | 'info' | 'success';
+  title: string;
+  message: string;
+  description: string;
+  obra: Row;
+  priority: 'high' | 'medium' | 'low';
+  timestamp: Date;
+  read: boolean;
+  action: string;
+}
+
+interface NotificationCenterProps {
+  data: Row[];
+  onClose: () => void;
+}
+
+const NotificationCenter = ({ data, onClose }: NotificationCenterProps) => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const theme = useTheme();
 
   // Generar notificaciones basadas en datos reales
   useEffect(() => {
     if (!data || data.length === 0) return;
 
-    const newNotifications = [];
+    const newNotifications: Notification[] = [];
 
     // 1. Obras con entregas retrasadas
-    const obrasRetrasadas = data.filter(row => {
+    const obrasRetrasadas = data.filter((row: Row) => {
       const fechaEstimada = row[F.fechaEstimadaDeEntrega];
       const fechaReal = row[F.fechaRealDeEntrega];
       const estadoObra = String(row[F.estadoDeLaObra] || '').toLowerCase();
@@ -73,10 +77,10 @@ const NotificationCenter = ({ data, onClose }) => {
       return false;
     });
 
-    obrasRetrasadas.forEach((obra, index) => {
-      const fechaEstimada = new Date(obra[F.fechaEstimadaDeEntrega]);
+    obrasRetrasadas.forEach((obra: Row, index: number) => {
+      const fechaEstimada = new Date(obra[F.fechaEstimadaDeEntrega] as string);
       const hoy = new Date();
-      const diasRetraso = Math.ceil((hoy - fechaEstimada) / (1000 * 60 * 60 * 24));
+      const diasRetraso = Math.ceil((hoy.getTime() - fechaEstimada.getTime()) / (1000 * 60 * 60 * 24));
       
       newNotifications.push({
         id: `retraso-${index}`,
@@ -93,23 +97,23 @@ const NotificationCenter = ({ data, onClose }) => {
     });
 
     // 2. Obras que están por vencer (próximas 30 días)
-    const obrasPorVencer = data.filter(row => {
+    const obrasPorVencer = data.filter((row: Row) => {
       const fechaEstimada = row[F.fechaEstimadaDeEntrega];
       const estadoObra = String(row[F.estadoDeLaObra] || '').toLowerCase();
       
       if (!fechaEstimada || estadoObra.includes('entreg')) return false;
       
-      const fechaEst = new Date(fechaEstimada);
+      const fechaEst = new Date(fechaEstimada as string);
       const hoy = new Date();
-      const diasRestantes = Math.ceil((fechaEst - hoy) / (1000 * 60 * 60 * 24));
+      const diasRestantes = Math.ceil((fechaEst.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
       
       return diasRestantes <= 30 && diasRestantes > 0;
     });
 
-    obrasPorVencer.forEach((obra, index) => {
-      const fechaEstimada = new Date(obra[F.fechaEstimadaDeEntrega]);
+    obrasPorVencer.forEach((obra: Row, index: number) => {
+      const fechaEstimada = new Date(obra[F.fechaEstimadaDeEntrega] as string);
       const hoy = new Date();
-      const diasRestantes = Math.ceil((fechaEstimada - hoy) / (1000 * 60 * 60 * 24));
+      const diasRestantes = Math.ceil((fechaEstimada.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
       
       newNotifications.push({
         id: `vencer-${index}`,
@@ -126,7 +130,7 @@ const NotificationCenter = ({ data, onClose }) => {
     });
 
     // 3. Obras con presupuesto bajo ejecutado (< 30%)
-    const obrasPresupuestoBajo = data.filter(row => {
+    const obrasPresupuestoBajo = data.filter((row: Row) => {
       const presupuestoEjecutado = Number(row[F.presupuestoEjecutado]) || 0;
       const costoTotal = Number(row[F.costoTotalActualizado]) || 0;
       const estadoObra = String(row[F.estadoDeLaObra] || '').toLowerCase();
@@ -137,7 +141,7 @@ const NotificationCenter = ({ data, onClose }) => {
       return porcentaje < 30 && porcentaje > 0;
     });
 
-    obrasPresupuestoBajo.forEach((obra, index) => {
+    obrasPresupuestoBajo.forEach((obra: Row, index: number) => {
       const presupuestoEjecutado = Number(obra[F.presupuestoEjecutado]) || 0;
       const costoTotal = Number(obra[F.costoTotalActualizado]) || 0;
       const porcentaje = (presupuestoEjecutado / costoTotal) * 100;
@@ -157,12 +161,12 @@ const NotificationCenter = ({ data, onClose }) => {
     });
 
     // 4. Obras con riesgo identificado
-    const obrasConRiesgo = data.filter(row => {
+    const obrasConRiesgo = data.filter((row: Row) => {
       const descripcionRiesgo = row[F.descripcionDelRiesgo];
       return descripcionRiesgo && String(descripcionRiesgo).trim().length > 0;
     });
 
-    obrasConRiesgo.forEach((obra, index) => {
+    obrasConRiesgo.forEach((obra: Row, index: number) => {
       newNotifications.push({
         id: `riesgo-${index}`,
         type: 'warning',
@@ -178,19 +182,19 @@ const NotificationCenter = ({ data, onClose }) => {
     });
 
     // Ordenar por prioridad y timestamp
-    newNotifications.sort((a, b) => {
-      const priorityOrder = { high: 3, medium: 2, low: 1 };
+    newNotifications.sort((a: Notification, b: Notification) => {
+      const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
       if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
         return priorityOrder[b.priority] - priorityOrder[a.priority];
       }
-      return b.timestamp - a.timestamp;
+      return b.timestamp.getTime() - a.timestamp.getTime();
     });
 
     setNotifications(newNotifications);
     setUnreadCount(newNotifications.length);
   }, [data]);
 
-  const getNotificationIcon = (type) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'error': return <Error color="error" />;
       case 'warning': return <Warning color="warning" />;
@@ -199,7 +203,7 @@ const NotificationCenter = ({ data, onClose }) => {
     }
   };
 
-  const getNotificationColor = (type) => {
+  const getNotificationColor = (type: string) => {
     switch (type) {
       case 'error': return '#f44336';
       case 'warning': return '#ff9800';
@@ -208,7 +212,7 @@ const NotificationCenter = ({ data, onClose }) => {
     }
   };
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'error';
       case 'medium': return 'warning';
@@ -217,15 +221,15 @@ const NotificationCenter = ({ data, onClose }) => {
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
+    setNotifications((prev: Notification[]) => 
+      prev.map((notification: Notification) => ({ ...notification, read: true }))
     );
     setUnreadCount(0);
   };
 
-  const formatTimeAgo = (timestamp) => {
+  const formatTimeAgo = (timestamp: Date) => {
     const now = new Date();
-    const diff = now - timestamp;
+    const diff = now.getTime() - timestamp.getTime();
     const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
