@@ -489,6 +489,32 @@ app.get('/api/test-connection', async (req, res) => {
   }
 });
 
+// Endpoint simple para ver datos de la API
+app.get('/api/sample-data', async (req, res) => {
+  try {
+    const data = await getData();
+    
+    // Devolver solo los primeros 3 registros con estructura completa
+    const sampleData = data.slice(0, 3);
+    
+    res.json({
+      status: 'SUCCESS',
+      totalRecords: data.length,
+      sampleRecords: sampleData,
+      fields: data.length > 0 ? Object.keys(data[0]) : [],
+      fieldCount: data.length > 0 ? Object.keys(data[0]).length : 0
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en /api/sample-data:', error);
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Error al obtener datos de muestra',
+      error: error.message
+    });
+  }
+});
+
 // Endpoint de debug para diagnosticar problemas
 app.get('/api/debug', async (req, res) => {
   try {

@@ -1755,6 +1755,41 @@ const Dashboard = () => {
           box-shadow: 0 7px 18px rgba(0,0,0,0.16);
         }
 
+        /* =====================
+           RESPONSIVE - CARDS Y LAYOUT
+           ===================== */
+        @media (max-width: 1200px) {
+          .budget-grid-top { grid-template-columns: 1fr 1fr; gap: 10px; }
+          .budget-top-duo { min-height: 70px; }
+          .duo-title { font-size: 0.85rem; }
+          .duo-value { font-size: 1.05rem; }
+          .budget-item.green-alt { min-height: 70px; }
+        }
+        @media (max-width: 992px) {
+          .budget-grid-top { grid-template-columns: 1fr; }
+          .budget-top-duo { min-height: 68px; }
+          .budget-summary-card { padding: 12px; }
+          .integrated-duo { grid-template-columns: 1fr; }
+          .pct-badge.small { font-size: 0.64rem; padding: 2px 6px; }
+        }
+        @media (max-width: 768px) {
+          .budget-summary-card { padding: 10px; border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.14); }
+          .budget-top-duo { border-radius: 8px; }
+          .budget-item, .integrated-cell, .integrated-top { padding: 10px; border-radius: 8px; }
+          .duo-title { font-size: 0.8rem; }
+          .duo-value, .integrated-value { font-size: 1rem; }
+        }
+        @media (max-width: 480px) {
+          .budget-summary-card { padding: 8px; gap: 8px; }
+          .budget-top-duo { min-height: 60px; }
+          .budget-item.green-alt { min-height: 60px; }
+          .duo-title { font-size: 0.75rem; }
+          .duo-value { font-size: 0.95rem; }
+          .integrated-title { font-size: 0.85rem; }
+          .integrated-value { font-size: 0.95rem; }
+          .pct-badge { font-size: 0.68rem; padding: 2px 6px; }
+        }
+
         .budget-item.dark {
           background: #0b2a3f;
           border-color: #0b2a3f;

@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Configuración de la API
-const API_URL = 'https://visorestrategicobackendprepdd-aaejehbqgednb5fr.eastus2-01.azurewebsites.net/api/powerbi/obras';
+const API_URL = 'https://visorestrategicobackend-gkejc4hthnace6b4.eastus2-01.azurewebsites.net/api/powerbi/obras';
 const API_CONFIG = {
   headers: {
     'Accept': 'application/json',

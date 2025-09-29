@@ -13,7 +13,7 @@ import GanttChartModern from '../components/GanttChartModern';
 import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 import NotificationCenter from '../components/NotificationCenter';
 import ProjectProgressIndicator from '../components/ProjectProgressIndicator';
-import { IconButton, Badge } from '@mui/material';
+import { IconButton, Badge, Card, CardContent, Stack, Typography } from '@mui/material';
 import { NotificationsActive, EventAvailable, Event } from '@mui/icons-material';
 
 // Importar las imágenes de las comunas
@@ -187,7 +187,7 @@ export default function ConsultarObra() {
 
 
   // Función para parsear porcentajes (copiada del servidor)
-  const parsePct = (val: any): number => {
+  const parsePct = (val: unknown): number => {
     if (val === undefined || val === null) return 0;
     if (typeof val === 'number') return Math.max(0, Math.min(100, val));
     let s = String(val).trim();
@@ -334,7 +334,7 @@ export default function ConsultarObra() {
         color="error"
         sx={{
           position: 'fixed',
-          top: 100,
+          bottom: 20,
           right: 20,
           zIndex: 1000,
         }}
@@ -481,18 +481,31 @@ export default function ConsultarObra() {
       <div className="main-content">
         {/* Layout principal con dos columnas */}
         <div className="main-layout">
-          {/* Columna izquierda - Fechas y Descripción */}
+          {/* Columna izquierda - Avance, Fechas compactas y Descripción */}
           <div className="left-column">
-        {/* Sección de fechas de entrega */}
-            <div className="delivery-dates-section-left">
+            {/* Indicador de avance del proyecto (mover arriba) */}
+            <ProjectProgressIndicator 
+              data={currentData} 
+              allData={filteredRows} 
+              onToggleStages={() => setShowStages(!showStages)}
+            />
+
+            {/* Fechas de entrega - Compactas */}
+            <div className="delivery-dates-section-left compact">
           <h3 className="delivery-dates-title" style={{color: '#2d3748', fontWeight: '600'}}>Fechas de Entrega</h3>
-            <div className="delivery-dates-grid-left">
-            <div className="delivery-date-card estimated modern">
-              <div className="delivery-date-header">
-                <span className="delivery-date-icon estimated"><Event /></span>
-                <span className="delivery-date-label">FECHA ESTIMADA DE ENTREGA</span>
-              </div>
-              <div className="delivery-date-value">
+              <div className="delivery-dates-grid-left compact">
+              {/* Tarjeta MUI - Estimada */}
+              <Card className="delivery-date-card estimated modern glass" elevation={6}
+                sx={{
+                  borderRadius: '14px',
+                  minHeight: 96
+                }}>
+                <CardContent sx={{ p: 1.2 }}>
+                  <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} className="delivery-date-header">
+                    <span className="delivery-date-icon estimated"><Event /></span>
+                    <Typography className="delivery-date-label">FECHA ESTIMADA DE ENTREGA</Typography>
+                  </Stack>
+                  <Typography className="delivery-date-value">
                 {currentData && currentData[F.fechaEstimadaDeEntrega] ? 
                   new Date(currentData[F.fechaEstimadaDeEntrega] as string).toLocaleDateString('es-CO', {
                     year: 'numeric',
@@ -501,15 +514,22 @@ export default function ConsultarObra() {
                   }) : 
                   'No especificada'
                 }
-          </div>
-        </div>
+                  </Typography>
+                </CardContent>
+              </Card>
 
-            <div className="delivery-date-card real modern">
-              <div className="delivery-date-header">
-                <span className="delivery-date-icon real"><EventAvailable /></span>
-                <span className="delivery-date-label">FECHA REAL DE ENTREGA</span>
-              </div>
-              <div className="delivery-date-value">
+              {/* Tarjeta MUI - Real */}
+              <Card className="delivery-date-card real modern glass" elevation={6}
+                sx={{
+                  borderRadius: '14px',
+                  minHeight: 96
+                }}>
+                <CardContent sx={{ p: 1.2 }}>
+                  <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} className="delivery-date-header">
+                    <span className="delivery-date-icon real"><EventAvailable /></span>
+                    <Typography className="delivery-date-label">FECHA REAL DE ENTREGA</Typography>
+                  </Stack>
+                  <Typography className="delivery-date-value">
                 {currentData && currentData[F.fechaRealDeEntrega] ? 
                   new Date(currentData[F.fechaRealDeEntrega] as string).toLocaleDateString('es-CO', {
                     year: 'numeric',
@@ -518,63 +538,51 @@ export default function ConsultarObra() {
                   }) : 
                   'No especificada'
                 }
+                  </Typography>
+                </CardContent>
+              </Card>
               </div>
             </div>
             
-              </div>
-            </div>
-            
-            {/* Indicador de avance del proyecto */}
-            <ProjectProgressIndicator 
-              data={currentData} 
-              allData={filteredRows} 
-              onToggleStages={() => setShowStages(!showStages)}
-            />
-
-            {/* Descripción debajo del indicador */}
-            <div className="description-card" style={{ marginTop: '20px' }}>
-              <div className="card-header">
-                <span className="detail-icon">{getIconForField('criterio')}</span>
-                <span className="card-title">Descripción</span>
-                  </div>
-              <div className="description-content-new">
-              {currentData ? (
-                  String(currentData[F.descripcion] ?? 'Sin descripción')
-              ) : (
-                  'Usa el botón de filtros para seleccionar un proyecto u obra.'
-              )}
-                </div>
-                  </div>
                 </div>
             
           {/* Columna derecha - Detalles y métricas */}
           <div className="right-column">
-            {/* Sección de métricas financieras */}
-            <div className="financial-section">
-              <div className="financial-card total-investment">
-                <div className="financial-label">INVERSIÓN TOTAL</div>
-                <div className="financial-value">
+            {/* Sección de métricas financieras (diseño alterno compacto) */}
+            <div className="kpis-alt">
+              <div className="kpi-chip kpi-total">
+                <div className="kpi-title">INVERSIÓN TOTAL</div>
+                <div className="kpi-value">
                   {currentData ? 
                     `$${((Number(currentData[F.costoTotalActualizado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
-                    '$10,69 bill.'
+                    '$10.69 bill.'
                   }
                   </div>
                 </div>
-              <div className="financial-card budget-executed">
-                <div className="financial-label">PRESUPUESTO EJECUTADO</div>
-                <div className="financial-value">
+              <div className="kpi-chip kpi-executed">
+                <div className="kpi-title">PRESUPUESTO EJECUTADO</div>
+                <div className="kpi-value">
                   {currentData ? 
                     `$${((Number(currentData[F.presupuestoEjecutado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
                     `$${(totalMetrics.ejec / 1000000000).toFixed(2)} bill.`
                   }
                 </div>
                 </div>
-              <div className="financial-card budget-2024-2025">
-                <div className="financial-label">PRESUPUESTO 2024-2025</div>
-                <div className="financial-value">
+              <div className="kpi-chip kpi-period">
+                <div className="kpi-title">PRESUPUESTO 2024-2025</div>
+                <div className="kpi-value">
                   {currentData ? 
-                    `$${((Number(currentData[F.costoTotalActualizado] ?? 0) * 1.15 / 1000000000).toFixed(2))} bill.` : 
+                    `$${((Number(currentData[F.presupuestoEjecutadoAdm2024_2027] ?? 0) / 1000000000).toFixed(2))} bill.` : 
                     '$12.29 bill.'
+                  }
+                </div>
+                  </div>
+              <div className="kpi-chip kpi-previous">
+                <div className="kpi-title">ADMINISTRACIONES ANTERIORES</div>
+                <div className="kpi-value">
+                  {currentData ? 
+                    `$${((Number(currentData[F.presupuestoEjecutadoAdmAnteriores] ?? 0) / 1000000000).toFixed(2))} bill.` : 
+                    '$3.45 bill.'
                   }
                 </div>
                   </div>
@@ -700,6 +708,21 @@ export default function ConsultarObra() {
 
 
 
+        {/* Descripción movida aquí - en el espacio vacío señalado */}
+        <div className="description-card" style={{ marginTop: '20px', marginBottom: '20px' }}>
+          <div className="card-header">
+            <span className="detail-icon">{getIconForField('criterio')}</span>
+            <span className="card-title">Descripción</span>
+          </div>
+          <div className="description-content-new">
+            {currentData ? (
+              String(currentData[F.descripcion] ?? 'Sin descripción')
+            ) : (
+              'Usa el botón de filtros para seleccionar un proyecto u obra.'
+            )}
+          </div>
+        </div>
+
         {/* Contenedor para las secciones inferiores */}
         <div className="bottom-sections-container">
         {/* Sección de etapas con gráficos de dona */}
@@ -821,13 +844,13 @@ export default function ConsultarObra() {
         /* Botón flotante para abrir/cerrar filtros */
         .filters-fab {
           position: fixed;
-          top: 96px;
-          left: 16px;
+          bottom: 20px;
+          left: 20px;
           background: linear-gradient(135deg, #00904c, #0bbf6a);
           color: #fff;
           border: none;
           border-radius: 999px;
-          padding: 10px 16px;
+          padding: 10px 14px;
           font-weight: 700;
           box-shadow: 0 8px 18px rgba(0,0,0,0.18);
           cursor: pointer;
@@ -985,7 +1008,7 @@ export default function ConsultarObra() {
         .left-column {
           display: flex;
           flex-direction: column;
-          gap: 0;
+          gap: 12px;
           align-self: start;
         }
 
@@ -1002,19 +1025,21 @@ export default function ConsultarObra() {
         .delivery-dates-section-left {
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
           border-radius: 12px;
-          padding: 12px;
+          padding: 10px;
           box-shadow: 0 6px 20px rgba(121, 188, 153, 0.1);
           border: 1px solid #79BC99;
           margin-bottom: 8px;
           flex-shrink: 0;
         }
+        .delivery-dates-section-left.compact { padding: 8px; margin-top: 2px; }
 
         .delivery-dates-grid-left {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 8px;
+          gap: 6px;
           width: 100%;
         }
+        .delivery-dates-grid-left.compact { gap: 6px; }
 
         /* Tarjeta de descripción mejorada */
         .description-card {
@@ -1057,23 +1082,49 @@ export default function ConsultarObra() {
         }
 
         /* Sección financiera mejorada */
-        .financial-section {
+        .financial-section { margin-bottom: 10px; width: 100%; }
+        /* KPIs: pares por breakpoint */
+        .kpis-row {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 15px;
-          margin-bottom: 20px;
-          width: 100%;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 6px;
+          align-items: center;
+        }
+        /* Desktop grande: 4 columnas (2 pares) */
+        @media (min-width: 1200px) {
+          .kpis-row { grid-template-columns: repeat(4, 1fr); }
+        }
+        /* Tablet: 2 columnas (1 par por fila) */
+        @media (min-width: 768px) and (max-width: 1199px) {
+          .kpis-row { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; }
+          .financial-card { height: 100%; }
+        }
+        /* Móvil: forzar 2 columnas fijas; si no cabe, reducimos tipografía aún más */
+        @media (max-width: 767px) {
+          .kpis-row { grid-template-columns: repeat(2, 1fr); }
+          .financial-label { font-size: 0.44rem; }
+          .financial-value { font-size: 0.62rem; }
+          .financial-card { min-height: 30px; }
         }
 
         .financial-card {
-          background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%);
           color: white;
-          border-radius: 10px;
-          padding: 14px;
+          border-radius: 4px;
+          padding: 2px 6px;
           text-align: center;
-          box-shadow: 0 6px 20px rgba(121, 188, 153, 0.25);
-          transition: transform 0.3s ease;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+          transition: transform 0.2s ease;
+          min-height: 32px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
+        /* Quitar scroll horizontal anterior */
+        .financial-card.solid { background: var(--darker-blue); }
+        .financial-card.total-investment.solid { background: #046C4E; }
+        .financial-card.budget-executed.solid { background: #0B7A75; }
+        .financial-card.budget-2024-2025.solid { background: #2AA7E1; }
+        .financial-card.budget-previous.solid { background: #98C73B; color: #002945; }
 
         .financial-card:hover {
           transform: translateY(-3px);
@@ -1088,18 +1139,85 @@ export default function ConsultarObra() {
         }
 
         .financial-label {
-          font-size: 0.8rem;
-          font-weight: 600;
+          font-size: 0.46rem;
+          font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          margin-bottom: 8px;
-          opacity: 0.9;
+          letter-spacing: 0.2px;
+          margin-bottom: 0;
+          opacity: 0.95;
+          line-height: 1.1;
         }
 
         .financial-value {
-          font-size: 1.5rem;
-          font-weight: 700;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          font-size: 0.66rem;
+          font-weight: 800;
+          text-shadow: 0 1px 1px rgba(0,0,0,0.06);
+          line-height: 1.1;
+        }
+
+        /* Diseño alterno tipo chip compacto */
+        .kpis-alt {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+        }
+        @media (min-width: 768px) and (max-width: 1199px) {
+          .kpis-alt { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 767px) {
+          .kpis-alt { grid-template-columns: repeat(2, 1fr); }
+        }
+        .kpi-chip {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 8px 12px 8px 14px;
+          border-radius: 14px;
+          background: linear-gradient(180deg, #ffffff 0%, #F9FBFD 100%);
+          border: 1px solid #E6EEF3;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+          min-height: 66px;
+          transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .kpi-chip::before {
+          content: '';
+          position: absolute;
+          left: 6px;
+          top: 8px;
+          bottom: 8px;
+          width: 4px;
+          border-radius: 6px;
+          background: var(--accent, #2AA7E1);
+        }
+        .kpi-chip:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+        .kpi-title {
+          font-size: 0.66rem;
+          font-weight: 800;
+          letter-spacing: .3px;
+          color: #002945;
+          margin-bottom: 2px;
+          text-transform: uppercase;
+        }
+        .kpi-value {
+          font-size: 1.0rem;
+          font-weight: 800;
+          color: #00233D;
+        }
+        .kpi-total { --accent:#046C4E; background: linear-gradient(180deg, rgba(4,108,78,.10) 0%, rgba(4,108,78,.02) 100%); }
+        .kpi-executed { --accent:#0B7A75; background: linear-gradient(180deg, rgba(11,122,117,.10) 0%, rgba(11,122,117,.02) 100%); }
+        .kpi-period { --accent:#2AA7E1; background: linear-gradient(180deg, rgba(42,167,225,.12) 0%, rgba(42,167,225,.03) 100%); }
+        .kpi-previous { --accent:#98C73B; background: linear-gradient(180deg, rgba(152,199,59,.14) 0%, rgba(152,199,59,.04) 100%); }
+
+        /* Refinar tamaños por breakpoints para mantener buena legibilidad y responsividad */
+        @media (min-width: 1400px) {
+          .financial-label { font-size: 0.52rem; }
+          .financial-value { font-size: 0.74rem; }
+          .financial-card { min-height: 36px; }
+        }
+        @media (max-width: 900px) {
+          .financial-label { font-size: 0.5rem; }
+          .financial-value { font-size: 0.72rem; }
         }
 
         /* Grid de detalles mejorado */
@@ -1470,27 +1588,47 @@ export default function ConsultarObra() {
 
         .delivery-date-card {
           text-align: center;
-          padding: 8px 6px;
-          border-radius: 10px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-          transition: transform 0.3s ease;
+          padding: 8px 8px;
+          border-radius: 14px;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
           position: relative;
           overflow: hidden;
+          border: 1px solid var(--border-light);
+        }
+        .delivery-date-card.glass {
+          background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.75) 100%) !important;
+          backdrop-filter: blur(6px);
+        }
+        .delivery-date-card.modern::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 8px;
+          border-radius: 14px 0 0 14px;
+          background: linear-gradient(180deg, var(--secondary-blue), var(--primary-blue));
+          animation: flowBar 6s linear infinite;
+          opacity: 0.9;
+        }
+        .delivery-date-card.real.modern::before {
+          background: linear-gradient(180deg, var(--primary-green), #7FB832);
+        }
+        @keyframes flowBar {
+          0% { filter: hue-rotate(0deg); }
+          50% { filter: hue-rotate(25deg); }
+          100% { filter: hue-rotate(0deg); }
         }
 
         .delivery-date-card:hover {
-          transform: translateY(-5px);
+          transform: translateY(-4px);
+          box-shadow: 0 16px 30px rgba(0,0,0,0.16);
         }
 
-        .delivery-date-card.estimated {
-          background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
-          border: 2px solid #2196F3;
-        }
+        .delivery-date-card.estimated { border: none; }
 
-        .delivery-date-card.real {
-          background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
-          border: 2px solid #FF9800;
-        }
+        .delivery-date-card.real { border: none; }
 
         .delivery-date-card.corrected {
           background: linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%);
@@ -1498,20 +1636,20 @@ export default function ConsultarObra() {
         }
 
         .delivery-date-label {
-          font-size: 0.7rem;
-          font-weight: 700;
+          font-size: 0.6rem;
+          font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.3px;
           margin-bottom: 0;
-          color: #2d3748;
+          color: var(--darker-blue);
         }
 
         .delivery-date-value {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: #2d3748;
-          margin-bottom: 6px;
-          line-height: 1.2;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: var(--text-medium);
+          margin-bottom: 4px;
+          line-height: 1.1;
         }
         /* Cabecera moderna para las tarjetas de fecha */
         .delivery-date-header {
@@ -1523,19 +1661,19 @@ export default function ConsultarObra() {
         }
         .delivery-date-icon {
           display: inline-flex;
-          width: 22px;
-          height: 22px;
+          width: 20px;
+          height: 20px;
           align-items: center;
           justify-content: center;
-          border-radius: 6px;
-          color: #1f2937;
-          background: rgba(0,0,0,0.05);
+          border-radius: 50%;
+          color: #FFFFFF;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.12);
         }
-        .delivery-date-icon.estimated { background: rgba(33,150,243,0.12); color: #1565C0; }
-        .delivery-date-icon.real { background: rgba(255,152,0,0.12); color: #E65100; }
+        .delivery-date-icon.estimated { background: linear-gradient(135deg, var(--secondary-blue), var(--primary-blue)); }
+        .delivery-date-icon.real { background: linear-gradient(135deg, #7FB832, var(--primary-green)); }
 
         /* Mantener tamaño visual consistente */
-        .delivery-date-card.modern { min-height: 88px; display: flex; flex-direction: column; justify-content: center; }
+        .delivery-date-card.modern { min-height: 48px; display: flex; flex-direction: column; justify-content: center; }
 
         .delivery-date-note {
           font-size: 0.65rem;

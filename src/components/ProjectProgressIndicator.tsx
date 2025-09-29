@@ -4,8 +4,7 @@ import {
   Card,
   CardContent,
   Typography,
-  IconButton,
-  Chip
+  IconButton
 } from '@mui/material';
 import {
   ExpandMore,
@@ -206,13 +205,6 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProg
     return '#f44336';
   };
 
-  const getProgressLabel = (percentage: number) => {
-    if (percentage >= 90) return 'Excelente';
-    if (percentage >= 70) return 'Bueno';
-    if (percentage >= 50) return 'Regular';
-    if (percentage >= 30) return 'Bajo';
-    return 'Crítico';
-  };
 
   return (
     <Card 
