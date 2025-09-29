@@ -13,8 +13,8 @@ import GanttChartModern from '../components/GanttChartModern';
 import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 import NotificationCenter from '../components/NotificationCenter';
 import ProjectProgressIndicator from '../components/ProjectProgressIndicator';
-import { IconButton, Badge, Card, CardContent, Stack, Typography } from '@mui/material';
-import { NotificationsActive, EventAvailable, Event } from '@mui/icons-material';
+import { IconButton, Badge, Card, CardContent, Stack, Typography, Box } from '@mui/material';
+import { NotificationsActive, EventAvailable, Event, Remove } from '@mui/icons-material';
 
 // Importar las imágenes de las comunas
 import comuna1Image from '../assets/comuna1.jpeg';
@@ -488,6 +488,7 @@ export default function ConsultarObra() {
               data={currentData} 
               allData={filteredRows} 
               onToggleStages={() => setShowStages(!showStages)}
+              showStages={showStages}
             />
 
             {/* Fechas de entrega - Compactas */}
@@ -730,8 +731,52 @@ export default function ConsultarObra() {
         <div className="bottom-sections-container">
         {/* Sección de etapas con gráficos de dona */}
           {showStages && (
-            <div className="stages-section">
-            <h3 className="stages-title" style={{color: '#2d3748', fontWeight: '600'}}>Etapas</h3>
+            <div id="stages-section" className="stages-section">
+            {/* Header con título y botón de cierre */}
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <h3 className="stages-title" style={{color: '#2d3748', fontWeight: '600', margin: 0}}>Etapas</h3>
+              <IconButton
+                title="Cerrar etapas"
+                aria-label="Cerrar etapas"
+                onClick={() => {
+                  setShowStages(false);
+                  // Scroll hacia la vista de inicio después de cerrar las etapas
+                  setTimeout(() => {
+                    // Intentar múltiples métodos de scroll
+                    try {
+                      window.scrollTo({ 
+                        top: 0, 
+                        behavior: 'smooth' 
+                      });
+                    } catch (e) {
+                      // Fallback si smooth no funciona
+                      window.scrollTo(0, 0);
+                    }
+                    
+                    // También intentar con document
+                    try {
+                      document.documentElement.scrollTop = 0;
+                      document.body.scrollTop = 0;
+                    } catch (e) {
+                      console.log('Scroll fallback applied');
+                    }
+                  }, 150);
+                }}
+                sx={{
+                  color: '#f44336',
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                  width: 32,
+                  height: 32,
+                  '&:hover': { 
+                    backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                    transform: 'scale(1.1)'
+                  },
+                  transition: 'all 0.2s ease-in-out'
+                }}
+              >
+                <Remove fontSize="small" />
+              </IconButton>
+            </Box>
             <div className="stages-grid">
               {stagesData.map((stage, index) => (
                 <div key={index} className="stage-card">

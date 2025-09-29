@@ -6,7 +6,8 @@ import {
   IconButton
 } from '@mui/material';
 import {
-  ExpandMore,
+  Add,
+  Remove,
   CheckCircle,
   Schedule,
   Construction,
@@ -26,9 +27,10 @@ interface ProjectProgressIndicatorProps {
   data: Row | null;
   allData: Row[];
   onToggleStages?: () => void;
+  showStages?: boolean;
 }
 
-const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProgressIndicatorProps) => {
+const ProjectProgressIndicator = ({ data, allData, onToggleStages, showStages = false }: ProjectProgressIndicatorProps) => {
 
   // Componente de barra de progreso moderna y compacta
   const ModernProgressBar = ({ percentage, title }: { percentage: number; title: string }) => {
@@ -278,17 +280,60 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProg
         {/* Botón para mostrar/ocultar etapas */}
         <Box display="flex" justifyContent="flex-end" mb={1}>
           <IconButton
-            title="Ver etapas"
-            aria-label="Ver etapas"
-            onClick={onToggleStages}
+            title={showStages ? "Ocultar etapas" : "Ver etapas"}
+            aria-label={showStages ? "Ocultar etapas" : "Ver etapas"}
+            onClick={() => {
+              if (onToggleStages) {
+                onToggleStages();
+                // Si se van a mostrar las etapas, hacer scroll hacia abajo
+                if (!showStages) {
+                  setTimeout(() => {
+                    const stagesSection = document.getElementById('stages-section');
+                    if (stagesSection) {
+                      stagesSection.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                      });
+                    }
+                  }, 100);
+                } else {
+                  // Si se van a cerrar las etapas, hacer scroll hacia la vista de inicio
+                  setTimeout(() => {
+                    // Intentar múltiples métodos de scroll
+                    try {
+                      window.scrollTo({ 
+                        top: 0, 
+                        behavior: 'smooth' 
+                      });
+                    } catch (e) {
+                      // Fallback si smooth no funciona
+                      window.scrollTo(0, 0);
+                    }
+                    
+                    // También intentar con document
+                    try {
+                      document.documentElement.scrollTop = 0;
+                      document.body.scrollTop = 0;
+                    } catch (e) {
+                      console.log('Scroll fallback applied');
+                    }
+                  }, 150);
+                }
+              }
+            }}
             sx={{
-              color: '#6c757d',
+              color: showStages ? '#f44336' : '#4caf50',
               width: 30,
               height: 30,
-              '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
+              backgroundColor: showStages ? 'rgba(244, 67, 54, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+              '&:hover': { 
+                backgroundColor: showStages ? 'rgba(244, 67, 54, 0.2)' : 'rgba(76, 175, 80, 0.2)',
+                transform: 'scale(1.1)'
+              },
+              transition: 'all 0.2s ease-in-out'
             }}
           >
-            <ExpandMore fontSize="small" />
+            {showStages ? <Remove fontSize="small" /> : <Add fontSize="small" />}
           </IconButton>
         </Box>
 
