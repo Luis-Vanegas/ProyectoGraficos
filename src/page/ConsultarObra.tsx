@@ -14,7 +14,7 @@ import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 import NotificationCenter from '../components/NotificationCenter';
 import ProjectProgressIndicator from '../components/ProjectProgressIndicator';
 import { IconButton, Badge } from '@mui/material';
-import { NotificationsActive } from '@mui/icons-material';
+import { NotificationsActive, EventAvailable, Event } from '@mui/icons-material';
 
 // Importar las imágenes de las comunas
 import comuna1Image from '../assets/comuna1.jpeg';
@@ -486,9 +486,12 @@ export default function ConsultarObra() {
         {/* Sección de fechas de entrega */}
             <div className="delivery-dates-section-left">
           <h3 className="delivery-dates-title" style={{color: '#2d3748', fontWeight: '600'}}>Fechas de Entrega</h3>
-              <div className="delivery-dates-grid-left">
-            <div className="delivery-date-card estimated">
-              <div className="delivery-date-label">FECHA ESTIMADA DE ENTREGA</div>
+            <div className="delivery-dates-grid-left">
+            <div className="delivery-date-card estimated modern">
+              <div className="delivery-date-header">
+                <span className="delivery-date-icon estimated"><Event /></span>
+                <span className="delivery-date-label">FECHA ESTIMADA DE ENTREGA</span>
+              </div>
               <div className="delivery-date-value">
                 {currentData && currentData[F.fechaEstimadaDeEntrega] ? 
                   new Date(currentData[F.fechaEstimadaDeEntrega] as string).toLocaleDateString('es-CO', {
@@ -501,8 +504,11 @@ export default function ConsultarObra() {
           </div>
         </div>
 
-            <div className="delivery-date-card real">
-              <div className="delivery-date-label">FECHA REAL DE ENTREGA</div>
+            <div className="delivery-date-card real modern">
+              <div className="delivery-date-header">
+                <span className="delivery-date-icon real"><EventAvailable /></span>
+                <span className="delivery-date-label">FECHA REAL DE ENTREGA</span>
+              </div>
               <div className="delivery-date-value">
                 {currentData && currentData[F.fechaRealDeEntrega] ? 
                   new Date(currentData[F.fechaRealDeEntrega] as string).toLocaleDateString('es-CO', {
@@ -995,7 +1001,7 @@ export default function ConsultarObra() {
         /* Sección de fechas en columna izquierda */
         .delivery-dates-section-left {
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-          border-radius: 10px;
+          border-radius: 12px;
           padding: 12px;
           box-shadow: 0 6px 20px rgba(121, 188, 153, 0.1);
           border: 1px solid #79BC99;
@@ -1465,7 +1471,7 @@ export default function ConsultarObra() {
         .delivery-date-card {
           text-align: center;
           padding: 8px 6px;
-          border-radius: 8px;
+          border-radius: 10px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.06);
           transition: transform 0.3s ease;
           position: relative;
@@ -1492,21 +1498,44 @@ export default function ConsultarObra() {
         }
 
         .delivery-date-label {
-          font-size: 0.65rem;
+          font-size: 0.7rem;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.3px;
-          margin-bottom: 6px;
+          margin-bottom: 0;
           color: #2d3748;
         }
 
         .delivery-date-value {
-          font-size: 0.85rem;
+          font-size: 0.9rem;
           font-weight: 600;
           color: #2d3748;
           margin-bottom: 6px;
           line-height: 1.2;
         }
+        /* Cabecera moderna para las tarjetas de fecha */
+        .delivery-date-header {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-bottom: 6px;
+        }
+        .delivery-date-icon {
+          display: inline-flex;
+          width: 22px;
+          height: 22px;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          color: #1f2937;
+          background: rgba(0,0,0,0.05);
+        }
+        .delivery-date-icon.estimated { background: rgba(33,150,243,0.12); color: #1565C0; }
+        .delivery-date-icon.real { background: rgba(255,152,0,0.12); color: #E65100; }
+
+        /* Mantener tamaño visual consistente */
+        .delivery-date-card.modern { min-height: 88px; display: flex; flex-direction: column; justify-content: center; }
 
         .delivery-date-note {
           font-size: 0.65rem;

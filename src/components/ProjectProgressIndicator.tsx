@@ -283,18 +283,7 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProg
             </Typography>
           </Box>
           
-          {/* Lado derecho: chip de estado */}
-          <Chip 
-            label={getProgressLabel(progressData.percentage)}
-            color={progressData.percentage >= 70 ? 'success' : progressData.percentage >= 40 ? 'warning' : 'error'}
-            size="small"
-            sx={{ 
-              fontWeight: 'bold', 
-              fontSize: '0.7rem', 
-              height: 22,
-              minWidth: 'auto'
-            }}
-          />
+          {/* Lado derecho: removido chip de estado por solicitud */}
         </Box>
       </CardContent>
     </Card>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 
 import { F } from '../dataConfig';
 // import type * as GeoJSON from 'geojson';
@@ -16,7 +16,8 @@ import {
   computeVigencias
 } from '../utils/utils/metrics';
 
-import Kpi from '../components/Kpi';
+// Reemplazo de KPIs por tarjetas compactas con CountUp
+import CountUp from 'react-countup';
 import ComboBars from '../components/comboBars';
 import SimpleBarChart from '../components/SimpleBarChart';
 import WorksTable from '../components/WorksTable';
@@ -92,9 +93,9 @@ const Dashboard = () => {
   useEffect(() => {
     // Filtros actualizados
   }, [filters]);
-  const [isMobileStack, setIsMobileStack] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const prefersReduced = useReducedMotion?.() ?? false;
+  // Prefiere animación reducida (reservado por si se necesita):
+  useReducedMotion?.();
   // Estado no utilizado en esta vista (selección se maneja en MapLibre)
   // const [selectedComuna] = useState<string | null>(null);
   // const [comunasGeo, setComunasGeo] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -141,15 +142,7 @@ const Dashboard = () => {
     })();
   }, []);
 
-  // Detecta móvil para forzar KPIs en columna
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mq = window.matchMedia('(max-width: 480px)');
-    const apply = () => setIsMobileStack(mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
+  // (Ya no se usa el flag isMobileStack)
 
   // (El visor de MapLibre maneja la carga de límites de comunas)
 
@@ -698,99 +691,77 @@ const Dashboard = () => {
              SECCIÓN DE KPIs - DISEÑO COMO EN LA IMAGEN
          ======================================================================== */}
         <div className="main-dashboard-section">
-          <div className="kpis-main-grid">
-            {/* Fila única: 7 KPIs organizados con animación */}
-            {(() => {
-              const container = {
-                hidden: { opacity: 0 },
-                show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.04 } }
-              } as const;
-              const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } } as const;
-              const gridProps = prefersReduced ? {} : { variants: container, initial: 'hidden', animate: 'show' };
-              const childProps = prefersReduced ? {} : { variants: item };
-              return (
-                <motion.div className="kpis-main-row" style={isMobileStack ? { gridTemplateColumns: '1fr', rowGap: 14 } : undefined} {...gridProps}>
-          {/* 1. TOTAL OBRAS */}
-          <motion.div {...childProps}>
-            <div className="kpi-green-1">
-              <Kpi 
-                label="TOTAL OBRAS" 
-                value={k.totalObras}
-              />
-            </div>
-          </motion.div>
-          {/* 2. OBRAS ENTREGADAS */}
-          <motion.div {...childProps}>
-            <div className="kpi-green-2">
-              <Kpi 
-                label="OBRAS ENTREGADAS" 
-                value={k.entregadas} 
-                subtitle={`${Math.round(k.pctEntregadas * 100)}% del total`}
-              />
-            </div>
-          </motion.div>
-                  {/* 3. INVERSIÓN TOTAL - DINERO */}
-                  <motion.div {...childProps}>
-                    <div className="kpi-blue-3">
-                      <Kpi 
-                        label="INVERSIÓN TOTAL" 
-                        value={k.invTotal} 
-                        format="money" 
-                        abbreviate 
-                        digits={1}
-                        subtitle={`${Math.round(k.pctEjec * 100)}% ejecutado`}
-                      />
+          {/* Tarjeta de Presupuestos ocupando el espacio de los KPIs */}
+          {(() => {
+            const presupuestoEjecutado = k.ejec;
+            const presupuestoCuatrienio = k.valorCuatrienio2024_2027;
+            const presupuestoAnteriores = Math.max(0, presupuestoEjecutado - presupuestoCuatrienio);
+            const invTotal = k.invTotal || 1;
+            const pctEjecSobreTotal = Math.round((presupuestoEjecutado / invTotal) * 100);
+            const pctCuatSobreTotal = Math.round((presupuestoCuatrienio / invTotal) * 100);
+            const pctAntSobreTotal = Math.round((presupuestoAnteriores / invTotal) * 100);
+            return (
+              <div className="budget-summary-card">
+                <div className="budget-grid-top">
+                  <div className="budget-top-duo">
+                    <div className="duo-cell">
+                      <div className="duo-title">Total obras</div>
+                      <div className="duo-value"><CountUp end={k.totalObras} duration={1.0} separator="." /></div>
                     </div>
-                  </motion.div>
-                  {/* 4. PRESUPUESTO EJECUTADO - DINERO */}
-                  <motion.div {...childProps}>
-                    <div className="kpi-blue-4">
-                      <Kpi 
-                        label="PRESUPUESTO EJECUTADO" 
-                        value={k.ejec} 
-                        format="money" 
-                        abbreviate
-                        digits={1}
-                        subtitle={`${Math.round(k.pctEjec * 100)}% de la inversión`}
-                      />
+                  <div className="duo-cell no-sep">
+                    <div className="duo-title with-badge">
+                      <span>Obras entregadas</span>
+                      <span className="pct-badge small">{Math.round(k.pctEntregadas * 100)}%</span>
                     </div>
-                  </motion.div>
-                  {/* 5. PRESUPUESTO 2024-2027 - DINERO */}
-                  <motion.div {...childProps}>
-                    <div className="kpi-blue-5">
-                      <Kpi 
-                        label="PRESUPUESTO 2024-2027" 
-                        value={k.valorCuatrienio2024_2027} 
-                        format="money"
-                        abbreviate
-                        digits={1}
-                        subtitle={`${Math.round(k.porcentajeCuatrienio2024_2027 * 100)}% de la inversión total`}
-                      />
+                    <div className="duo-value"><CountUp end={k.entregadas} duration={1.0} separator="." /></div>
+                  </div>
+                  </div>
+                  <div className="budget-item green-alt">
+                    <div className="budget-header no-badge">
+                      <span className="budget-title">Inversión total</span>
                     </div>
-                  </motion.div>
-                  {/* 6. ALERTAS */}
-                  <motion.div {...childProps}>
-                    <div className="kpi-blue-6">
-                      <Kpi 
-                        label="ALERTAS" 
-                        value={k.alertasEncontradas}
-                      />
+                    <div className="budget-value"><CountUp end={k.invTotal} duration={1.2} prefix="$" separator="." /></div>
+                  </div>
+                </div>
+                <div className="budget-integrated">
+                  <div className="integrated-top center">
+                    <div className="integrated-header center">
+                      <span className="integrated-title">Presupuesto ejecutado</span>
+                      <span className="pct-badge">{pctEjecSobreTotal}%</span>
                     </div>
-                  </motion.div>
-                  {/* 7. SIN COORDENADAS */}
-                  <motion.div {...childProps}>
-                    <div className="kpi-blue-7">
-                      <Kpi 
-                        label="SIN COORDENADAS" 
-                        value={k.sinUbicacion}
-                        subtitle="Obras sin ubicación"
-                      />
+                    <div className="integrated-value center">
+                      <CountUp end={presupuestoEjecutado} duration={1.2} prefix="$" separator="." />
                     </div>
-                  </motion.div>
-                </motion.div>
-              );
-            })()}
-          </div>
+                  </div>
+                  <div className="integrated-duo">
+                    <div className="integrated-cell">
+                      <div className="integrated-header">
+                        <span className="integrated-title">Presupuesto 2024-2027</span>
+                        <span className="pct-badge">{pctCuatSobreTotal}%</span>
+                      </div>
+                      <div className="integrated-value">
+                        <CountUp end={presupuestoCuatrienio} duration={1.2} prefix="$" separator="." />
+                      </div>
+                    </div>
+                    <div className="integrated-cell alt">
+                      <div className="integrated-header">
+                        <span className="integrated-title">Presupuesto administraciones anteriores</span>
+                        <span className="pct-badge">{pctAntSobreTotal}%</span>
+                      </div>
+                      <div className="integrated-value">
+                        <CountUp end={presupuestoAnteriores} duration={1.2} prefix="$" separator="." />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Se elimina tarjeta de Alertas y se reordena Inversión total arriba */}
+              </div>
+            );
+          })()}
+
+          {/* (Se eliminó la fila separada de chips; ahora se integran en la misma tarjeta) */}
+
+          {/* (El bloque anterior ahora ocupa el lugar de los KPIs, así que se elimina el duplicado aquí) */}
 
           {/* Separador visual */}
           <div className="dashboard-separator"></div>
@@ -1587,8 +1558,8 @@ const Dashboard = () => {
 
         .kpis-main-row {
           display: grid;
-          grid-template-columns: repeat(7, 1fr);
-          gap: 16px;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 12px;
           align-items: stretch;
           width: 100%;
           overflow-x: auto;
@@ -1606,6 +1577,262 @@ const Dashboard = () => {
           border-radius: 12px;
           padding: 15px;
           border: 1px solid rgba(121, 188, 153, 0.3);
+        }
+
+        /* =====================
+           NUEVOS KPIs COMPACTOS
+           ===================== */
+        .compact-kpis-row {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+        .compact-kpi {
+          border-radius: 14px;
+          padding: 14px;
+          color: #fff;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+          min-height: 110px;
+        }
+        .compact-kpi.navy { background:#002945; }
+        .compact-kpi.green { background:#98C73B; color:#fff; }
+        .compact-kpi-label { font-size: 0.78rem; font-weight: 700; opacity: 0.95; text-align:center; }
+        .compact-kpi-value { font-size: 1.35rem; font-weight: 800; margin-top: 6px; text-align:center; }
+        .compact-kpi-sub { font-size: 0.72rem; font-weight: 600; opacity: 0.9; margin-top: 6px; text-align:center; }
+
+        @media (max-width: 1400px) {
+          .compact-kpis-row { grid-template-columns: repeat(5, 1fr); }
+        }
+        @media (max-width: 1200px) {
+          .compact-kpis-row { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+          .compact-kpis-row { grid-template-columns: repeat(2, 1fr); }
+          .compact-kpi { min-height: 100px; padding: 12px; }
+          .compact-kpi-value { font-size: 1.2rem; }
+        }
+        @media (max-width: 480px) {
+          .compact-kpis-row { grid-template-columns: 1fr; }
+          .compact-kpi { min-height: 96px; padding: 10px; }
+          .compact-kpi-value { font-size: 1.1rem; }
+        }
+
+        /* =====================
+           TARJETA: PRESUPUESTOS
+           ===================== */
+        .budget-summary-card {
+          background: #FFFFFF;
+          border-radius: 14px;
+          padding: 14px;
+          border: 1px solid #C8CFDA; /* gris más oscuro */
+          box-shadow: 0 8px 20px rgba(0,0,0,0.18); /* sombra más marcada */
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 6px;
+        }
+
+        .budget-grid-top,
+        .budget-grid-bottom {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        .budget-top-duo {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0;
+          background: transparent; /* permitir contraste entre celdas */
+          border-radius: 10px;
+          overflow: hidden;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          min-height: 74px;
+          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+        }
+        .budget-top-duo .duo-cell {
+          padding: 12px;
+          color: #fff;
+          background: #0b2a3f; /* celda 1: azul sólido */
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          position: relative;
+        }
+        .budget-top-duo .duo-cell + .duo-cell { background: rgba(9, 67, 105, 0.88); }
+        .budget-top-duo .duo-cell.no-sep { border-left: none !important; }
+        .duo-title { font-weight: 700; font-size: 0.88rem; opacity: 0.95; display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
+        .duo-title.with-badge .pct-badge.small { position: absolute; right: 10px; top: 10px; margin-left: 0; }
+        .duo-value { font-size: 1.1rem; font-weight: 800; margin-top: 6px; text-align: center; }
+
+        .pct-badge.small { font-size: 0.7rem; padding: 2px 6px; }
+
+        /* Igualar altura de Inversión total con el bloque azul */
+        .budget-item.green-alt { min-height: 74px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .budget-item.green-alt .budget-header { justify-content: center; width: 100%; }
+        .budget-item.green-alt .budget-value { text-align: center; width: 100%; }
+
+        /* =====================
+           BLOQUE INTEGRADO (cuadro rojo)
+           ===================== */
+        .budget-integrated {
+          background: #F8FFF1;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border-radius: 10px;
+          padding: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+        }
+        .integrated-top {
+          background: #f5fde9;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border-radius: 8px;
+          padding: 10px 12px;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.16);
+        }
+        .integrated-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px; }
+        .integrated-title { font-weight: 700; color:#2C3E50; font-size: 0.9rem; }
+        .integrated-value { font-size: 1.05rem; font-weight: 800; color:#002945; }
+
+        /* Centrado explícito para el bloque solicitado */
+        .integrated-top.center { text-align: center; position: relative; }
+        .integrated-header.center { justify-content: center; gap: 10px; margin-bottom: 6px; }
+        .integrated-value.center { text-align: center; }
+        /* Mover el % a la derecha dentro de la tarjeta centrada */
+        .integrated-top.center .pct-badge {
+          position: absolute;
+          right: 10px;
+          top: 10px;
+        }
+
+        /* Centrado de celdas inferiores y ubicacion del % a la derecha */
+        .integrated-cell { position: relative; text-align: center; }
+        .integrated-cell .integrated-header { justify-content: center; }
+        .integrated-cell .integrated-value { text-align: center; }
+        .integrated-cell .pct-badge { position: absolute; right: 10px; top: 10px; }
+
+        .integrated-duo {
+          display:grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .integrated-cell {
+          background: #f5fde9;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border-radius: 8px;
+          padding: 10px 12px;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.16);
+        }
+        .integrated-cell.alt {
+          background: #eef9da;
+        }
+
+        @media (max-width: 768px) {
+          .integrated-duo { grid-template-columns: 1fr; }
+        }
+
+        .budget-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+
+        .budget-item {
+          background: #F8FFF1;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border-radius: 10px;
+          padding: 12px;
+          position: relative;
+          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+        }
+
+        .budget-item.dark {
+          background: #0b2a3f;
+          border-color: #0b2a3f;
+        }
+        .budget-item.dark .budget-title { color: #e6f2f8; }
+        .budget-item.dark .budget-value { color: #ffffff; }
+
+        .budget-item.green-alt { background:#EFFEDE; }
+
+        .budget-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 6px;
+        }
+
+        .budget-title {
+          font-weight: 700;
+          color: #2C3E50;
+          font-size: 0.88rem;
+        }
+
+        .budget-header.no-badge { justify-content: flex-start; }
+
+        .budget-value {
+          font-size: 1.05rem;
+          font-weight: 800;
+          color: #002945;
+          }
+
+        .pct-badge {
+          background: #98C73B;
+          color: #FFFFFF;
+          font-weight: 800;
+          font-size: 0.72rem;
+          padding: 3px 7px;
+          border-radius: 999px;
+          border: 1px solid rgba(0,0,0,0.08);
+        }
+
+        @media (max-width: 768px) {
+          .budget-grid-top,
+          .budget-row,
+          .budget-grid-bottom { grid-template-columns: 1fr; }
+        }
+
+        /* =====================
+           KPIs CHIPS (fila compacta)
+           ===================== */
+        .kpi-chips-row {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+          margin-top: 14px;
+          margin-bottom: 14px;
+        }
+        .kpi-chip {
+          border-radius: 12px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 90px;
+          color: #fff;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+        .kpi-chip.navy { background:#002945; }
+        .kpi-chip.green { background:#98C73B; }
+        .kpi-chip-label { font-size: 0.72rem; font-weight: 700; opacity: 0.95; text-align:center; }
+        .kpi-chip-value { font-size: 1.1rem; font-weight: 800; margin-top: 6px; text-align:center; }
+
+        @media (max-width: 1200px) {
+          .kpi-chips-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+          .kpi-chips-row { grid-template-columns: 1fr; }
+          .kpi-chip { min-height: 84px; padding: 10px; }
         }
 
         .dependencies-list {
@@ -2266,8 +2493,8 @@ const Dashboard = () => {
         ======================================================================== */
         @media (max-width: 1400px) {
           .kpis-main-row {
-            grid-template-columns: repeat(6, 1fr);
-            gap: 14px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
           }
         }
         
@@ -2276,8 +2503,8 @@ const Dashboard = () => {
           .kpis-row-6 { grid-template-columns: repeat(4, 1fr); }
           .kpis-row-7 { grid-template-columns: repeat(4, 1fr); }
           .kpis-main-row { 
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
           }
           .main-content {
             grid-template-columns: 1fr;
