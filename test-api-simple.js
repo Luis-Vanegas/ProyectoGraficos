@@ -1,4 +1,4 @@
-// Script simple para probar la API sin dependencias externas
+// Script simple para probar la API externa
 const https = require('https');
 
 const options = {
@@ -15,14 +15,10 @@ const options = {
 
 console.log('🔍 Probando API externa...');
 console.log('URL:', `https://${options.hostname}${options.path}`);
-console.log('Headers:', options.headers);
-console.log('---\n');
 
 const req = https.request(options, (res) => {
   console.log('✅ Respuesta recibida!');
   console.log('Status:', res.statusCode);
-  console.log('Headers:', res.headers);
-  console.log('---\n');
 
   let data = '';
   res.on('data', (chunk) => {
@@ -70,4 +66,3 @@ req.on('error', (error) => {
 });
 
 req.end();
-

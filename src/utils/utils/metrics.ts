@@ -19,6 +19,28 @@ export type Row = Record<string, string | number | Date | null>;
 export const nf = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
 export const cf = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
+// Formateador para valores monetarios con notación colombiana (B, M, MM) y 2 decimales
+export function formatMoneyColombian(value: number): string {
+  const abs = Math.abs(value);
+  
+  if (abs >= 1e12) {
+    // Billones (10^12)
+    return `$${(value / 1e12).toFixed(2)}B`;
+  } else if (abs >= 1e9) {
+    // Mil millones (10^9)
+    return `$${(value / 1e9).toFixed(2)}MM`;
+  } else if (abs >= 1e6) {
+    // Millones (10^6)
+    return `$${(value / 1e6).toFixed(2)}M`;
+  } else if (abs >= 1e3) {
+    // Miles (10^3)
+    return `$${(value / 1e3).toFixed(2)}K`;
+  } else {
+    // Valores menores a 1000
+    return `$${value.toFixed(2)}`;
+  }
+}
+
 // Formateador de fechas
 export function formatDate(dateValue: string | null | undefined): string {
   if (!dateValue || dateValue === 'Sin información' || dateValue === 'undefined') {

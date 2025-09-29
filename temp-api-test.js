@@ -14,7 +14,6 @@ async function testAPI() {
   try {
     console.log('🔍 Probando conexión a la API externa...');
     console.log('URL:', API_URL);
-    console.log('Headers:', API_CONFIG.headers);
     console.log('---\n');
 
     const response = await axios.get(API_URL, {
@@ -24,7 +23,6 @@ async function testAPI() {
 
     console.log('✅ Respuesta exitosa!');
     console.log('Status:', response.status);
-    console.log('Headers de respuesta:', Object.keys(response.headers));
     console.log('---\n');
 
     // Analizar estructura de datos
@@ -36,27 +34,25 @@ async function testAPI() {
       console.log('Claves del objeto:', Object.keys(response.data));
     }
 
+    let actualData = response.data;
     if (Array.isArray(response.data)) {
       console.log('Longitud del array:', response.data.length);
-      if (response.data.length > 0) {
-        console.log('Primer registro:');
-        console.log(JSON.stringify(response.data[0], null, 2));
-      }
+      actualData = response.data;
     } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
       console.log('Datos en response.data.data, longitud:', response.data.data.length);
-      if (response.data.data.length > 0) {
-        console.log('Primer registro:');
-        console.log(JSON.stringify(response.data.data[0], null, 2));
-      }
+      actualData = response.data.data;
     } else if (response.data && response.data.rows && Array.isArray(response.data.rows)) {
       console.log('Datos en response.data.rows, longitud:', response.data.rows.length);
-      if (response.data.rows.length > 0) {
-        console.log('Primer registro:');
-        console.log(JSON.stringify(response.data.rows[0], null, 2));
-      }
-    } else {
-      console.log('Estructura inesperada:');
-      console.log(JSON.stringify(response.data, null, 2));
+      actualData = response.data.rows;
+    }
+
+    if (actualData && actualData.length > 0) {
+      console.log('\n=== CAMPOS DE LA API ===');
+      const fields = Object.keys(actualData[0]);
+      console.log('Total de campos:', fields.length);
+      fields.forEach((field, index) => {
+        console.log(`${index + 1}. ${field}`);
+      });
     }
 
   } catch (error) {
@@ -65,10 +61,8 @@ async function testAPI() {
     if (error.response) {
       console.error('Status:', error.response.status);
       console.error('Data:', error.response.data);
-      console.error('Headers:', error.response.headers);
     }
   }
 }
 
 testAPI();
-

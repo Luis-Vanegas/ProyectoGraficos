@@ -32,3 +32,4 @@ pause > nul
 
 echo Cerrando servidor...
 taskkill /F /IM node.exe > nul 2>&1
+

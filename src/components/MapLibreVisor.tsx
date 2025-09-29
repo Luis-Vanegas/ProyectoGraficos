@@ -5,6 +5,8 @@ import type { LngLatLike } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as turf from '@turf/turf';
 import GanttChart from './GanttChart';
+import { formatMoneyColombian } from '../utils/utils/metrics';
+import { F } from '../dataConfig';
 
 type LimiteFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, { CODIGO: string; NOMBRE: string }>;
 type LimitesFC = GeoJSON.FeatureCollection<LimiteFeature['geometry'], LimiteFeature['properties']>;
@@ -915,7 +917,7 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       const coords = (f.geometry as any).coordinates as [number, number];
       const p = (f.properties as any) || {};
       const obra = obrasEnriquecidas && Array.isArray(obrasEnriquecidas) ? obrasEnriquecidas.find(o => o.id === p.id) || null : null;
-      const { nombre } = p;
+      const nombre = (obra as any)?.[F.nombre] || '';
       
       map.easeTo({ center: coords, zoom: Math.max(map.getZoom(), 15), duration: 600 });
       if (clickPopupRef.current) clickPopupRef.current.remove();
@@ -923,92 +925,67 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
       // Solo crear popup si obra existe
       if (!obra) return;
       
-      // Verificar si la obra tiene coordenadas
-      const lat = (obra as any)?.[getFieldNames.lat || ''] || '';
-      const lon = (obra as any)?.[getFieldNames.lon || ''] || '';
-      const tieneCoordenadas = lat && lon && 
-                               !isNaN(parseFloat(String(lat))) && 
-                               !isNaN(parseFloat(String(lon))) &&
-                               parseFloat(String(lat)) !== 0 && 
-                               parseFloat(String(lon)) !== 0;
+      // Obtener información de la obra usando los campos correctos
+      const imgUrl = (obra as any)?.[F.urlImagen] || '';
+      const comunaStr = (obra as any)?.[F.comunaOCorregimiento] || '';
+      const dependencia = (obra as any)?.[F.dependencia] || '';
+      const presupuesto = (obra as any)?.[F.presupuestoEjecutado] || '';
+      const porcentaje = (obra as any)?.[F.presupuestoPorcentajeEjecutado] || 0;
       
-      // Obtener información de la obra
-      const imgUrl = (obra as any)?.[getFieldNames.imagenUrl || ''] || (obra as any)?.[getFieldNames.imagen || ''] || '';
-        const comunaStr = (obra as any)?.comunaNombre || (obra?.comunaCodigo ? codigoToComuna[obra.comunaCodigo] : (selectedCodigo ? codigoToComuna[selectedCodigo] : '')) || '';
-      const dependencia = (obra as any)?.[getFieldNames.dependencia || ''] || '';
-      const direccion = (obra as any)?.[getFieldNames.direccion || ''] || '';
-      const presupuesto = (obra as any)?.[getFieldNames.presupuesto || ''] || '';
-      const porcentaje = (obra as any)?.[getFieldNames.porcentaje || ''] || 0;
-      const alertaPresencia = (obra as any)?.[getFieldNames.alertaPresencia || ''] || '';
-      const alertaDescripcion = (obra as any)?.[getFieldNames.alertaDescripcion || ''] || '';
-      const alertaImpacto = (obra as any)?.[getFieldNames.alertaImpacto || ''] || '';
+      // Debug: Log de datos para verificar
+      console.log('Datos del popup:', {
+        nombre: (obra as any)?.[F.nombre],
+        imgUrl,
+        comunaStr,
+        dependencia,
+        presupuesto,
+        porcentaje,
+        obra: obra
+      });
       
-      // Formatear valores monetarios
+      // Formatear valores monetarios con notación colombiana
       const formatMoney = (value: any) => {
         if (!value || value === 0) return 'No especificado';
         const numValue = parseFloat(String(value));
         if (isNaN(numValue)) return 'No especificado';
-        return new Intl.NumberFormat('es-CO', {
-          style: 'currency',
-          currency: 'COP',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0
-        }).format(numValue);
+        return formatMoneyColombian(numValue);
       };
       
-      // Crear HTML del popup
-      const imgHtml = imgUrl ? `<div style="margin-bottom:8px"><img src="${imgUrl}" alt="${nombre || ''}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb"/></div>` : '';
-      const comunaText = comunaStr ? `<div style="color:#374151;margin-bottom:6px"><strong>Comuna:</strong> ${comunaStr}</div>` : '';
-      const depText = dependencia ? `<div style="color:#374151;margin-bottom:6px"><strong>Dependencia:</strong> ${dependencia}</div>` : '';
-      const dirText = direccion ? `<div style="color:#374151;margin-bottom:6px"><strong>Dirección:</strong> ${direccion}</div>` : '';
-      const presText = presupuesto ? `<div style="color:#374151;margin-bottom:6px"><strong>Presupuesto:</strong> ${formatMoney(presupuesto)}</div>` : '';
+      // Crear HTML del popup organizado según la imagen
+      const imgHtml = imgUrl ? `<div style="margin-bottom:12px"><img src="${imgUrl}" alt="${nombre || ''}" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb"/></div>` : '';
       const pct = (porcentaje === null || porcentaje === undefined) ? 's/d' : `${porcentaje}%`;
-      
-      // Verificar si hay alerta válida
-      const hasValidAlert = alertaPresencia && 
-        String(alertaPresencia).toLowerCase() !== 'sin información' && 
-        String(alertaPresencia).toLowerCase() !== 'sin informacion' && 
-        String(alertaPresencia).toLowerCase() !== 'no aplica' && 
-        String(alertaPresencia).toLowerCase() !== 'ninguna' &&
-        String(alertaPresencia).toLowerCase() !== 'null' &&
-        String(alertaPresencia).toLowerCase() !== '';
-      
-      const alertaHtml = hasValidAlert ? `
-        <div style="margin-top:12px;padding:12px;border:2px solid #dc2626;border-radius:10px;background:#fef2f2;box-shadow:0 2px 8px rgba(220,38,38,0.15)">
-          <div style="font-weight:900;color:#dc2626;margin-bottom:8px;font-size:14px;text-transform:uppercase;letter-spacing:0.5px">⚠️ Alerta y Riesgo</div>
-          <div style="color:#374151;margin-bottom:6px"><strong style="font-weight:700;color:#111827">Presencia de Riesgo:</strong> <span style="color:#dc2626;font-weight:600">${alertaPresencia}</span></div>
-          ${alertaDescripcion ? `<div style="color:#374151;margin-bottom:6px"><strong style="font-weight:700;color:#111827">Descripción:</strong> <span style="color:#374151;line-height:1.4">${alertaDescripcion}</span></div>` : ''}
-          ${alertaImpacto ? `<div style="color:#374151"><strong style="font-weight:700;color:#111827">Impacto:</strong> <span style="color:#374151">${alertaImpacto}</span></div>` : ''}
-        </div>
-      ` : '';
-      
-      // HTML especial para obras sin coordenadas
-      const sinCoordenadasHtml = !tieneCoordenadas ? `
-        <div style="margin-top:12px;padding:12px;border:2px solid #f59e0b;border-radius:10px;background:#fef3c7;box-shadow:0 2px 8px rgba(245,158,11,0.15)">
-          <div style="font-weight:900;color:#92400e;margin-bottom:8px;font-size:14px;text-transform:uppercase;letter-spacing:0.5px">⚠️ Sin Coordenadas</div>
-          <div style="color:#92400e;margin-bottom:6px"><strong style="font-weight:700;color:#92400e">Estado:</strong> <span style="color:#92400e">Esta obra no tiene coordenadas geográficas</span></div>
-          <div style="color:#92400e;margin-bottom:6px"><strong style="font-weight:700;color:#92400e">Ubicación:</strong> <span style="color:#92400e">${comunaStr || 'No especificada'}</span></div>
-          ${comunaStr === '99 - Varias' ? `<div style="color:#92400e"><strong style="font-weight:700;color:#92400e">Alcance:</strong> <span style="color:#92400e">Obra que abarca toda Antioquia</span></div>` : ''}
-        </div>
-      ` : '';
       
       const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
         .setLngLat(coords)
         .setHTML(`
-          <div style="font-weight:900;margin-bottom:12px;color:#111827;font-size:16px;line-height:1.3">${nombre || ''}</div>
-          ${imgHtml}
-          <div style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:12px;border-left:4px solid #3b82f6">
-            <div style="font-weight:700;color:#1e40af;margin-bottom:8px;font-size:14px">📋 Información del Proyecto</div>
-          ${depText}
-          ${comunaText}
-            ${dirText}
-            ${presText}
-            <div style="color:#111827;margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb">
-              <strong>Avance del proyecto:</strong> <span style="font-weight:800;color:#059669">${pct}</span>
-        </div>
+          <div style="background:white;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,0.15);overflow:hidden;min-width:280px;max-width:320px">
+            <!-- Header con barra azul -->
+            <div style="background:linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);padding:12px 16px;border-left:4px solid #1e40af">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:18px">📋</div>
+                <div style="font-weight:700;color:white;font-size:16px">Información del Proyecto</div>
+              </div>
+            </div>
+            
+            <!-- Contenido principal -->
+            <div style="padding:16px">
+              <!-- Nombre del proyecto -->
+              <div style="font-weight:900;margin-bottom:12px;color:#111827;font-size:16px;line-height:1.3">${nombre || 'Sin nombre'}</div>
+              
+              <!-- Imagen -->
+              ${imgHtml}
+              
+              <!-- Información del proyecto -->
+              <div style="background:#f8fafc;padding:12px;border-radius:8px;border-left:4px solid #3b82f6">
+                ${dependencia ? `<div style="color:#374151;margin-bottom:8px"><strong>Dependencia:</strong> ${dependencia}</div>` : ''}
+                ${comunaStr ? `<div style="color:#374151;margin-bottom:8px"><strong>Comuna:</strong> ${comunaStr}</div>` : ''}
+                ${presupuesto ? `<div style="color:#374151;margin-bottom:8px"><strong>Presupuesto:</strong> ${formatMoney(presupuesto)}</div>` : ''}
+                <div style="color:#111827;margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb">
+                  <strong>Avance del proyecto:</strong> <span style="font-weight:800;color:#059669">${pct}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          ${alertaHtml}
-          ${sinCoordenadasHtml}
         `)
         .addTo(map);
       clickPopupRef.current = popup;

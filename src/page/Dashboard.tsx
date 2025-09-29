@@ -13,7 +13,8 @@ import {
   // cleanDependentFilters, // TEMPORALMENTE DESHABILITADO
   type Row,
   type Filters,
-  computeVigencias
+  computeVigencias,
+  formatMoneyColombian
 } from '../utils/utils/metrics';
 
 // Reemplazo de KPIs por tarjetas compactas con CountUp
@@ -720,7 +721,7 @@ const Dashboard = () => {
                     <div className="budget-header no-badge">
                       <span className="budget-title">Inversión total</span>
                     </div>
-                    <div className="budget-value"><CountUp end={k.invTotal} duration={1.2} prefix="$" separator="." /></div>
+                    <div className="budget-value">{formatMoneyColombian(k.invTotal)}</div>
                   </div>
                 </div>
                 <div className="budget-integrated">
@@ -730,7 +731,7 @@ const Dashboard = () => {
                       <span className="pct-badge">{pctEjecSobreTotal}%</span>
                     </div>
                     <div className="integrated-value center">
-                      <CountUp end={presupuestoEjecutado} duration={1.2} prefix="$" separator="." />
+                      {formatMoneyColombian(presupuestoEjecutado)}
                     </div>
                   </div>
                   <div className="integrated-duo">
@@ -740,7 +741,7 @@ const Dashboard = () => {
                         <span className="pct-badge">{pctCuatSobreTotal}%</span>
                       </div>
                       <div className="integrated-value">
-                        <CountUp end={presupuestoCuatrienio} duration={1.2} prefix="$" separator="." />
+                        {formatMoneyColombian(presupuestoCuatrienio)}
                       </div>
                     </div>
                     <div className="integrated-cell alt">
@@ -749,7 +750,7 @@ const Dashboard = () => {
                         <span className="pct-badge">{pctAntSobreTotal}%</span>
                       </div>
                       <div className="integrated-value">
-                        <CountUp end={presupuestoAnteriores} duration={1.2} prefix="$" separator="." />
+                        {formatMoneyColombian(presupuestoAnteriores)}
                       </div>
                     </div>
                   </div>

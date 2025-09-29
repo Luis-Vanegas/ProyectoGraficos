@@ -1,6 +1,6 @@
 // src/dataConfig.ts
 // Mapa completo de campos de la API -> claves camelCase para usar en el código
-// Total: 107 campos sincronizados con la API
+// Total: 114 campos sincronizados con la API
 export const F = {
   // ===== INFORMACIÓN BÁSICA (5 campos) =====
   id: 'id',
@@ -46,11 +46,12 @@ export const F = {
   avance2026: 'AVANCE 2026',
   avance2027: 'AVANCE 2027',
 
-  // ===== CÓDIGOS Y PROYECTOS (9 campos) =====
+  // ===== CÓDIGOS Y PROYECTOS (10 campos) =====
   codigoProyecto1: 'CÓDIGO PROYECTO 1',
   codigoProyecto2: 'CÓDIGO PROYECTO 2',
   codigoProyecto3: 'CÓDIGO PROYECTO 3',
   proyectoEstrategico: 'PROYECTO ESTRATÉGICO',
+  subproyectoEstrategico: 'SUBPROYECTO ESTRATÉGICO',
   relacionPOT: 'RELACIÓN POT',
   codigoProgramaPDD: 'CÓDIGO DEL PROGRAMA PDD',
   indicador1: 'INDICADOR 1',
@@ -95,6 +96,14 @@ export const F = {
   fechaInicioRealViabilizacionDAP: 'FECHA INICIO REAL VIABILIZACIÓN (DAP)',
   fechaFinEstimadaViabilizacionDAP: 'FECHA FIN ESTIMADA VIABILIZACIÓN (DAP)',
   fechaFinRealViabilizacionDAP: 'FECHA FIN REAL VIABILIZACIÓN (DAP)',
+
+  // ===== LICENCIAS (CURADURÍA) (6 campos) - NUEVOS =====
+  porcentajeLicenciasCuraduria: 'PORCENTAJE LICENCIAS (CURADURÍA)',
+  inversionLicenciasCuraduria: 'INVERSIÓN LICENCIAS (CURADURÍA)',
+  fechaInicioEstimadaLicenciasCuraduria: 'FECHA INICIO ESTIMADA LICENCIAS (CURADURÍA)',
+  fechaInicioRealLicenciasCuraduria: 'FECHA INICIO REAL LICENCIAS (CURADURÍA)',
+  fechaFinEstimadaLicenciasCuraduria: 'FECHA FIN ESTIMADA LICENCIAS (CURADURÍA)',
+  fechaFinRealLicenciasCuraduria: 'FECHA FIN REAL LICENCIAS (CURADURÍA)',
 
   // ===== CONTRATACIÓN (5 campos) =====
   porcentajeContratacion: 'PORCENTAJE CONTRATACIÓN',
@@ -179,7 +188,7 @@ export const getFieldsByCategory = {
     F.avance2024, F.avance2025, F.avance2026, F.avance2027
   ],
   codes: () => [
-    F.codigoProyecto1, F.codigoProyecto2, F.codigoProyecto3, F.proyectoEstrategico, F.relacionPOT,
+    F.codigoProyecto1, F.codigoProyecto2, F.codigoProyecto3, F.proyectoEstrategico, F.subproyectoEstrategico, F.relacionPOT,
     F.codigoProgramaPDD, F.indicador1, F.indicador2, F.indicador3
   ],
   administrative: () => [
@@ -191,5 +200,9 @@ export const getFieldsByCategory = {
   ],
   delivery: () => [
     F.fechaEstimadaDeEntrega, F.obraEntregada, F.fechaRealDeEntrega
+  ],
+  licenses: () => [
+    F.porcentajeLicenciasCuraduria, F.inversionLicenciasCuraduria, F.fechaInicioEstimadaLicenciasCuraduria,
+    F.fechaInicioRealLicenciasCuraduria, F.fechaFinEstimadaLicenciasCuraduria, F.fechaFinRealLicenciasCuraduria
   ]
 };

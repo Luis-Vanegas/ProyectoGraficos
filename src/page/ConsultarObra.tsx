@@ -479,6 +479,36 @@ export default function ConsultarObra() {
 
       {/* Contenido principal */}
       <div className="main-content">
+        {/* Sección de información de la obra seleccionada - En la parte superior */}
+        {currentData && (
+          <div className="selected-project-header">
+            <div className="project-image-container">
+              {currentData[F.urlImagen] ? (
+                <img 
+                  src={String(currentData[F.urlImagen])} 
+                  alt={String(currentData[F.nombre])}
+                  className="project-image"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className="project-image-fallback" style={{ display: currentData[F.urlImagen] ? 'none' : 'flex' }}>
+                <div className="fallback-icon">🏗️</div>
+              </div>
+            </div>
+            <div className="project-info">
+              <h2 className="project-name">{String(currentData[F.nombre])}</h2>
+              <div className="project-status">
+                <span className="status-badge">{String(currentData[F.estadoDeLaObra] ?? 'En Progreso')}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Layout principal con dos columnas */}
         <div className="main-layout">
           {/* Columna izquierda - Avance, Fechas compactas y Descripción */}
@@ -1758,6 +1788,120 @@ export default function ConsultarObra() {
           width: 100%;
           margin: 15px auto 0 auto;
           box-sizing: border-box;
+        }
+
+        /* ========================================================================
+            SECCION DE INFORMACION DE OBRA SELECCIONADA
+        ======================================================================== */
+        .selected-project-header {
+          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+          border-radius: 16px;
+          padding: 24px;
+          margin-bottom: 24px;
+          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
+          border: 1px solid #79BC99;
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          transition: all 0.3s ease;
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .selected-project-header:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 35px rgba(121, 188, 153, 0.18);
+        }
+
+        .project-image-container {
+          position: relative;
+          width: 100px;
+          height: 100px;
+          border-radius: 16px;
+          overflow: hidden;
+          flex-shrink: 0;
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .project-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.3s ease;
+        }
+
+        .project-image:hover {
+          transform: scale(1.05);
+        }
+
+        .project-image-fallback {
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(135deg, #79BC99 0%, #5A9A7A 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 12px;
+        }
+
+        .fallback-icon {
+          font-size: 40px;
+          opacity: 0.8;
+        }
+
+        .project-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .project-name {
+          font-size: 1.6rem;
+          font-weight: 700;
+          color: #2d3748;
+          margin: 0 0 12px 0;
+          line-height: 1.3;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          white-space: nowrap;
+        }
+
+        .project-status {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .status-badge {
+          background: linear-gradient(135deg, #79BC99 0%, #5A9A7A 100%);
+          color: white;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.3);
+        }
+
+        /* Responsive para la sección de obra seleccionada */
+        @media (max-width: 768px) {
+          .selected-project-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 15px;
+            padding: 16px;
+          }
+
+          .project-image-container {
+            width: 60px;
+            height: 60px;
+          }
+
+          .project-name {
+            font-size: 1.2rem;
+            white-space: normal;
+            line-height: 1.4;
+          }
         }
 
         /* ========================================================================
