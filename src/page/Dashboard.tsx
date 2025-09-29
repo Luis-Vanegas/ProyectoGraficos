@@ -951,7 +951,7 @@ const Dashboard = () => {
         ======================================================================== */
         .dashboard-container {
           min-height: 100vh;
-          background: #94caf3;
+          background: #ffffff;
           font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -1546,7 +1546,7 @@ const Dashboard = () => {
         ======================================================================== */
         .main-dashboard-section {
           margin-bottom: 30px;
-          background: #2C3E50;
+          background: #032c55;
           border-radius: 20px;
           padding: 30px;
           box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);

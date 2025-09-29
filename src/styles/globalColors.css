@@ -50,7 +50,7 @@
 /* Fondo principal de todas las páginas */
 .dashboard-container,
 .page-container {
-  background: #00233D !important;
+  background: #01233E !important;
   min-height: 100vh;
   font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
