@@ -262,7 +262,7 @@ export default function ConsultarObra() {
     return stages;
   }, [currentData]);
 
-  // Componente de medidor semicircular
+  // Componente de medidor semicircular para etapas
   const SemicircularGauge = ({ percentage, title, color }: { percentage: number; title: string; color: string }) => {
     const radius = 40;
     const strokeWidth = 5;
@@ -271,7 +271,7 @@ export default function ConsultarObra() {
     const strokeDasharray = `${circumference} ${circumference}`;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-  return (
+    return (
       <div className="gauge-container">
         <div className="gauge-title">{title}</div>
         <div className="gauge-wrapper">
@@ -306,7 +306,7 @@ export default function ConsultarObra() {
             />
           </svg>
           <div className="gauge-percentage">{percentage.toFixed(2)}%</div>
-          </div>
+        </div>
         <div className="gauge-labels">
           <span className="gauge-label-start">0.00%</span>
           <span className="gauge-label-end">100.00%</span>
@@ -701,25 +701,28 @@ export default function ConsultarObra() {
               </div>
             </div>
             
+            {/* Descripción movida aquí - justo debajo de las tarjetas de detalles */}
+            <div className="description-card-full-width" style={{ 
+              marginTop: '1px', 
+              marginBottom: '2px',
+              width: '100%',
+              gridColumn: '1 / -1'
+            }}>
+              <div className="card-header">
+                <span className="detail-icon">{getIconForField('criterio')}</span>
+                <span className="card-title">Descripción</span>
+              </div>
+              <div className="description-content-new">
+                {currentData ? (
+                  String(currentData[F.descripcion] ?? 'Sin descripción')
+                ) : (
+                  'Usa el botón de filtros para seleccionar un proyecto u obra.'
+                )}
               </div>
             </div>
-          </div>
-        </div>
-
-
-
-        {/* Descripción movida aquí - en el espacio vacío señalado */}
-        <div className="description-card" style={{ marginTop: '20px', marginBottom: '20px' }}>
-          <div className="card-header">
-            <span className="detail-icon">{getIconForField('criterio')}</span>
-            <span className="card-title">Descripción</span>
-          </div>
-          <div className="description-content-new">
-            {currentData ? (
-              String(currentData[F.descripcion] ?? 'Sin descripción')
-            ) : (
-              'Usa el botón de filtros para seleccionar un proyecto u obra.'
-            )}
+            
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1230,10 +1233,31 @@ export default function ConsultarObra() {
           grid-auto-rows: min-content;
         }
 
+         /* Descripción de ancho completo */
+         .description-card-full-width {
+           background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+           border-radius: 12px;
+           padding: 5px;
+           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+           border: 1px solid #e9ecef;
+           transition: all 0.3s ease;
+           display: flex;
+           flex-direction: column;
+           height: auto;
+           grid-column: 1 / -1;
+           width: 100%;
+         }
+
+         .description-card-full-width:hover {
+           transform: translateY(-2px);
+           box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+           border-color: #79BC99;
+         }
+
         .detail-card {
           background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
           border-radius: 10px;
-          padding: 10px;
+          padding: 6px;
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
           border: 1px solid #e9ecef;
           transition: all 0.3s ease;

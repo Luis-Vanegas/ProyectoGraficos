@@ -3,7 +3,6 @@ import {
   Box,
   Card,
   CardContent,
-  Typography,
   IconButton
 } from '@mui/material';
 import {
@@ -17,7 +16,8 @@ import {
   DesignServices,
   Handshake,
   Receipt,
-  Timeline
+  Timeline,
+  Speed
 } from '@mui/icons-material';
 import { F } from '../dataConfig';
 import { type Row } from '../utils/utils/metrics';
@@ -29,6 +29,71 @@ interface ProjectProgressIndicatorProps {
 }
 
 const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProgressIndicatorProps) => {
+
+  // Componente de barra de progreso moderna y compacta
+  const ModernProgressBar = ({ percentage, title }: { percentage: number; title: string }) => {
+    const getProgressColor = (pct: number) => {
+      if (pct < 30) return '#ff4444';
+      if (pct < 60) return '#ffaa00';
+      if (pct < 80) return '#ffdd00';
+      return '#00cc66';
+    };
+
+    const currentColor = getProgressColor(percentage);
+
+    return (
+      <div className="modern-progress-container">
+        <div className="progress-header">
+          <div className="progress-title">
+            <Speed sx={{ fontSize: 16, marginRight: 0.5 }} />
+            {title}
+          </div>
+          <div className="progress-percentage">
+            {percentage.toFixed(1)}%
+          </div>
+        </div>
+        
+        <div className="progress-bar-container">
+          <div className="progress-bar-background">
+            <div 
+              className="progress-bar-fill"
+              style={{ 
+                width: `${percentage}%`,
+                background: `linear-gradient(90deg, ${currentColor} 0%, ${currentColor}dd 100%)`
+              }}
+            />
+          </div>
+          
+          {/* Marcas de progreso */}
+          <div className="progress-marks">
+            {[0, 25, 50, 75, 100].map((value) => (
+              <div 
+                key={value}
+                className={`progress-mark ${percentage >= value ? 'active' : ''}`}
+                style={{ left: `${value}%` }}
+              >
+                <div className="mark-dot" />
+                <span className="mark-value">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Indicador de estado */}
+        <div className="progress-status">
+          <div 
+            className="status-dot" 
+            style={{ backgroundColor: currentColor }}
+          />
+          <span className="status-text">
+            {percentage < 30 ? 'Inicio' : 
+             percentage < 60 ? 'En Progreso' : 
+             percentage < 80 ? 'Avanzado' : 'Casi Terminado'}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   // Función para parsear porcentajes (copiada del servidor)
   const parsePct = (val: any): number | null => {
@@ -197,13 +262,7 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProg
     };
   }, [data, allData]);
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return '#4caf50';
-    if (percentage >= 60) return '#8bc34a';
-    if (percentage >= 40) return '#ffc107';
-    if (percentage >= 20) return '#ff9800';
-    return '#f44336';
-  };
+  // Nota: función de color ya no se usa aquí; el color dinámico está en ModernProgressBar
 
 
   return (
@@ -215,71 +274,205 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages }: ProjectProg
         overflow: 'hidden'
       }}
     >
-      <CardContent sx={{ p: 2 }}>
-        {/* Header con botón de expansión */}
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Construction sx={{ color: '#495057', fontSize: 20 }} />
-            <Typography variant="h6" fontWeight="bold" color="#495057">
-              Avance General del Proyecto
-            </Typography>
-          </Box>
+      <CardContent sx={{ p: 1.2 }}>
+        {/* Botón para mostrar/ocultar etapas */}
+        <Box display="flex" justifyContent="flex-end" mb={1}>
           <IconButton
+            title="Ver etapas"
+            aria-label="Ver etapas"
             onClick={onToggleStages}
             sx={{
               color: '#6c757d',
+              width: 30,
+              height: 30,
               '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
             }}
           >
-            <ExpandMore />
+            <ExpandMore fontSize="small" />
           </IconButton>
         </Box>
 
-        {/* Indicador como barra horizontal compacta */}
-        <Box 
-          sx={{ 
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-            borderRadius: 1,
-            p: 1.2,
-            border: '1px solid #e9ecef',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}
-        >
-          {/* Lado izquierdo: círculo + porcentaje */}
-          <Box display="flex" alignItems="center" gap={1.5}>
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: `linear-gradient(135deg, ${getProgressColor(progressData.percentage)}20, ${getProgressColor(progressData.percentage)}10)`,
-                border: `2px solid ${getProgressColor(progressData.percentage)}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Typography 
-                variant="body2" 
-                fontWeight="bold" 
-                color={getProgressColor(progressData.percentage)}
-                sx={{ fontSize: '0.75rem' }}
-              >
-                {progressData.percentage.toFixed(0)}%
-              </Typography>
-            </Box>
-            <Typography variant="body2" fontWeight="bold" color="#2d3748" sx={{ fontSize: '0.85rem' }}>
-              {progressData.percentage.toFixed(1)}% completado
-            </Typography>
-          </Box>
-          
-          {/* Lado derecho: removido chip de estado por solicitud */}
-        </Box>
+        {/* Barra de progreso moderna */}
+        <ModernProgressBar 
+          percentage={progressData.percentage} 
+          title="Avance General del Proyecto" 
+        />
       </CardContent>
     </Card>
   );
 };
 
 export default ProjectProgressIndicator;
+
+// Estilos CSS para la barra de progreso moderna
+const modernProgressStyles = `
+  .modern-progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .progress-title {
+    display: flex;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #2d3748;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .progress-percentage {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #2d3748;
+    background: rgba(121, 188, 153, 0.1);
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(121, 188, 153, 0.2);
+  }
+
+  .progress-bar-container {
+    position: relative;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 6px;
+    overflow: visible; /* permitir ver marcas y valores */
+    margin: 4px 0;
+  }
+
+  .progress-bar-background {
+    width: 100%;
+    height: 100%;
+    background: #f1f3f4;
+    border-radius: 6px;
+    position: relative;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.8s ease-in-out;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .progress-marks {
+    position: absolute;
+    top: -4px; /* acercar a la barra */
+    left: 0;
+    right: 0;
+    height: 20px;
+    pointer-events: none;
+  }
+
+  .progress-mark {
+    position: absolute;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .mark-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #cbd5e0;
+    transition: all 0.3s ease;
+  }
+
+  .progress-mark.active .mark-dot {
+    background: #79BC99;
+    transform: scale(1.2);
+    box-shadow: 0 0 0 2px rgba(121, 188, 153, 0.2);
+  }
+
+  .mark-value {
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #718096;
+    opacity: 0.9;
+    background: rgba(255,255,255,0.85);
+    border: 1px solid rgba(233, 236, 239, 0.9);
+    border-radius: 6px;
+    padding: 0 4px;
+    line-height: 1.2;
+    transition: all 0.3s ease;
+  }
+
+  .progress-mark.active .mark-value {
+    color: #2d3748;
+    opacity: 1;
+    font-weight: 700;
+  }
+
+  .progress-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  .status-text {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+
+  .modern-progress-container:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #79BC99;
+  }
+`;
+
+// Inyectar estilos
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = modernProgressStyles;
+  document.head.appendChild(styleSheet);
+}
