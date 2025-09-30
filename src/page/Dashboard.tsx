@@ -57,6 +57,7 @@ const hslToHex = (h: number, s: number, l: number): string => {
 // ============================================================================
 type UIFilters = {
   proyecto?: string[];
+  subproyecto?: string[];
   comuna?: string[];
   dependencia?: string[];
   tipo?: string[];
@@ -95,6 +96,8 @@ const Dashboard = () => {
     // Filtros actualizados
   }, [filters]);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [showMainChart, setShowMainChart] = useState(true);
+  const [showMap, setShowMap] = useState(true);
   // Prefiere animación reducida (reservado por si se necesita):
   useReducedMotion?.();
   // Estado no utilizado en esta vista (selección se maneja en MapLibre)
@@ -155,6 +158,7 @@ const Dashboard = () => {
   const combineDateFields = (filters: UIFilters): Filters => {
     const newFilters: Filters = { 
       proyecto: filters.proyecto,
+      subproyecto: filters.subproyecto,
       comuna: filters.comuna,
       dependencia: filters.dependencia,
       tipo: filters.tipo,
@@ -430,7 +434,10 @@ const Dashboard = () => {
       <HeaderIcons 
         rows={rows} 
         filtered={filtered} 
-        // onShowLearningPanel={() => setShowLearningPanel(true)}
+        onToggleChart={() => setShowMainChart(v => !v)}
+        isChartVisible={showMainChart}
+        onToggleMap={() => setShowMap(v => !v)}
+        isMapVisible={showMap}
       />
 
       {/* Botón flotante para abrir el panel de filtros (derecha) */}
@@ -507,6 +514,17 @@ const Dashboard = () => {
                   handleFilterChange('proyecto', values);
                 }}
                 placeholder="Todos los proyectos"
+              />
+            )}
+
+            {/* Filtro: Subproyecto estratégico */}
+            {F.subproyectoEstrategico && (
+              <ImprovedMultiSelect
+                label="SUBPROYECTO"
+                options={opciones.subproyectos}
+                selectedValues={filters.subproyecto || []}
+                onSelectionChange={(values) => handleFilterChange('subproyecto', values)}
+                placeholder="Todos los subproyectos"
               />
             )}
 
@@ -767,7 +785,91 @@ const Dashboard = () => {
           {/* Separador visual */}
           <div className="dashboard-separator"></div>
 
+          {/* Mapa principal dentro del tablero */}
+          {showMap && (
+          <div className="map-main-panel">
+            <button
+              className="map-close-btn"
+              aria-label="Ocultar mapa"
+              title="Ocultar mapa"
+              onClick={() => {
+                setShowMap(false);
+                if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+            >
+              −
+            </button>
+            <div style={{ height: '60vh', minHeight: 380, width: '100%' }}>
+              {(() => {
+                const mapQuery = new URLSearchParams();
+
+                if (combinedFilters.estadoDeLaObra) {
+                  if (Array.isArray(combinedFilters.estadoDeLaObra)) {
+                    combinedFilters.estadoDeLaObra.forEach(val => mapQuery.append('estadoDeLaObra', val));
+                  } else {
+                    mapQuery.set('estadoDeLaObra', String(combinedFilters.estadoDeLaObra));
+                  }
+                }
+                if (combinedFilters.dependencia) {
+                  if (Array.isArray(combinedFilters.dependencia)) {
+                    combinedFilters.dependencia.forEach(val => mapQuery.append('dependencia', val));
+                  } else {
+                    mapQuery.set('dependencia', String(combinedFilters.dependencia));
+                  }
+                }
+                if (combinedFilters.subproyecto) {
+                  if (Array.isArray(combinedFilters.subproyecto)) {
+                    combinedFilters.subproyecto.forEach(val => mapQuery.append('subproyectoEstrategico', val));
+                  } else {
+                    mapQuery.set('subproyectoEstrategico', String(combinedFilters.subproyecto));
+                  }
+                }
+                if (combinedFilters.proyecto) {
+                  if (Array.isArray(combinedFilters.proyecto)) {
+                    combinedFilters.proyecto.forEach(val => mapQuery.append('proyectoEstrategico', val));
+                  } else {
+                    mapQuery.set('proyectoEstrategico', String(combinedFilters.proyecto));
+                  }
+                }
+                if (combinedFilters.comuna) {
+                  if (Array.isArray(combinedFilters.comuna)) {
+                    combinedFilters.comuna.forEach(val => mapQuery.append('comuna', val));
+                  } else {
+                    mapQuery.set('comuna', String(combinedFilters.comuna));
+                  }
+                }
+                if (combinedFilters.tipo) {
+                  if (Array.isArray(combinedFilters.tipo)) {
+                    combinedFilters.tipo.forEach(val => mapQuery.append('tipo', val));
+                  } else {
+                    mapQuery.set('tipo', String(combinedFilters.tipo));
+                  }
+                }
+                if (combinedFilters.contratista) {
+                  if (Array.isArray(combinedFilters.contratista)) {
+                    combinedFilters.contratista.forEach(val => mapQuery.append('contratista', val));
+                  } else {
+                    mapQuery.set('contratista', String(combinedFilters.contratista));
+                  }
+                }
+                if (combinedFilters.desde) {
+                  mapQuery.set('desde', String(combinedFilters.desde));
+                }
+                if (combinedFilters.hasta) {
+                  mapQuery.set('hasta', String(combinedFilters.hasta));
+                }
+
+                const obrasParaMapa = filtered.map(row => ({ ...row, id: String(row.id || row.ID || '') }));
+                return <MapLibreVisor height={'100%'} query={mapQuery} filteredObras={obrasParaMapa} />;
+              })()}
+            </div>
+          </div>
+          )}
+
           {/* Lista de dependencias como en la imagen */}
+          {showMap && (
           <div className="dependencies-section">
             <div className="dependencies-list">
               {Object.keys(mapData).map((dependencia) => (
@@ -781,84 +883,7 @@ const Dashboard = () => {
               ))}
             </div>
           </div>
-        </div>
-
-        {/* ========================================================================
-             PANEL PRINCIPAL DEL MAPA - TERCERA POSICIÓN
-         ======================================================================== */}
-        <div className="map-main-panel">
-          
-          {/* Mapa principal: responsive y conectado a filtros externos */}
-          <div style={{ height: '60vh', minHeight: 380, width: '100%' }}>
-            {(() => {
-              const mapQuery = new URLSearchParams();
-              
-              // Manejar filtros que pueden ser arrays o strings
-              if (combinedFilters.estadoDeLaObra) {
-                if (Array.isArray(combinedFilters.estadoDeLaObra)) {
-                  combinedFilters.estadoDeLaObra.forEach(val => mapQuery.append('estadoDeLaObra', val));
-                } else {
-                  mapQuery.set('estadoDeLaObra', String(combinedFilters.estadoDeLaObra));
-                }
-              }
-              
-              if (combinedFilters.dependencia) {
-                if (Array.isArray(combinedFilters.dependencia)) {
-                  combinedFilters.dependencia.forEach(val => mapQuery.append('dependencia', val));
-                } else {
-                  mapQuery.set('dependencia', String(combinedFilters.dependencia));
-                }
-              }
-              
-              if (combinedFilters.proyecto) {
-                if (Array.isArray(combinedFilters.proyecto)) {
-                  combinedFilters.proyecto.forEach(val => mapQuery.append('proyectoEstrategico', val));
-                } else {
-                  mapQuery.set('proyectoEstrategico', String(combinedFilters.proyecto));
-                }
-              }
-              
-              if (combinedFilters.comuna) {
-                if (Array.isArray(combinedFilters.comuna)) {
-                  combinedFilters.comuna.forEach(val => mapQuery.append('comuna', val));
-                } else {
-                  mapQuery.set('comuna', String(combinedFilters.comuna));
-                }
-              }
-              
-              if (combinedFilters.tipo) {
-                if (Array.isArray(combinedFilters.tipo)) {
-                  combinedFilters.tipo.forEach(val => mapQuery.append('tipo', val));
-                } else {
-                  mapQuery.set('tipo', String(combinedFilters.tipo));
-                }
-              }
-              
-              if (combinedFilters.contratista) {
-                if (Array.isArray(combinedFilters.contratista)) {
-                  combinedFilters.contratista.forEach(val => mapQuery.append('contratista', val));
-                } else {
-                  mapQuery.set('contratista', String(combinedFilters.contratista));
-                }
-              }
-              
-              if (combinedFilters.desde) {
-                mapQuery.set('desde', String(combinedFilters.desde));
-              }
-              
-              if (combinedFilters.hasta) {
-                mapQuery.set('hasta', String(combinedFilters.hasta));
-              }
-              
-              
-              const obrasParaMapa = filtered.map(row => ({ ...row, id: String(row.id || row.ID || '') }));
-              
-              
-              
-              
-              return <MapLibreVisor height={'100%'} query={mapQuery} filteredObras={obrasParaMapa} />;
-            })()}
-          </div>
+          )}
         </div>
 
         {/* ========================================================================
@@ -871,8 +896,21 @@ const Dashboard = () => {
         {/* ========================================================================
              GRÁFICO PRINCIPAL - Inversión vs Presupuesto Ejecutado
          ======================================================================== */}
-        {simpleChartData.length > 0 && (
+        {simpleChartData.length > 0 && showMainChart && (
           <div className="main-chart-section">
+            <button
+              className="chart-close-btn"
+              aria-label="Ocultar gráfico"
+              title="Ocultar gráfico"
+              onClick={() => {
+                setShowMainChart(false);
+                if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+            >
+              −
+            </button>
             <SimpleBarChart
               title="Inversión Total vs Presupuesto Ejecutado"
               data={simpleChartData}
@@ -1098,7 +1136,7 @@ const Dashboard = () => {
           position: fixed;
           top: 96px;
           left: 16px;
-          background: linear-gradient(135deg, #00904c, #0bbf6a);
+          background: var(--brand-green-500);
           color: #fff;
           border: none;
           border-radius: 999px;
@@ -1110,7 +1148,7 @@ const Dashboard = () => {
         }
 
         .filters-fab.open {
-          background: linear-gradient(135deg, #dc2626, #ef4444);
+          background: var(--brand-red-500);
           opacity: 0;
           pointer-events: none;
         }
@@ -1546,11 +1584,14 @@ const Dashboard = () => {
             SECCIÓN PRINCIPAL DEL DASHBOARD - DISEÑO COMO EN LA IMAGEN
         ======================================================================== */
         .main-dashboard-section {
-          margin-bottom: 30px;
+          margin-bottom: 20px;
           background: #032c55;
-          border-radius: 20px;
-          padding: 30px;
+          border-radius: 14px;
+          padding: 16px;
           box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+          max-width: 1200px;
+          margin-left: auto;
+          margin-right: auto;
         }
 
         .kpis-main-grid {
@@ -1568,7 +1609,7 @@ const Dashboard = () => {
 
         .dashboard-separator {
           height: 1px;
-          background: linear-gradient(90deg, transparent, #98C73B, transparent);
+          background: var(--brand-yellow-500);
           margin: 15px 0;
           border-radius: 1px;
         }
@@ -1591,20 +1632,20 @@ const Dashboard = () => {
         }
         .compact-kpi {
           border-radius: 14px;
-          padding: 14px;
+          padding: 10px;
           color: #fff;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-          min-height: 110px;
+          min-height: 92px;
         }
         .compact-kpi.navy { background:#002945; }
         .compact-kpi.green { background:#98C73B; color:#fff; }
-        .compact-kpi-label { font-size: 0.78rem; font-weight: 700; opacity: 0.95; text-align:center; }
-        .compact-kpi-value { font-size: 1.35rem; font-weight: 800; margin-top: 6px; text-align:center; }
-        .compact-kpi-sub { font-size: 0.72rem; font-weight: 600; opacity: 0.9; margin-top: 6px; text-align:center; }
+        .compact-kpi-label { font-size: 0.72rem; font-weight: 700; opacity: 0.95; text-align:center; }
+        .compact-kpi-value { font-size: 1.2rem; font-weight: 800; margin-top: 6px; text-align:center; }
+        .compact-kpi-sub { font-size: 0.68rem; font-weight: 600; opacity: 0.9; margin-top: 6px; text-align:center; }
 
         @media (max-width: 1400px) {
           .compact-kpis-row { grid-template-columns: repeat(5, 1fr); }
@@ -1627,15 +1668,360 @@ const Dashboard = () => {
            TARJETA: PRESUPUESTOS
            ===================== */
         .budget-summary-card {
-          background: #FFFFFF;
-          border-radius: 14px;
-          padding: 14px;
-          border: 1px solid #C8CFDA; /* gris más oscuro */
-          box-shadow: 0 8px 20px rgba(0,0,0,0.18); /* sombra más marcada */
+          background: rgba(255, 255, 255, 0.55);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-radius: 18px;
+          padding: 16px;
+          border: 1px solid rgba(231, 236, 243, 0.9);
+          box-shadow:
+            0 10px 30px rgba(15, 23, 42, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 14px;
           margin-top: 6px;
+          max-width: 1120px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .budget-grid-top,
+        .budget-grid-bottom {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 14px;
+        }
+
+        .budget-top-duo {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          background: rgba(255,255,255,0.6);
+          border-radius: 14px;
+          overflow: hidden;
+          border: 1px solid rgba(231, 236, 243, 0.9);
+          min-height: 62px;
+          box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.06);
+        }
+        .budget-top-duo .duo-cell {
+          padding: 14px 12px;
+          color: #0F172A;
+          background: #FFFFFF;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          position: relative;
+        }
+        .budget-top-duo .duo-cell + .duo-cell {
+          background: #F8FAFC;
+        }
+        .duo-title { font-weight: 800; font-size: 0.92rem; color:#0F172A; letter-spacing: 0.2px; display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
+        .duo-title.with-badge .pct-badge.small { position: absolute; right: 10px; top: 10px; margin-left: 0; }
+        .duo-value { font-size: 1.2rem; font-weight: 900; margin-top: 6px; text-align: center; color:#0B1220; text-shadow: 0 1px 0 rgba(255,255,255,0.6); }
+
+        .pct-badge { background: var(--brand-green-500); color: #FFFFFF; font-weight: 800; font-size: 0.72rem; padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 2px 8px rgba(121,188,153,0.25); }
+        .pct-badge.small { font-size: 0.68rem; padding: 3px 7px; }
+
+        .budget-item {
+          background: rgba(255,255,255,0.6);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(231,236,243,0.9);
+          border-radius: 14px;
+          padding: 12px;
+          position: relative;
+          box-shadow: 0 10px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .budget-item.green-alt { background: rgba(255,255,255,0.7); min-height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+
+        .budget-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .budget-title { font-weight: 800; color: #0F172A; font-size: 0.95rem; }
+        .budget-value { font-size: 1.12rem; font-weight: 900; color:#0B1220; }
+
+        .budget-integrated {
+          background: rgba(255,255,255,0.55);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(231,236,243,0.9);
+          border-radius: 14px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          box-shadow: 0 10px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .integrated-top { background: #FFFFFF; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+        .integrated-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px; }
+        .integrated-title { font-weight: 800; color:#0F172A; font-size: 0.92rem; }
+        .integrated-value { font-size: 1.08rem; font-weight: 900; color:#0B1220; }
+        .integrated-duo { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .integrated-cell { background: #FFFFFF; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+        .integrated-cell.alt { background: #F8FAFC; }
+
+        /* Hover elegante */
+        .budget-item:hover, .integrated-cell:hover, .integrated-top:hover, .budget-top-duo .duo-cell:hover {
+          box-shadow: 0 16px 30px rgba(15,23,42,0.12);
+          transform: translateY(-2px);
+          transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        /* Tarjetas genéricas con glass */
+        .chart-card, .table-card {
+          background: #FFFFFF;
+          border-radius: 20px;
+          padding: 24px;
+          border: 1px solid var(--border);
+          box-shadow: var(--panel-shadow);
+          border-top: 4px solid var(--brand-blue-900);
+          transition: all 0.3s ease;
+        }
+        .chart-card:hover, .table-card:hover { box-shadow: 0 18px 36px rgba(15,23,42,0.16); transform: translateY(-2px); }
+        
+        /* Filetes de acento por sección */
+        .chart-card { border-top-color: var(--brand-blue-500); }
+        .table-card { border-top-color: var(--brand-green-500); }
+        .map-main-panel { border-top-color: var(--brand-yellow-500); }
+
+        @media (max-width: 1200px) {
+          .budget-top-duo { min-height: 58px; }
+          .duo-title { font-size: 0.88rem; }
+          .duo-value { font-size: 1.08rem; }
+          .budget-item.green-alt { min-height: 58px; }
+        }
+        @media (max-width: 992px) {
+          .budget-grid-top { grid-template-columns: 1fr; }
+          .budget-top-duo { min-height: 56px; }
+          .budget-summary-card { padding: 12px; }
+          .integrated-duo { grid-template-columns: 1fr; }
+          .pct-badge.small { font-size: 0.64rem; padding: 2px 6px; }
+        }
+
+        .budget-grid-top,
+        .budget-grid-bottom {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        .budget-top-duo {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0;
+          background: transparent; /* permitir contraste entre celdas */
+          border-radius: 10px;
+          overflow: hidden;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          min-height: 74px;
+          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+        }
+        .budget-top-duo .duo-cell {
+          padding: 12px;
+          color: #fff;
+          background: #0b2a3f; /* celda 1: azul sólido */
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          position: relative;
+        }
+        .budget-top-duo .duo-cell + .duo-cell { background: rgba(9, 67, 105, 0.88); }
+        .budget-top-duo .duo-cell.no-sep { border-left: none !important; }
+        .duo-title { font-weight: 700; font-size: 0.88rem; opacity: 0.95; display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
+        .duo-title.with-badge .pct-badge.small { position: absolute; right: 10px; top: 10px; margin-left: 0; }
+        .duo-value { font-size: 1.1rem; font-weight: 800; margin-top: 6px; text-align: center; }
+
+        .pct-badge { background: var(--brand-green-500); color: #FFFFFF; font-weight: 800; font-size: 0.72rem; padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 2px 8px rgba(121,188,153,0.25); }
+        .pct-badge.small { font-size: 0.68rem; padding: 3px 7px; }
+
+        .budget-item {
+          background: rgba(255,255,255,0.6);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(231,236,243,0.9);
+          border-radius: 14px;
+          padding: 12px;
+          position: relative;
+          box-shadow: 0 10px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .budget-item.green-alt { background: rgba(255,255,255,0.7); min-height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+
+        .budget-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .budget-title { font-weight: 800; color: #0F172A; font-size: 0.95rem; }
+        .budget-value { font-size: 1.12rem; font-weight: 900; color:#0B1220; }
+
+        .budget-integrated {
+          background: rgba(255,255,255,0.55);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(231,236,243,0.9);
+          border-radius: 14px;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          box-shadow: 0 10px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .integrated-top { background: #FFFFFF; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+        .integrated-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px; }
+        .integrated-title { font-weight: 800; color:#0F172A; font-size: 0.92rem; }
+        .integrated-value { font-size: 1.08rem; font-weight: 900; color:#0B1220; }
+        .integrated-duo { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .integrated-cell { background: #FFFFFF; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+        .integrated-cell.alt { background: #F8FAFC; }
+
+        /* Hover elegante */
+        .budget-item:hover, .integrated-cell:hover, .integrated-top:hover, .budget-top-duo .duo-cell:hover {
+          box-shadow: 0 16px 30px rgba(15,23,42,0.12);
+          transform: translateY(-2px);
+          transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        /* Tarjetas genéricas con glass */
+        .chart-card, .table-card {
+          background: #FFFFFF;
+          border-radius: 20px;
+          padding: 24px;
+          border: 1px solid var(--border);
+          box-shadow: var(--panel-shadow);
+          border-top: 4px solid var(--brand-blue-900);
+          transition: all 0.3s ease;
+        }
+        .chart-card:hover, .table-card:hover { box-shadow: 0 18px 36px rgba(15,23,42,0.16); transform: translateY(-2px); }
+        
+        /* Filetes de acento por sección */
+        .chart-card { border-top-color: var(--brand-blue-500); }
+        .table-card { border-top-color: var(--brand-green-500); }
+        .map-main-panel { border-top-color: var(--brand-yellow-500); }
+
+        @media (max-width: 1200px) {
+          .budget-top-duo { min-height: 58px; }
+          .duo-title { font-size: 0.88rem; }
+          .duo-value { font-size: 1.08rem; }
+          .budget-item.green-alt { min-height: 58px; }
+        }
+        @media (max-width: 992px) {
+          .budget-grid-top { grid-template-columns: 1fr; }
+          .budget-top-duo { min-height: 56px; }
+          .budget-summary-card { padding: 12px; }
+          .integrated-duo { grid-template-columns: 1fr; }
+          .pct-badge.small { font-size: 0.64rem; padding: 2px 6px; }
+        }
+
+        .budget-grid-top,
+        .budget-grid-bottom {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        .budget-top-duo {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0;
+          background: transparent; /* permitir contraste entre celdas */
+          border-radius: 10px;
+          overflow: hidden;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          min-height: 74px;
+          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+        }
+        .budget-top-duo .duo-cell {
+          padding: 12px;
+          color: #fff;
+          background: #0b2a3f; /* celda 1: azul sólido */
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          position: relative;
+        }
+        .budget-top-duo .duo-cell + .duo-cell { background: rgba(9, 67, 105, 0.88); }
+        .budget-top-duo .duo-cell.no-sep { border-left: none !important; }
+        .duo-title { font-weight: 700; font-size: 0.88rem; opacity: 0.95; display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
+        .duo-title.with-badge .pct-badge.small { position: absolute; right: 10px; top: 10px; margin-left: 0; }
+        .duo-value { font-size: 1.1rem; font-weight: 800; margin-top: 6px; text-align: center; }
+
+        .pct-badge.small { font-size: 0.7rem; padding: 2px 6px; }
+
+        /* Igualar altura de Inversión total con el bloque azul */
+        .budget-item.green-alt { min-height: 74px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .budget-item.green-alt .budget-header { justify-content: center; width: 100%; }
+        .budget-item.green-alt .budget-value { text-align: center; width: 100%; }
+
+        /* =====================
+           BLOQUE INTEGRADO (cuadro rojo)
+           ===================== */
+        .budget-integrated {
+          background: #F8FFF1;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border-radius: 10px;
+          padding: 6px 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+        }
+        .integrated-top {
+          background: #f5fde9;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border-radius: 8px;
+          padding: 6px 8px;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.16);
+        }
+        .integrated-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 2px; }
+        .integrated-title { font-weight: 700; color:#2C3E50; font-size: 0.82rem; }
+        .integrated-value { font-size: 0.92rem; font-weight: 800; color:#002945; }
+
+        /* Centrado explícito para el bloque solicitado */
+        .integrated-top.center { text-align: center; position: relative; }
+        .integrated-header.center { justify-content: center; gap: 8px; margin-bottom: 4px; }
+        .integrated-value.center { text-align: center; }
+        /* Mover el % a la derecha dentro de la tarjeta centrada */
+        .integrated-top.center .pct-badge {
+          position: absolute;
+          right: 8px;
+          top: 8px;
+        }
+
+        /* Centrado de celdas inferiores y ubicacion del % a la derecha */
+        .integrated-cell { position: relative; text-align: center; }
+        .integrated-cell .integrated-header { justify-content: center; }
+        .integrated-cell .integrated-value { text-align: center; }
+        .integrated-cell .pct-badge { position: absolute; right: 8px; top: 8px; }
+
+        .integrated-duo {
+          display:grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+        .integrated-cell {
+          background: #f5fde9;
+          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border-radius: 8px;
+          padding: 6px 8px;
+          box-shadow: 0 6px 16px rgba(0,0,0,0.16);
+        }
+        .integrated-cell.alt {
+          background: #eef9da;
+        }
+
+        @media (max-width: 1200px) {
+          .budget-grid-top { grid-template-columns: 1fr 1fr; gap: 8px; }
+          .budget-top-duo { min-height: 54px; }
+          .duo-title { font-size: 0.76rem; }
+          .duo-value { font-size: 0.9rem; }
+          .budget-item.green-alt { min-height: 54px; }
+        }
+        @media (max-width: 992px) {
+          .budget-grid-top { grid-template-columns: 1fr; }
+          .budget-top-duo { min-height: 52px; }
+          .budget-summary-card { padding: 8px; }
+          .integrated-duo { grid-template-columns: 1fr; }
+          .pct-badge.small { font-size: 0.6rem; padding: 2px 6px; }
         }
 
         .budget-grid-top,
@@ -1849,19 +2235,17 @@ const Dashboard = () => {
         }
         .kpi-chip {
           border-radius: 12px;
-          padding: 12px;
+          padding: 10px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          min-height: 90px;
+          min-height: 80px;
           color: #fff;
           box-shadow: 0 6px 16px rgba(0,0,0,0.12);
         }
-        .kpi-chip.navy { background:#002945; }
-        .kpi-chip.green { background:#98C73B; }
-        .kpi-chip-label { font-size: 0.72rem; font-weight: 700; opacity: 0.95; text-align:center; }
-        .kpi-chip-value { font-size: 1.1rem; font-weight: 800; margin-top: 6px; text-align:center; }
+        .kpi-chip-label { font-size: 0.68rem; font-weight: 700; opacity: 0.95; text-align:center; }
+        .kpi-chip-value { font-size: 1.0rem; font-weight: 800; margin-top: 6px; text-align:center; }
 
         @media (max-width: 1200px) {
           .kpi-chips-row { grid-template-columns: repeat(2, 1fr); }
@@ -1920,9 +2304,11 @@ const Dashboard = () => {
         .kpis-section {
           margin-bottom: 22px;
           padding: 20px;
-          background: rgba(232, 244, 248, 0.35);
-          border-radius: 18px;
-          border: 1px solid rgba(121, 188, 153, 0.25);
+          background: #FFFFFF;
+          border-radius: 20px;
+          border: 1px solid var(--border);
+          box-shadow: var(--panel-shadow);
+          border-top: 6px solid var(--brand-blue-900);
         }
 
         .kpis-container {
@@ -2495,6 +2881,60 @@ const Dashboard = () => {
           overflow: hidden;
           width: 100%;
           max-width: 100%;
+        }
+
+        .main-chart-section .chart-close-btn {
+          position: absolute;
+          right: 16px;
+          top: 16px;
+          background: rgba(0, 0, 0, 0.05);
+          color: #000000;
+          border: 1px solid var(--primary-green);
+          border-radius: 9999px;
+          width: 32px;
+          height: 32px;
+          cursor: pointer;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .main-chart-section .chart-close-btn:hover {
+          background: rgba(0, 0, 0, 0.12);
+          transform: scale(1.05);
+        }
+
+        /* Botón de cerrar para el panel de mapa */
+        .map-main-panel {
+          position: relative;
+          background: #FFFFFF;
+          border-radius: 20px;
+          border: 1px solid var(--border);
+          box-shadow: var(--panel-shadow);
+          border-top: 6px solid var(--brand-yellow-500);
+        }
+
+        .map-main-panel .map-close-btn {
+          position: absolute;
+          right: 16px;
+          top: 16px;
+          background: rgba(0, 0, 0, 0.05);
+          color: #000000;
+          border: 1px solid var(--primary-green);
+          border-radius: 9999px;
+          width: 32px;
+          height: 32px;
+          cursor: pointer;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .map-main-panel .map-close-btn:hover {
+          background: rgba(0, 0, 0, 0.12);
+          transform: scale(1.05);
         }
 
         .main-chart-section .simple-chart-container {
@@ -3128,6 +3568,179 @@ const Dashboard = () => {
         .main-dashboard-section .kpis-main-row .kpi-blue-7 .kpi {
           background: #98C73B !important;
           box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
+        }
+
+        /* ======== ESTILO TIPO KPI DE CONSULTAR OBRA (COLORES CORPORATIVOS) ======== */
+        .budget-summary-card {
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          gap: 16px;
+          max-width: 1120px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .budget-grid-top,
+        .budget-grid-bottom { gap: 10px; }
+
+        .budget-top-duo {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          background: transparent;
+          border: none;
+          min-height: auto;
+          box-shadow: none;
+        }
+        /* Celda 1: Total obras → azul corporativo */
+        .budget-top-duo .duo-cell {
+          padding: 12px;
+          color: var(--text-white);
+          background: var(--primary-blue);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          position: relative;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.18);
+          box-shadow: 0 6px 18px rgba(0, 180, 255, 0.25);
+        }
+        /* Celda 2: Obras entregadas → verde corporativo */
+        .budget-top-duo .duo-cell + .duo-cell {
+          background: var(--primary-green);
+          color: var(--dark-blue);
+          border: 1px solid rgba(0,0,0,0.08);
+          box-shadow: 0 6px 18px rgba(152, 199, 59, 0.25);
+        }
+        .duo-title { font-weight: 700; font-size: 0.9rem; color: var(--text-white); opacity: 0.95; }
+        .budget-top-duo .duo-cell + .duo-cell .duo-title { color: var(--dark-blue); }
+        .duo-value { font-size: 1.2rem; font-weight: 900; margin-top: 6px; text-align: center; color: var(--text-white); }
+        .budget-top-duo .duo-cell + .duo-cell .duo-value { color: var(--dark-blue); }
+        .pct-badge { background: rgba(255,255,255,0.2); color: var(--text-white); border: 1px solid rgba(255,255,255,0.25); }
+        .budget-top-duo .duo-cell + .duo-cell .pct-badge { background: rgba(0,0,0,0.08); color: var(--dark-blue); border-color: rgba(0,0,0,0.12); }
+
+        /* 3) Inversión total (budget-item.green-alt): BLANCO */
+        .budget-item.green-alt {
+          background: var(--white);
+          color: var(--darker-blue);
+          min-height: 56px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          border: 1px solid var(--border-light);
+          box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+        }
+        .budget-item.green-alt .budget-title { color: var(--darker-blue); }
+        .budget-item.green-alt .budget-value { color: var(--darker-blue); }
+
+        /* 4) Presupuesto ejecutado (integrated-top): AZUL MEDIO #2AA7E1 */
+        .integrated-top {
+          background: var(--secondary-blue);
+          border: 1px solid rgba(0,0,0,0.06);
+          border-radius: 12px;
+          padding: 10px 12px;
+          color: var(--text-white);
+          box-shadow: 0 6px 18px rgba(42,167,225,0.25);
+        }
+        .integrated-title { color: var(--text-white); }
+        .integrated-value { color: var(--text-white); }
+        .integrated-top .pct-badge { background: rgba(255,255,255,0.2); color: var(--text-white); border-color: rgba(255,255,255,0.3); }
+
+        /* 5) Presupuesto 2024-2027 (integrated-cell): AZUL OSCURO */
+        .integrated-cell {
+          background: var(--darker-blue);
+          color: var(--text-white);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 12px;
+          padding: 10px 12px;
+          box-shadow: 0 6px 18px rgba(0,41,69,0.25);
+        }
+        .integrated-cell .integrated-title { color: var(--text-white); }
+        .integrated-cell .integrated-value { color: var(--text-white); }
+        .integrated-cell .pct-badge { background: rgba(255,255,255,0.2); color: var(--text-white); border-color: rgba(255,255,255,0.25); }
+
+        /* 6) Administraciones anteriores (integrated-cell.alt): VERDE */
+        .integrated-cell.alt {
+          background: var(--primary-green);
+          color: var(--dark-blue);
+          border: 1px solid rgba(0,0,0,0.08);
+          box-shadow: 0 6px 18px rgba(152,199,59,0.25);
+        }
+        .integrated-cell.alt .integrated-title { color: var(--dark-blue); }
+        .integrated-cell.alt .integrated-value { color: var(--dark-blue); }
+        .integrated-cell.alt .pct-badge { background: rgba(0,0,0,0.08); color: var(--dark-blue); border-color: rgba(0,0,0,0.12); }
+
+        /* Resto de tarjetas por defecto (no etiquetadas) → usar blanco limpio */
+        .budget-item {
+          background: var(--white);
+          color: var(--darker-blue);
+          border: 1px solid var(--border-light);
+          border-radius: 12px;
+          padding: 12px;
+          position: relative;
+          box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+        }
+
+        /* ======== OVERRIDES DE ALTA ESPECIFICIDAD (aseguran paleta aplicada) ======== */
+        .main-dashboard-section .budget-top-duo .duo-cell {
+          background: var(--darker-blue) !important; /* #002945 */
+          color: var(--text-white) !important;
+          border: 1px solid rgba(255,255,255,0.18) !important;
+          box-shadow: 0 6px 18px rgba(0, 41, 69, 0.25) !important;
+        }
+        .main-dashboard-section .budget-top-duo .duo-cell + .duo-cell {
+          background: var(--primary-green) !important; /* #98C73B */
+          color: var(--dark-blue) !important;
+          border: 1px solid rgba(0,0,0,0.08) !important;
+          box-shadow: 0 6px 18px rgba(152, 199, 59, 0.25) !important;
+        }
+        .main-dashboard-section .budget-top-duo .duo-cell .duo-title,
+        .main-dashboard-section .budget-top-duo .duo-cell .duo-value { color: var(--text-white) !important; }
+        .main-dashboard-section .budget-top-duo .duo-cell + .duo-cell .duo-title,
+        .main-dashboard-section .budget-top-duo .duo-cell + .duo-cell .duo-value { color: var(--dark-blue) !important; }
+        .main-dashboard-section .budget-top-duo .duo-cell .pct-badge { background: rgba(255,255,255,0.2) !important; color: var(--text-white) !important; border-color: rgba(255,255,255,0.25) !important; }
+        .main-dashboard-section .budget-top-duo .duo-cell + .duo-cell .pct-badge { background: rgba(0,0,0,0.08) !important; color: var(--dark-blue) !important; border-color: rgba(0,0,0,0.12) !important; }
+
+        .main-dashboard-section .budget-item.green-alt {
+          background: var(--white) !important;
+          color: var(--darker-blue) !important;
+          border: 1px solid var(--border-light) !important;
+          box-shadow: 0 6px 18px rgba(2,6,23,0.08) !important;
+        }
+        .main-dashboard-section .budget-item.green-alt .budget-title,
+        .main-dashboard-section .budget-item.green-alt .budget-value { color: var(--darker-blue) !important; }
+
+        .main-dashboard-section .budget-integrated .integrated-top {
+          background: var(--secondary-blue) !important; /* #2AA7E1 */
+          color: var(--text-white) !important;
+          border: 1px solid rgba(0,0,0,0.06) !important;
+          box-shadow: 0 6px 18px rgba(42,167,225,0.25) !important;
+        }
+        .main-dashboard-section .budget-integrated .integrated-top .pct-badge { background: rgba(255,255,255,0.2) !important; color: var(--text-white) !important; border-color: rgba(255,255,255,0.3) !important; }
+
+        .main-dashboard-section .budget-integrated .integrated-duo .integrated-cell {
+          background: var(--darker-blue) !important;
+          color: var(--text-white) !important;
+          border: 1px solid rgba(255,255,255,0.15) !important;
+          box-shadow: 0 6px 18px rgba(0,41,69,0.25) !important;
+        }
+        .main-dashboard-section .budget-integrated .integrated-duo .integrated-cell.alt {
+          background: var(--primary-green) !important;
+          color: var(--dark-blue) !important;
+          border: 1px solid rgba(0,0,0,0.08) !important;
+          box-shadow: 0 6px 18px rgba(152,199,59,0.25) !important;
+        }
+
+        .main-dashboard-section .budget-item:not(.green-alt) {
+          background: var(--white) !important;
+          color: var(--darker-blue) !important;
+          border: 1px solid var(--border-light) !important;
+          box-shadow: 0 6px 18px rgba(2,6,23,0.08) !important;
         }
       `}</style>
     </div>

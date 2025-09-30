@@ -154,6 +154,7 @@ export function getDefaultDateFilters(): { desde: string; hasta: string } {
 // Modelo de filtros del UI
 export type Filters = {
   proyecto?: string[];
+  subproyecto?: string[];
   comuna?: string[];
   dependencia?: string[];
   tipo?: string[];
@@ -174,6 +175,7 @@ export type Filters = {
 // Nuevas funciones para filtros relacionados
 export type FilterOptions = {
   proyectos: string[];
+  subproyectos: string[];
   comunas: string[];
   dependencias: string[];
   tipos: string[];
@@ -189,6 +191,7 @@ export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOp
   // pero ignorar el filtro de "proyecto" para permitir seleccionar múltiples valores.
 
   const filteredExceptProyecto = applyFiltersForOptions(rows, { ...currentFilters, proyecto: undefined });
+  const filteredExceptSubproyecto = applyFiltersForOptions(rows, { ...currentFilters, subproyecto: undefined });
   const filteredExceptComuna = applyFiltersForOptions(rows, { ...currentFilters, comuna: undefined });
   const filteredExceptDependencia = applyFiltersForOptions(rows, { ...currentFilters, dependencia: undefined });
   const filteredExceptTipo = applyFiltersForOptions(rows, { ...currentFilters, tipo: undefined });
@@ -198,6 +201,7 @@ export function getFilterOptions(rows: Row[], currentFilters: Filters): FilterOp
 
   return {
     proyectos: uniques(filteredExceptProyecto, F.proyectoEstrategico),
+    subproyectos: uniques(filteredExceptSubproyecto, F.subproyectoEstrategico),
     comunas: uniques(filteredExceptComuna, F.comunaOCorregimiento),
     dependencias: uniques(filteredExceptDependencia, F.dependencia),
     tipos: uniques(filteredExceptTipo, F.tipoDeIntervecion),
@@ -267,6 +271,7 @@ export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
   // NUEVO: Aplicar TODOS los filtros activos para calcular opciones relacionadas
   return rows.filter(r =>
     inStr(f.proyecto)(F.proyectoEstrategico ? r[F.proyectoEstrategico] : undefined) &&
+    inStr(f.subproyecto)(F.subproyectoEstrategico ? r[F.subproyectoEstrategico] : undefined) &&
     inStr(f.comuna)(F.comunaOCorregimiento ? r[F.comunaOCorregimiento] : undefined) &&
     inStr(f.dependencia)(F.dependencia ? r[F.dependencia] : undefined) &&
     inStr(f.tipo)(F.tipoDeIntervecion ? r[F.tipoDeIntervecion] : undefined) &&
@@ -380,6 +385,7 @@ export function applyFilters(rows: Row[], f: Filters): Row[] {
 
   return rows.filter(r =>
     inStr(f.proyecto)(F.proyectoEstrategico ? r[F.proyectoEstrategico] : undefined) &&
+    inStr(f.subproyecto)(F.subproyectoEstrategico ? r[F.subproyectoEstrategico] : undefined) &&
     inStr(f.comuna)(F.comunaOCorregimiento ? r[F.comunaOCorregimiento] : undefined) &&
     inStr(f.dependencia)(F.dependencia ? r[F.dependencia] : undefined) &&
     inStr(f.tipo)(F.tipoDeIntervecion ? r[F.tipoDeIntervecion] : undefined) &&

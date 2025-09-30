@@ -36,10 +36,19 @@
   --g: 16px;                      /* gap */
   --pad: clamp(12px, 2vw, 24px);  /* padding responsivo */
   --chart-h: clamp(300px, 45vh, 440px); /* altura "bonita" para gráficos */
-  --primary-bg: #00233D;          /* color de fondo principal */
-  --accent-green: #00FF88;        /* verde de acento */
-  --accent-blue: #00B4FF;         /* azul de acento */
-  --accent-orange: #FF6B35;       /* naranja de acento */
+  /* Nueva base clara */
+  --bg: #FFFFFF;                  /* fondo general */
+  --ink: #0f172a;                 /* texto principal (gris muy oscuro) */
+  --muted-ink: #334155;           /* texto secundario */
+  /* Paleta entregada (nuevos colores, no corporativos viejos) */
+  --brand-blue-900: #032C55;      /* azul profundo */
+  --brand-blue-500: #00B4FF;      /* azul medio/acento */
+  --brand-green-500: #79BC99;     /* verde medio */
+  --brand-lime-500: #98C73B;      /* lima */
+  --brand-cyan-400: #2AA7E1;      /* cian */
+  /* Bordes y sombras sutiles */
+  --border: #E5E7EB;
+  --panel-shadow: 0 6px 16px rgba(2, 6, 23, 0.06);
 }
 
 *,
@@ -47,7 +56,7 @@
 *::after { box-sizing: border-box; }
 
 html, body, #root { height: 100%; width: 100%; }
-body { margin: 0; background:#00233D; color:#eaeaea; font-family: 'Metropolis', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; overflow-x: hidden; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Metropolis', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; overflow-x: hidden; }
 /* Popups de MapLibre: mejorar contraste del texto */
 .maplibregl-popup-content { color: #111827 !important; }
 .maplibregl-popup-tip { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); }
@@ -103,10 +112,11 @@ h1 {
 
 /* Panel / tarjeta */
 .panel {
-  background:#171a1d;
-  border:1px solid #2a2f32;
-  border-radius:12px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: var(--pad);
+  box-shadow: var(--panel-shadow);
 }
 
 /* Evita overflow en la barra de filtros */
@@ -171,12 +181,12 @@ h1 {
   display:grid;
   grid-template-rows: auto 1fr auto;
   gap: 8px;
-  background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 16px;
   padding: 20px;
   min-height: 120px;
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
+  box-shadow: var(--panel-shadow);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -190,14 +200,13 @@ h1 {
 }
 
 /* Línea superior decorativa */
+/* filete superior por tipo: usa data-variant en el contenedor para colores */
 .kpi::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #3B8686, #79BC99, #4E8484);
+  background: var(--kpi-accent, var(--brand-blue-900));
 }
 
 .kpi:hover {
@@ -219,54 +228,35 @@ h1 {
 }
 
 .kpi-trend-up {
-  color: #FFFFFF;
-  background: rgba(255, 255, 255, 0.2);
+  color: var(--brand-blue-900);
+  background: rgba(3, 44, 85, 0.08);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
 }
 
 .kpi-trend-down {
-  color: #FFFFFF;
-  background: rgba(255, 255, 255, 0.2);
+  color: #B42318;
+  background: rgba(180, 35, 24, 0.08);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
 }
 
 .kpi-trend-neutral {
-  color: #FFFFFF;
-  background: rgba(255, 255, 255, 0.2);
+  color: var(--muted-ink);
+  background: rgba(15, 23, 42, 0.06);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
 }
 
-.kpi-subtitle {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 500;
-}
+.kpi-subtitle { font-size: 12px; color: var(--muted-ink); font-weight: 500; }
 
 /* números más contenidos para que quepan */
-.kpi-value{
-  font-size: clamp(16px, 4.5vw, 26px);
-  line-height: 1.05;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;     /* si aún se excede, corta con … */
-  color: #FFFFFF;
-  font-weight: 700;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+.kpi-value{ font-size: clamp(16px, 4.5vw, 26px); line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 800; }
 
-.kpi-label{ 
-  font-size: 12px; 
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+.kpi-label{ font-size: 12px; color: var(--muted-ink); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
 
 /* Contenedor del gráfico (controla la altura) */
@@ -681,12 +671,13 @@ h1 {
     TARJETAS DE CONTENIDO
 ======================================================================== */
 .chart-card, .map-card, .table-card {
-  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-  border-radius: 20px;
-  padding: 30px;
-  box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
-  border: 1px solid #79BC99;
-  transition: all 0.3s ease;
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  box-shadow: var(--panel-shadow);
+  transition: all 0.2s ease;
+  border-top: 4px solid var(--section-accent, var(--brand-blue-900));
 }
 
 .chart-card:hover, .map-card:hover, .table-card:hover {
@@ -1144,9 +1135,11 @@ h1 {
 .kpis-section {
   margin-bottom: 40px;
   padding: 30px;
-  background: linear-gradient(135deg, rgba(212, 230, 241, 0.3) 0%, rgba(232, 244, 248, 0.3) 100%);
-  border-radius: 25px;
-  border: 1px solid rgba(121, 188, 153, 0.2);
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: var(--panel-shadow);
+  border-top: 6px solid var(--section-accent, var(--brand-blue-900));
 }
 
 .kpis-container {
@@ -1174,13 +1167,14 @@ h1 {
     PANEL PRINCIPAL DEL MAPA - OCUPA TODA LA PARTE SUPERIOR
 ======================================================================== */
 .map-main-panel {
-  background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
-  border-radius: 25px;
-  padding: 30px;
-  margin-bottom: 40px;
-  box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
-  border: 2px solid #79BC99;
-  transition: all 0.3s ease;
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: var(--panel-shadow);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+  border-top: 6px solid var(--section-accent, var(--brand-blue-900));
 }
 
 .map-main-panel:hover {

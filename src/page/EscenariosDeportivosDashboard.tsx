@@ -51,6 +51,7 @@ const hslToHex = (h: number, s: number, l: number): string => {
 // ============================================================================
 type UIFilters = {
   proyecto?: string[];
+  subproyecto?: string[];
   comuna?: string[];
   dependencia?: string[];
   tipo?: string[];
@@ -158,6 +159,7 @@ const EscenariosDeportivosDashboard = () => {
   const combineDateFields = (filters: UIFilters): Filters => {
     const newFilters: Filters = { 
       proyecto: filters.proyecto,
+      subproyecto: filters.subproyecto,
       comuna: filters.comuna,
       dependencia: filters.dependencia,
       tipo: filters.tipo,
@@ -396,16 +398,36 @@ const EscenariosDeportivosDashboard = () => {
           </div>
           {/* Primera fila de filtros */}
           <div className="filters-container filters-row-main">
-            {/* Filtro: Proyectos estratégicos */}
-            {F.proyectoEstrategico && (
+          {/* Filtro: Proyectos estratégicos */}
+          {F.proyectoEstrategico && (
+            <ImprovedMultiSelect
+              label="PROYECTOS ESTRATÉGICOS"
+              options={opciones.proyectos}
+              selectedValues={filters.proyecto || []}
+              onSelectionChange={(values) => handleFilterChange('proyecto', values)}
+              placeholder="Todos los proyectos"
+            />
+          )}
+
+          {/* Filtro: Subproyecto estratégico */}
+          {F.subproyectoEstrategico && (
+            <ImprovedMultiSelect
+              label="SUBPROYECTO"
+              options={opciones.subproyectos}
+              selectedValues={filters.subproyecto || []}
+              onSelectionChange={(values) => handleFilterChange('subproyecto', values)}
+              placeholder="Todos los subproyectos"
+            />
+          )}
+
+            {/* Filtro: Subproyecto estratégico */}
+            {F.subproyectoEstrategico && (
               <ImprovedMultiSelect
-                label="PROYECTOS ESTRATÉGICOS"
-                options={opciones.proyectos}
-                selectedValues={filters.proyecto || []}
-                onSelectionChange={(values) => {
-                  handleFilterChange('proyecto', values);
-                }}
-                placeholder="Todos los proyectos"
+                label="SUBPROYECTO"
+                options={opciones.subproyectos}
+                selectedValues={filters.subproyecto || []}
+                onSelectionChange={(values) => handleFilterChange('subproyecto', values)}
+                placeholder="Todos los subproyectos"
               />
             )}
 
@@ -698,8 +720,21 @@ const EscenariosDeportivosDashboard = () => {
                   }
                 }
                 
-              // Filtro específico para escenarios deportivos
-                mapQuery.set('proyectoEstrategico', 'Escenarios Deportivos');
+                if (combinedFilters.subproyecto) {
+                  if (Array.isArray(combinedFilters.subproyecto)) {
+                    combinedFilters.subproyecto.forEach(val => mapQuery.append('subproyectoEstrategico', val));
+                  } else {
+                    mapQuery.set('subproyectoEstrategico', String(combinedFilters.subproyecto));
+                  }
+                }
+
+                if (combinedFilters.proyecto) {
+                  if (Array.isArray(combinedFilters.proyecto)) {
+                    combinedFilters.proyecto.forEach(val => mapQuery.append('proyectoEstrategico', val));
+                  } else {
+                    mapQuery.set('proyectoEstrategico', String(combinedFilters.proyecto));
+                  }
+                }
                 
                 if (combinedFilters.comuna) {
                   if (Array.isArray(combinedFilters.comuna)) {

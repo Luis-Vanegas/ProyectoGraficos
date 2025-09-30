@@ -6,6 +6,10 @@ import type { Row } from '../utils/utils/metrics';
 interface HeaderIconsProps {
   rows: Row[];
   filtered: Row[];
+  onToggleChart?: () => void;
+  isChartVisible?: boolean;
+  onToggleMap?: () => void;
+  isMapVisible?: boolean;
 }
 
 interface ObraCalendario {
@@ -18,7 +22,7 @@ interface ObraCalendario {
   comuna?: string;
 }
 
-export default function HeaderIcons({ filtered }: HeaderIconsProps) {
+export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, onToggleMap, isMapVisible }: HeaderIconsProps) {
   const [showCalendarPopup, setShowCalendarPopup] = useState(false);
   const [showAlertsPopup, setShowAlertsPopup] = useState(false);
 
@@ -196,6 +200,19 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
           </svg>
         </button>
 
+        {/* Icono de Mapa (toggle) */}
+        <button
+          className={`header-icon map-toggle-icon ${isMapVisible ? 'active' : ''}`}
+          onClick={() => onToggleMap && onToggleMap()}
+          title={isMapVisible ? 'Ocultar mapa' : 'Mostrar mapa'}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/>
+            <line x1="8" y1="3" x2="8" y2="18"/>
+            <line x1="16" y1="6" x2="16" y2="21"/>
+          </svg>
+        </button>
+
         {/* Icono de Alertas */}
         <button 
           className={`header-icon alert-icon ${alertas.length > 0 ? 'has-alerts' : ''}`}
@@ -209,7 +226,18 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
           </svg>
           {alertas.length > 0 && <span className="alert-indicator"></span>}
         </button>
-
+        {/* Icono de Gráfico (toggle) */}
+        <button
+          className={`header-icon chart-toggle-icon ${isChartVisible ? 'active' : ''}`}
+          onClick={() => onToggleChart && onToggleChart()}
+          title={isChartVisible ? 'Ocultar gráfico' : 'Mostrar gráfico'}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="11" width="4" height="10"/>
+            <rect x="10" y="7" width="4" height="14"/>
+            <rect x="17" y="3" width="4" height="18"/>
+          </svg>
+        </button>
 
       </div>
 
@@ -417,6 +445,7 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
           top: 80px; /* Más abajo para separar del logo */
           right: 20px;
           display: flex;
+          flex-direction: column; /* Vertical */
           gap: 10px;
           z-index: 1001; /* Mayor que la navegación */
         }
@@ -462,6 +491,12 @@ export default function HeaderIcons({ filtered }: HeaderIconsProps) {
         .header-icon svg {
           width: 20px;
           height: 20px;
+        }
+
+        .header-icon.chart-toggle-icon.active {
+          border: 2px solid #4E8484;
+          background: rgba(121, 188, 153, 0.12);
+          box-shadow: 0 0 12px rgba(121, 188, 153, 0.25);
         }
 
         .header-icon.gantt-icon.has-delays {

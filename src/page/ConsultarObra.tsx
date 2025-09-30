@@ -14,7 +14,7 @@ import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 import NotificationCenter from '../components/NotificationCenter';
 import ProjectProgressIndicator from '../components/ProjectProgressIndicator';
 import { IconButton, Badge, Card, CardContent, Stack, Typography, Box } from '@mui/material';
-import { NotificationsActive, EventAvailable, Event, Remove } from '@mui/icons-material';
+import { NotificationsActive, EventAvailable, Event, Remove, AttachMoney, Savings, CalendarMonth, History } from '@mui/icons-material';
 
 // Importar las imágenes de las comunas
 import comuna1Image from '../assets/comuna1.jpeg';
@@ -322,7 +322,7 @@ export default function ConsultarObra() {
         minHeight: '100vh',
         width: '100%',
         display: 'block',
-        background: 'linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%)',
+        background: 'linear-gradient(180deg, #001724 0%, #001A28 50%, #00233D 100%)',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
       }}
     >
@@ -523,7 +523,7 @@ export default function ConsultarObra() {
 
             {/* Fechas de entrega - Compactas */}
             <div className="delivery-dates-section-left compact">
-          <h3 className="delivery-dates-title" style={{color: '#2d3748', fontWeight: '600'}}>Fechas de Entrega</h3>
+          <h3 className="delivery-dates-title" style={{color: '#E6EDF3', fontWeight: '600'}}>Fechas de Entrega</h3>
               <div className="delivery-dates-grid-left compact">
               {/* Tarjeta MUI - Estimada */}
               <Card className="delivery-date-card estimated modern glass" elevation={6}
@@ -582,6 +582,7 @@ export default function ConsultarObra() {
             {/* Sección de métricas financieras (diseño alterno compacto) */}
             <div className="kpis-alt">
               <div className="kpi-chip kpi-total">
+                <div className="kpi-icon"><AttachMoney fontSize="small" htmlColor="#00B4FF" /></div>
                 <div className="kpi-title">INVERSIÓN TOTAL</div>
                 <div className="kpi-value">
                   {currentData ? 
@@ -591,6 +592,7 @@ export default function ConsultarObra() {
                   </div>
                 </div>
               <div className="kpi-chip kpi-executed">
+                <div className="kpi-icon"><Savings fontSize="small" htmlColor="#2E5D5D" /></div>
                 <div className="kpi-title">PRESUPUESTO EJECUTADO</div>
                 <div className="kpi-value">
                   {currentData ? 
@@ -600,6 +602,7 @@ export default function ConsultarObra() {
                 </div>
                 </div>
               <div className="kpi-chip kpi-period">
+                <div className="kpi-icon"><CalendarMonth fontSize="small" htmlColor="#2D4B0A" /></div>
                 <div className="kpi-title">PRESUPUESTO 2024-2025</div>
                 <div className="kpi-value">
                   {currentData ? 
@@ -609,6 +612,7 @@ export default function ConsultarObra() {
                 </div>
                   </div>
               <div className="kpi-chip kpi-previous">
+                <div className="kpi-icon"><History fontSize="small" htmlColor="#163B3B" /></div>
                 <div className="kpi-title">ADMINISTRACIONES ANTERIORES</div>
                 <div className="kpi-value">
                   {currentData ? 
@@ -778,7 +782,7 @@ export default function ConsultarObra() {
                         top: 0, 
                         behavior: 'smooth' 
                       });
-                    } catch (e) {
+                    } catch {
                       // Fallback si smooth no funciona
                       window.scrollTo(0, 0);
                     }
@@ -787,7 +791,7 @@ export default function ConsultarObra() {
                     try {
                       document.documentElement.scrollTop = 0;
                       document.body.scrollTop = 0;
-                    } catch (e) {
+                    } catch {
                       console.log('Scroll fallback applied');
                     }
                   }, 150);
@@ -845,7 +849,7 @@ export default function ConsultarObra() {
           display: block !important;
           margin: 0 !important;
           padding: 0 !important;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%) !important;
+          background: linear-gradient(180deg, #001724 0%, #001A28 50%, #00233D 100%) !important;
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
           box-sizing: border-box !important;
         }
@@ -856,6 +860,7 @@ export default function ConsultarObra() {
           padding: 95px 10px 15px 10px;
           box-sizing: border-box;
           margin: 0;
+          color: #E6EDF3;
         }
 
         /* ========================================================================
@@ -906,8 +911,8 @@ export default function ConsultarObra() {
           padding: 10px 14px;
           border-radius: 10px;
           border: 1px solid var(--primary-green);
-          background: #00904c;
-          color: #fff;
+          background: #79BC99 !important;
+          color: #fff !important;
           font-weight: 700;
           cursor: pointer;
         }
@@ -924,13 +929,13 @@ export default function ConsultarObra() {
           position: fixed;
           bottom: 20px;
           left: 20px;
-          background: linear-gradient(135deg, #00904c, #0bbf6a);
-          color: #fff;
+          background: linear-gradient(135deg, #79BC99, #4E8484) !important;
+          color: #fff !important;
           border: none;
           border-radius: 999px;
           padding: 10px 14px;
           font-weight: 700;
-          box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+          box-shadow: 0 8px 18px rgba(0,0,0,0.18) !important;
           cursor: pointer;
           z-index: 1250;
         }
@@ -1101,11 +1106,11 @@ export default function ConsultarObra() {
 
         /* Sección de fechas en columna izquierda */
         .delivery-dates-section-left {
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: rgba(255, 255, 255, 0.06);
           border-radius: 12px;
           padding: 10px;
-          box-shadow: 0 6px 20px rgba(121, 188, 153, 0.1);
-          border: 1px solid #79BC99;
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+          border: 1px solid rgba(255,255,255,0.12);
           margin-bottom: 8px;
           flex-shrink: 0;
         }
@@ -1199,8 +1204,8 @@ export default function ConsultarObra() {
         }
         /* Quitar scroll horizontal anterior */
         .financial-card.solid { background: var(--darker-blue); }
-        .financial-card.total-investment.solid { background: #046C4E; }
-        .financial-card.budget-executed.solid { background: #0B7A75; }
+        .financial-card.total-investment.solid { background: #00B4FF; }
+        .financial-card.budget-executed.solid { background: #79BC99; }
         .financial-card.budget-2024-2025.solid { background: #2AA7E1; }
         .financial-card.budget-previous.solid { background: #98C73B; color: #002945; }
 
@@ -1252,23 +1257,50 @@ export default function ConsultarObra() {
           justify-content: center;
           padding: 8px 12px 8px 14px;
           border-radius: 14px;
-          background: linear-gradient(180deg, #ffffff 0%, #F9FBFD 100%);
+          background: #FFFFFF;
           border: 1px solid #E6EEF3;
           box-shadow: 0 8px 20px rgba(0,0,0,0.06);
           min-height: 66px;
           transition: transform .15s ease, box-shadow .15s ease;
         }
-        .kpi-chip::before {
-          content: '';
-          position: absolute;
-          left: 6px;
-          top: 8px;
-          bottom: 8px;
-          width: 4px;
-          border-radius: 6px;
-          background: var(--accent, #2AA7E1);
+
+        /* Colores de fondo completos según título de tarjeta - igual que Reporte General */
+        .kpi-chip.kpi-total { background: #00B4FF !important; color: #FFFFFF !important; border: 1px solid #00A0E5 !important; }
+
+        .kpi-chip.kpi-executed { background: #79BC99 !important; color: #FFFFFF !important; border: 1px solid #6CAF8E !important; }
+
+        .kpi-chip.kpi-period { background: #98C73B !important; color: #002945 !important; border: 1px solid #8FBC35 !important; }
+
+        .kpi-chip.kpi-previous { background: #3B8686 !important; color: #FFFFFF !important; border: 1px solid #357A7A !important; }
+        /* Sin decorador izquierdo */
+        .kpi-chip::before { display: none; }
+        .kpi-chip:hover { 
+          transform: translateY(-2px); 
+          box-shadow: 0 12px 28px rgba(0,0,0,0.08); 
         }
-        .kpi-chip:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(0,0,0,0.08); }
+
+        /* Hover simple sin degradados */
+        .kpi-chip.kpi-total:hover { box-shadow: 0 15px 30px rgba(0, 180, 255, 0.35) !important; }
+        .kpi-chip.kpi-executed:hover { box-shadow: 0 15px 30px rgba(121, 188, 153, 0.35) !important; }
+        .kpi-chip.kpi-period:hover { box-shadow: 0 15px 30px rgba(152, 199, 59, 0.35) !important; }
+        .kpi-chip.kpi-previous:hover { box-shadow: 0 15px 30px rgba(59, 134, 134, 0.35) !important; }
+
+        /* Ícono con fondo blanco */
+        .kpi-chip .kpi-icon {
+          position: absolute;
+          left: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: #FFFFFF;
+          display: grid;
+          place-items: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        }
+
+        .kpi-chip { padding-left: 54px; }
         .kpi-title {
           font-size: 0.66rem;
           font-weight: 800;
@@ -1277,14 +1309,37 @@ export default function ConsultarObra() {
           margin-bottom: 2px;
           text-transform: uppercase;
         }
+
+        /* Títulos y valores para fondos de colores */
+        .kpi-chip.kpi-total .kpi-title,
+        .kpi-chip.kpi-executed .kpi-title,
+        .kpi-chip.kpi-previous .kpi-title {
+          color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .kpi-chip.kpi-total .kpi-value,
+        .kpi-chip.kpi-executed .kpi-value,
+        .kpi-chip.kpi-previous .kpi-value {
+          color: #FFFFFF !important;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .kpi-chip.kpi-period .kpi-title {
+          color: rgba(0, 41, 69, 0.9) !important;
+        }
+
+        .kpi-chip.kpi-period .kpi-value {
+          color: #002945 !important;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        }
         .kpi-value {
           font-size: 1.0rem;
           font-weight: 800;
           color: #00233D;
         }
-        .kpi-total { --accent:#046C4E; background: linear-gradient(180deg, rgba(4,108,78,.10) 0%, rgba(4,108,78,.02) 100%); }
-        .kpi-executed { --accent:#0B7A75; background: linear-gradient(180deg, rgba(11,122,117,.10) 0%, rgba(11,122,117,.02) 100%); }
-        .kpi-period { --accent:#2AA7E1; background: linear-gradient(180deg, rgba(42,167,225,.12) 0%, rgba(42,167,225,.03) 100%); }
+        .kpi-total { --accent:#00B4FF; background: linear-gradient(180deg, rgba(0,180,255,.12) 0%, rgba(0,180,255,.03) 100%) !important; }
+        .kpi-executed { --accent:#79BC99; background: linear-gradient(180deg, rgba(121,188,153,.12) 0%, rgba(121,188,153,.04) 100%) !important; }
+        .kpi-period { --accent:#98C73B; background: linear-gradient(180deg, rgba(152,199,59,.14) 0%, rgba(152,199,59,.04) 100%) !important; }
         .kpi-previous { --accent:#98C73B; background: linear-gradient(180deg, rgba(152,199,59,.14) 0%, rgba(152,199,59,.04) 100%); }
 
         /* Refinar tamaños por breakpoints para mantener buena legibilidad y responsividad */
@@ -1768,8 +1823,8 @@ export default function ConsultarObra() {
           color: #FFFFFF;
           box-shadow: 0 4px 8px rgba(0,0,0,0.12);
         }
-        .delivery-date-icon.estimated { background: linear-gradient(135deg, var(--secondary-blue), var(--primary-blue)); }
-        .delivery-date-icon.real { background: linear-gradient(135deg, #7FB832, var(--primary-green)); }
+        .delivery-date-icon.estimated { background: linear-gradient(135deg, #00B4FF, #2AA7E1); }
+        .delivery-date-icon.real { background: linear-gradient(135deg, #98C73B, #7FB832); }
 
         /* Mantener tamaño visual consistente */
         .delivery-date-card.modern { min-height: 48px; display: flex; flex-direction: column; justify-content: center; }
@@ -1794,12 +1849,12 @@ export default function ConsultarObra() {
             SECCION DE INFORMACION DE OBRA SELECCIONADA
         ======================================================================== */
         .selected-project-header {
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+          background: rgba(255, 255, 255, 0.06);
           border-radius: 16px;
           padding: 24px;
           margin-bottom: 24px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
-          border: 1px solid #79BC99;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+          border: 1px solid rgba(255,255,255,0.12);
           display: flex;
           align-items: center;
           gap: 24px;
@@ -1837,7 +1892,7 @@ export default function ConsultarObra() {
         .project-image-fallback {
           width: 100%;
           height: 100%;
-          background: linear-gradient(135deg, #79BC99 0%, #5A9A7A 100%);
+          background: #003356;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1857,7 +1912,7 @@ export default function ConsultarObra() {
         .project-name {
           font-size: 1.6rem;
           font-weight: 700;
-          color: #2d3748;
+          color: #E6EDF3;
           margin: 0 0 12px 0;
           line-height: 1.3;
           text-overflow: ellipsis;
@@ -1872,15 +1927,15 @@ export default function ConsultarObra() {
         }
 
         .status-badge {
-          background: linear-gradient(135deg, #79BC99 0%, #5A9A7A 100%);
-          color: white;
+          background: #0E4C4C;
+          color: #E6EDF3;
           padding: 6px 12px;
           border-radius: 20px;
           font-size: 0.75rem;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.3);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
         }
 
         /* Responsive para la sección de obra seleccionada */
@@ -2010,18 +2065,19 @@ export default function ConsultarObra() {
             SECCION DE GANTT
         ======================================================================== */
         .gantt-section {
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: #032C55;
           border-radius: 12px;
           padding: 18px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
-          border: 1px solid #79BC99;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+          border: 1px solid #032C55;
           width: 100%;
           box-sizing: border-box;
+          color: #FFFFFF;
         }
 
         .gantt-title {
           margin: 0 0 15px 0 !important;
-          color: #2d3748 !important;
+          color: #FFFFFF !important;
           font-size: 1.3rem !important;
           font-weight: 600 !important;
           text-align: center !important;
@@ -2030,6 +2086,7 @@ export default function ConsultarObra() {
         .gantt-container {
           width: 100%;
           overflow-x: auto;
+          color: #FFFFFF;
         }
 
         /* ========================================================================
@@ -2973,17 +3030,25 @@ export default function ConsultarObra() {
           .project-selection-section,
           .project-details-section,
           .financial-overview-section,
-          .stages-section,
-          .gantt-section {
+          .stages-section {
             background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
             border-color: #79BC99;
           }
           
+          .gantt-section {
+            background: #032C55 !important;
+            border-color: #032C55 !important;
+            color: #FFFFFF !important;
+          }
+          
           .selection-label,
           .description-label,
-          .stages-title,
-          .gantt-title {
+          .stages-title {
             color: #2d3748;
+          }
+          
+          .gantt-title {
+            color: #FFFFFF !important;
           }
           
           .selection-select {

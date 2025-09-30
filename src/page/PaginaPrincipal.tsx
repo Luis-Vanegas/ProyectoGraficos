@@ -77,7 +77,7 @@ export default function PaginaPrincipal() {
     },
     {
       id: 'escuelas-inteligentes',
-      titulo: 'Escuelas Inteligentes',
+      titulo: 'Mega colegios',
       descripcion: 'Tecnología educativa',
       icono: escuelasInteligentes, // Imagen real
       ruta: '/dashboard/escuelas-inteligentes',

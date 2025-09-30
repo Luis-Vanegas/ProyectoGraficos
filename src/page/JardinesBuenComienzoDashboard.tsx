@@ -382,6 +382,37 @@ const JardinesBuenComienzoDashboard = () => {
          ======================================================================== */}
         <div className="filters-section">
           <div className="filters-container">
+            {/* Filtro: Proyectos estratégicos */}
+            {F.proyectoEstrategico && (
+              <ImprovedMultiSelect
+                label="PROYECTOS ESTRATÉGICOS"
+                options={opciones.proyectos}
+                selectedValues={filters.proyecto || []}
+                onSelectionChange={(values) => handleFilterChange('proyecto', values)}
+                placeholder="Todos los proyectos"
+              />
+            )}
+
+            {/* Filtro: Subproyecto estratégico */}
+            {F.subproyectoEstrategico && (
+              <ImprovedMultiSelect
+                label="SUBPROYECTO"
+                options={opciones.subproyectos}
+                selectedValues={filters.subproyecto || []}
+                onSelectionChange={(values) => handleFilterChange('subproyecto', values)}
+                placeholder="Todos los subproyectos"
+              />
+            )}
+            {/* Filtro: Subproyecto estratégico */}
+            {F.subproyectoEstrategico && (
+              <ImprovedMultiSelect
+                label="SUBPROYECTO"
+                options={opciones.subproyectos}
+                selectedValues={filters.subproyecto || []}
+                onSelectionChange={(values) => handleFilterChange('subproyecto', values)}
+                placeholder="Todos los subproyectos"
+              />
+            )}
             {/* Filtro: Dependencia */}
             {F.dependencia && (
               <ImprovedMultiSelect
@@ -403,6 +434,18 @@ const JardinesBuenComienzoDashboard = () => {
                 onSelectionChange={(values) => handleFilterChange('comuna', values)}
                 disabled={opciones.comunas.length === 0}
                 placeholder="Todas las comunas"
+              />
+            )}
+
+            {/* Filtro: Obra (Nombre) */}
+            {F.nombre && (
+              <ImprovedMultiSelect
+                label="NOMBRE DE LA OBRA"
+                options={opciones.nombres}
+                selectedValues={filters.nombre || []}
+                onSelectionChange={(values) => handleFilterChange('nombre', values)}
+                disabled={opciones.nombres.length === 0}
+                placeholder="Todas las obras"
               />
             )}
 
@@ -613,8 +656,8 @@ const JardinesBuenComienzoDashboard = () => {
             <MapLibreVisor height={'100%'} query={new URLSearchParams({
               ...(filters.estadoDeLaObra ? { estado: String(filters.estadoDeLaObra) } : {}),
               ...(filters.dependencia ? { dependencia: String(filters.dependencia) } : {}),
-              // Filtro específico para jardines buen comienzo
-              proyectoEstrategico: 'Jardines Buen Comienzo',
+              ...(filters.subproyecto ? { subproyectoEstrategico: String(filters.subproyecto) } : {}),
+              ...(filters.proyecto ? { proyectoEstrategico: String(filters.proyecto) } : {}),
               ...(filters.comuna ? { comunaNombre: String(filters.comuna) } : {}),
               ...(filters.tipo ? { tipo: String(filters.tipo) } : {}),
               ...(filters.contratista ? { contratista: String(filters.contratista) } : {}),
@@ -668,7 +711,7 @@ const JardinesBuenComienzoDashboard = () => {
         ======================================================================== */
         .dashboard-container {
           min-height: 100vh;
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 50%, #F0F8FF 100%);
+          background: #00233D;
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -752,12 +795,12 @@ const JardinesBuenComienzoDashboard = () => {
             SECCIÓN DE FILTROS - DISEÑO MEJORADO
         ======================================================================== */
         .filters-section {
-          background: linear-gradient(135deg, #D4E6F1 0%, #E8F4F8 100%);
-          border-radius: 20px;
-          padding: 30px;
-          margin-bottom: 30px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.15);
-          border: 2px solid ${CORPORATE_COLORS.primary};
+          background: #FFFFFF;
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 18px;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+          border: 1px solid #E9ECEF;
         }
 
         .filters-container {
@@ -917,11 +960,11 @@ const JardinesBuenComienzoDashboard = () => {
             TARJETAS DE CONTENIDO
         ======================================================================== */
         .chart-card, .table-card {
-          background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
+          background: #FFFFFF;
           border-radius: 20px;
           padding: 30px;
-          box-shadow: 0 8px 25px rgba(121, 188, 153, 0.12);
-          border: 1px solid ${CORPORATE_COLORS.primary};
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+          border: 1px solid #98C73B;
           transition: all 0.3s ease;
         }
 
