@@ -361,7 +361,7 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages, showStages = 
                       document.documentElement.scrollTop = 0;
                       document.body.scrollTop = 0;
                     } catch (e) {
-                      console.log('Scroll fallback applied');
+                      // Scroll fallback applied
                     }
                   }, 150);
                 }

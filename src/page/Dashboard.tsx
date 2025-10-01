@@ -9,7 +9,7 @@ import {
   buildTwoSeriesDataset,
   getFilterOptions,
   // toNumber,
-  extractYearFrom,
+  // extractYearFrom, // No se usa actualmente
   // cleanDependentFilters, // TEMPORALMENTE DESHABILITADO
   type Row,
   type Filters,
@@ -112,30 +112,22 @@ const Dashboard = () => {
   useEffect(() => {
     (async () => {
       try {
-        console.log('🔄 Iniciando carga de datos...');
-        
         const sres = await fetch('/api/sheets');
-        console.log('📋 Respuesta /api/sheets:', sres.status, sres.ok);
         
         if (!sres.ok) {
           throw new Error(`Error ${sres.status}: No se pudo cargar /api/sheets`);
         }
         
         const { sheets } = await sres.json();
-        console.log('📋 Hojas disponibles:', sheets);
         const hoja = sheets.includes('Obras') ? 'Obras' : sheets[0];
-        console.log('📋 Hoja seleccionada:', hoja);
         
         const dres = await fetch(`/api/data?sheet=${encodeURIComponent(hoja)}`);
-        console.log('📊 Respuesta /api/data:', dres.status, dres.ok);
         
         if (!dres.ok) {
           throw new Error(`Error ${dres.status}: No se pudo cargar /api/data`);
         }
         
         const { rows } = await dres.json();
-        console.log('📊 Datos cargados:', rows.length, 'filas');
-        console.log('📊 Primeras 3 filas:', rows.slice(0, 3));
         
         setRows(rows);
         setStatus(`${rows.length} filas cargadas exitosamente`);
@@ -187,7 +179,6 @@ const Dashboard = () => {
   }, [filters]);
   const filtered = useMemo(() => {
     const result = applyFilters(rows, combinedFilters);
-    console.log('🔍 Datos después de aplicar filtros:', result.length, 'de', rows.length, 'total');
     return result;
   }, [rows, combinedFilters]);
 
@@ -196,79 +187,14 @@ const Dashboard = () => {
 
   // Calcular KPIs sobre TODOS los datos filtrados, no solo 2024-2027
   const k = useMemo(() => {
-    const result = kpis(filtered); // Cambiado de filtered2024_2027 a filtered
-    console.log('📊 KPIs calculados:', {
-      totalObras: result.totalObras,
-      invTotal: result.invTotal,
-      ejec: result.ejec,
-      pctEjec: result.pctEjec
-    });
+    const result = kpis(filtered);
     return result;
   }, [filtered]); // Cambiado de filtered2024_2027 a filtered
   const vigencias = useMemo(() => {
     const rows = computeVigencias(filtered); // Cambiado de filtered2024_2027 a filtered
     const only = rows.filter(r => r.year >= 2024 && r.year <= 2027);
-    try {
-      // Log comparativo para validar con Power BI
-      // year, estimatedCount, estimatedInvestment, realCount, realInvestment
-      // Inversión real corresponde a Presupuesto ejecutado
-
-      // Log de depuración para "Inversión estimada" 2024
-      const debug2024 = filtered.filter(r => {
-        // Buscar AÑO DE ENTREGA directamente o calcularlo
-        const añoEntrega = r['AÑO DE ENTREGA'] ? extractYearFrom(r['AÑO DE ENTREGA']) : null;
-        if (añoEntrega === 2024) return true;
-        
-        // Fallback: calcular desde fecha estimada
-        const fechaEstimada = F.fechaEstimadaDeEntrega ? String(r[F.fechaEstimadaDeEntrega] ?? '') : '';
-        const yearMatch = fechaEstimada.match(/\b(\d{4})\b/);
-        return yearMatch && Number(yearMatch[1]) === 2024;
-      });
-      console.log(`📊 Obras con AÑO DE ENTREGA = 2024: ${debug2024.length}`);
-      
-      // const sumaCostoCorregido = debug2024.reduce((sum, r) => {
-      //   const costo = r['Costo total actualizado corregido'] ? 
-      //     toNumber(r['Costo total actualizado corregido']) : 
-      //     (F.costoTotalActualizado ? toNumber(r[F.costoTotalActualizado]) : 0);
-      //   return sum + costo;
-      // }, 0);
-      
-      // Mostrar algunas obras de ejemplo
-      
-      // Debug para "Inversión real" 2024
-      const debugReal2024 = filtered.filter(r => {
-        const entregada = String((F.obraEntregada ? r[F.obraEntregada] : '') ?? '').toLowerCase().trim();
-        if (entregada !== 'si' && entregada !== 'sí') return false;
-        
-        const añoReal = r['AÑO DE ENTREGA REAL'] ? extractYearFrom(r['AÑO DE ENTREGA REAL']) : null;
-        if (añoReal === 2024) return true;
-        
-        // Fallback: calcular desde fecha real
-        const fechaReal = F.fechaRealDeEntrega ? String(r[F.fechaRealDeEntrega] ?? '') : '';
-        const yearMatch = fechaReal.match(/\b(\d{4})\b/);
-        return yearMatch && Number(yearMatch[1]) === 2024;
-      });
-      
-      console.log(`📊 Obras entregadas con AÑO DE ENTREGA REAL = 2024: ${debugReal2024.length}`);
-      
-      const sumaPresupuestoEjecutado = debugReal2024.reduce((sum, r) => {
-        return sum + Number(r[F.presupuestoEjecutado] ?? 0);
-      }, 0);
-      console.log(`💰 Suma PRESUPUESTO EJECUTADO: ${sumaPresupuestoEjecutado}`);
-      console.log(`🎯 Valor esperado Power BI: 172,10 mil M`);
-      
-      // Mostrar ejemplos de presupuesto ejecutado
-      console.log('📋 Primeras 3 obras entregadas 2024:', debugReal2024.slice(0, 3).map(r => ({
-        nombre: r[F.nombre],
-        añoReal: r['AÑO DE ENTREGA REAL'],
-        presupuestoEjecutado: r[F.presupuestoEjecutado],
-        obraEntregada: r[F.obraEntregada]
-      })));
-    } catch (error) {
-      console.error('Error en debug de vigencias:', error);
-    }
     return only.sort((a, b) => a.year - b.year);
-  }, [filtered]); // Cambiado de filtered2024_2027 a filtered
+  }, [filtered]);
 
   // Dataset para el gráfico "Inversión total vs Presupuesto ejecutado"
   const comboDataset = useMemo(() => {

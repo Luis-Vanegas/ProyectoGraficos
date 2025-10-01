@@ -676,14 +676,11 @@ export default function ConsultarObra() {
                               alt={`Comuna ${comunaName}`} 
                               className="comuna-image"
                               onError={(e) => {
-                                console.log('Error loading image:', imageSrc);
                                 e.currentTarget.style.display = 'none';
                               }}
-                              onLoad={() => console.log('Image loaded successfully:', imageSrc)}
                             />
                           );
                         } else {
-                          console.log('No image found for comuna:', comunaName);
                           return <span className="detail-icon">{getIconForField('comuna')}</span>;
                         }
                       })()}
@@ -828,7 +825,7 @@ export default function ConsultarObra() {
                       document.documentElement.scrollTop = 0;
                       document.body.scrollTop = 0;
                     } catch {
-                      console.log('Scroll fallback applied');
+                      // Scroll fallback applied
                     }
                   }, 150);
                 }}
