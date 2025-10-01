@@ -168,18 +168,46 @@ app.get('/api/obras', async (req, res) => {
       liquidacion: 'PORCENTAJE LIQUIDACIÓN',
       presupuestoPctEjec: 'PRESUPUESTO PORCENTAJE EJECUTADO'
     };
+    /**
+     * Función para parsear porcentajes y determinar redistribución
+     * 
+     * RETORNA NULL (se redistribuye el peso):
+     *   - null, undefined
+     *   - Texto: "No aplica", "N/A", "NA", "" (vacío), "Sin información"
+     *   - Valores no numéricos
+     * 
+     * RETORNA NÚMERO (0-100):
+     *   - Porcentajes válidos (0%, 50%, 100%, etc.)
+     */
     const parsePct = (val) => {
-      if (val === undefined || val === null) return null; // se redistribuye
+      // 1. Si es null o undefined → SE REDISTRIBUYE
+      if (val === undefined || val === null) return null;
+      
+      // 2. Si es número directo → Retornar limitado entre 0-100
       if (typeof val === 'number') return Math.max(0, Math.min(100, val));
+      
+      // 3. Convertir a string y limpiar
       let s = String(val).trim();
       const sLower = s.toLowerCase();
-      if (sLower.includes('no aplica')) return null; // se redistribuye
-      if (sLower.includes('sin información') || sLower.includes('sin informacion')) return 0; // 0% explícito
+      
+      // 4. Casos de texto que SE REDISTRIBUYEN (retorna null)
+      if (s === '') return null;  // Vacío
+      if (sLower === 'n/a' || sLower === 'na') return null;  // N/A, NA
+      if (sLower.includes('no aplica')) return null;  // "No aplica"
+      if (sLower.includes('no aplicable')) return null;  // "No aplicable"
+      if (sLower.includes('sin información') || sLower.includes('sin informacion')) return null;  // "Sin información"
+      
+      // 5. Intentar convertir a número
       s = s.replace('%', '').replace(/,/g, '.');
-      if (s === '' || sLower === 'n/a') return null;
       let n = Number(s);
+      
+      // 6. Si no es un número válido → SE REDISTRIBUYE
       if (!Number.isFinite(n)) return null;
+      
+      // 7. Convertir decimales (0.5 → 50%)
       if (n > 0 && n <= 1) n *= 100;
+      
+      // 8. Retornar limitado entre 0-100
       return Math.max(0, Math.min(100, n));
     };
     const getPct = (r, keys) => {
@@ -195,6 +223,7 @@ app.get('/api/obras', async (req, res) => {
       const pEstudios   = parsePct(r['PORCENTAJE ESTUDIOS PRELIMINARES']);
       const pViabili    = parsePct(r['PORCENTAJE VIABILIZACIÓN (DAP)']);
       const pPredial    = parsePct(r['PORCENTAJE GESTIÓN PREDIAL']);
+      const pLicencias  = parsePct(r['PORCENTAJE LICENCIAS (CURADURÍA)']);
       const pContra     = parsePct(r['PORCENTAJE CONTRATACIÓN']);
       const pInicio     = parsePct(r['PORCENTAJE INICIO']);
       const pDisenos    = parsePct(r['PORCENTAJE DISEÑOS']);
@@ -203,19 +232,27 @@ app.get('/api/obras', async (req, res) => {
       const pEnt        = parsePct(r['PORCENTAJE ENTREGA OBRA']);
       const pLiq        = parsePct(r['PORCENTAJE LIQUIDACIÓN']);
 
-      const wPlaneacion = 2.0, wEstudios = 1.5, wViabili = 1.5, wPredial = 1.5, wContra = 1.5,
+      const wPlaneacion = 2.0, wEstudios = 1.2, wViabili = 1.2, wPredial = 1.2, wLicencias = 1.2, wContra = 1.2,
             wInicio = 2.0, wDisenos = 5.0, wEjecucion = 78.0, wEntrega = 5.0, wLiq = 2.0;
 
       const aPlaneacion = pPlaneacion !== null;
-      const aEstudios = pEstudios !== null; const aViabili = pViabili !== null; const aPredial = pPredial !== null; const aContra = pContra !== null;
-      const aInicio = pInicio !== null; const aDisenos = pDisenos !== null; const aEjec = pEjec !== null; const aEnt = pEnt !== null; const aLiq = pLiq !== null;
+      const aEstudios = pEstudios !== null; 
+      const aViabili = pViabili !== null; 
+      const aPredial = pPredial !== null; 
+      const aLicencias = pLicencias !== null;
+      const aContra = pContra !== null;
+      const aInicio = pInicio !== null; 
+      const aDisenos = pDisenos !== null; 
+      const aEjec = pEjec !== null; 
+      const aEnt = pEnt !== null; 
+      const aLiq = pLiq !== null;
 
       const prepApplicable = aPlaneacion ? 1 : 0;
       const prepNAWeight = aPlaneacion ? 0 : wPlaneacion;
       const prepExtra = prepApplicable === 0 ? 0 : prepNAWeight / prepApplicable;
 
-      const preconApplicable = (aEstudios ? 1 : 0) + (aViabili ? 1 : 0) + (aPredial ? 1 : 0) + (aContra ? 1 : 0);
-      const preconNAWeight = (aEstudios ? 0 : wEstudios) + (aViabili ? 0 : wViabili) + (aPredial ? 0 : wPredial) + (aContra ? 0 : wContra);
+      const preconApplicable = (aEstudios ? 1 : 0) + (aViabili ? 1 : 0) + (aPredial ? 1 : 0) + (aLicencias ? 1 : 0) + (aContra ? 1 : 0);
+      const preconNAWeight = (aEstudios ? 0 : wEstudios) + (aViabili ? 0 : wViabili) + (aPredial ? 0 : wPredial) + (aLicencias ? 0 : wLicencias) + (aContra ? 0 : wContra);
       const preconExtra = preconApplicable === 0 ? 0 : preconNAWeight / preconApplicable;
 
       const conApplicable = (aInicio ? 1 : 0) + (aDisenos ? 1 : 0) + (aEjec ? 1 : 0) + (aEnt ? 1 : 0);
@@ -235,6 +272,7 @@ app.get('/api/obras', async (req, res) => {
       const cEstudios   = aEstudios   ? ((pEstudios)   * (wEstudios   + preconExtra + globalExtra)) / 100.0 : 0;
       const cViabili    = aViabili    ? ((pViabili)    * (wViabili    + preconExtra + globalExtra)) / 100.0 : 0;
       const cPredial    = aPredial    ? ((pPredial)    * (wPredial    + preconExtra + globalExtra)) / 100.0 : 0;
+      const cLicencias  = aLicencias  ? ((pLicencias)  * (wLicencias  + preconExtra + globalExtra)) / 100.0 : 0;
       const cContra     = aContra     ? ((pContra)     * (wContra     + preconExtra + globalExtra)) / 100.0 : 0;
       const cInicio     = aInicio     ? ((pInicio)     * (wInicio     + conExtra   + globalExtra)) / 100.0 : 0;
       const cDisen      = aDisenos    ? ((pDisenos)    * (wDisenos    + conExtra   + globalExtra)) / 100.0 : 0;
@@ -242,7 +280,7 @@ app.get('/api/obras', async (req, res) => {
       const cEnt        = aEnt        ? ((pEnt)        * (wEntrega    + conExtra   + globalExtra)) / 100.0 : 0;
       const cLiq        = aLiq        ? ((pLiq)        * (wLiq        + postExtra  + globalExtra)) / 100.0 : 0;
 
-      const total = cPlaneacion + cEstudios + cViabili + cPredial + cContra + cInicio + cDisen + cEjec + cEnt + cLiq;
+      const total = cPlaneacion + cEstudios + cViabili + cPredial + cLicencias + cContra + cInicio + cDisen + cEjec + cEnt + cLiq;
       const bounded = Math.max(0, Math.min(100, total));
       return Number.isFinite(bounded) ? Math.round(bounded * 100) / 100 : 0;
     };

@@ -12,7 +12,7 @@
   --white: #FFFFFF;
   
   /* Colores de fondo */
-  --background-dark: #00233D;
+  --background-dark: #f0f0f0;
   --background-light: #F0F8FF;
   --background-gradient-start: #D4E6F1;
   --background-gradient-end: #E8F4F8;
@@ -50,7 +50,7 @@
 /* Fondo principal de todas las páginas */
 .dashboard-container,
 .page-container {
-  background: #01233E !important;
+  background: #ffffff !important;
   min-height: 100vh;
   font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }

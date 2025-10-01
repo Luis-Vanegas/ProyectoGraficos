@@ -97,28 +97,56 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages, showStages = 
     );
   };
 
-  // Función para parsear porcentajes (copiada del servidor)
+  /**
+   * Función para parsear porcentajes y determinar redistribución
+   * 
+   * RETORNA NULL (se redistribuye el peso):
+   *   - null, undefined
+   *   - Texto: "No aplica", "N/A", "NA", "" (vacío), "Sin información"
+   *   - Valores no numéricos
+   * 
+   * RETORNA NÚMERO (0-100):
+   *   - Porcentajes válidos (0%, 50%, 100%, etc.)
+   */
   const parsePct = (val: any): number | null => {
+    // 1. Si es null o undefined → SE REDISTRIBUYE
     if (val === undefined || val === null) return null;
+    
+    // 2. Si es número directo → Retornar limitado entre 0-100
     if (typeof val === 'number') return Math.max(0, Math.min(100, val));
+    
+    // 3. Convertir a string y limpiar
     let s = String(val).trim();
     const sLower = s.toLowerCase();
-    if (sLower.includes('no aplica')) return null;
-    if (sLower.includes('sin información') || sLower.includes('sin informacion')) return 0;
+    
+    // 4. Casos de texto que SE REDISTRIBUYEN (retorna null)
+    if (s === '') return null;  // Vacío
+    if (sLower === 'n/a' || sLower === 'na') return null;  // N/A, NA
+    if (sLower.includes('no aplica')) return null;  // "No aplica"
+    if (sLower.includes('no aplicable')) return null;  // "No aplicable"
+    if (sLower.includes('sin información') || sLower.includes('sin informacion')) return null;  // "Sin información"
+    
+    // 5. Intentar convertir a número
     s = s.replace('%', '').replace(/,/g, '.');
-    if (s === '' || sLower === 'n/a') return null;
     let n = Number(s);
+    
+    // 6. Si no es un número válido → SE REDISTRIBUYE
     if (!Number.isFinite(n)) return null;
+    
+    // 7. Convertir decimales (0.5 → 50%)
     if (n > 0 && n <= 1) n *= 100;
+    
+    // 8. Retornar limitado entre 0-100
     return Math.max(0, Math.min(100, n));
   };
 
-  // Función para calcular el indicador (fórmula del servidor)
+  // Función para calcular el indicador (fórmula del servidor con redistribución dinámica)
   const calculateIndicador = (row: Row): number | null => {
     const pPlaneacion = parsePct(row[F.porcentajePlaneacionMGA]);
     const pEstudios = parsePct(row[F.porcentajeEstudiosPreliminares]);
     const pViabili = parsePct(row[F.porcentajeViabilizacionDAP]);
     const pPredial = parsePct(row[F.porcentajeGestionPredial]);
+    const pLicencias = parsePct(row[F.porcentajeLicenciasCuraduria]);
     const pContra = parsePct(row[F.porcentajeContratacion]);
     const pInicio = parsePct(row[F.porcentajeInicio]);
     const pDisenos = parsePct(row[F.porcentajeDisenos]);
@@ -127,45 +155,63 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages, showStages = 
     const pEnt = parsePct(row[F.porcentajeEntregaObra]);
     const pLiq = parsePct(row[F.porcentajeLiquidacion]);
 
-    const wPlaneacion = 2.0, wEstudios = 1.5, wViabili = 1.5, wPredial = 1.5, wContra = 1.5,
+    const wPlaneacion = 2.0, wEstudios = 1.2, wViabili = 1.2, wPredial = 1.2, wLicencias = 1.2, wContra = 1.2,
           wInicio = 2.0, wDisenos = 5.0, wEjecucion = 78.0, wEntrega = 5.0, wLiq = 2.0;
 
     const aPlaneacion = pPlaneacion !== null;
-    const aEstudios = pEstudios !== null; const aViabili = pViabili !== null; const aPredial = pPredial !== null; const aContra = pContra !== null;
-    const aInicio = pInicio !== null; const aDisenos = pDisenos !== null; const aEjec = pEjec !== null; const aEnt = pEnt !== null; const aLiq = pLiq !== null;
+    const aEstudios = pEstudios !== null; 
+    const aViabili = pViabili !== null; 
+    const aPredial = pPredial !== null; 
+    const aLicencias = pLicencias !== null;
+    const aContra = pContra !== null;
+    const aInicio = pInicio !== null; 
+    const aDisenos = pDisenos !== null; 
+    const aEjec = pEjec !== null; 
+    const aEnt = pEnt !== null; 
+    const aLiq = pLiq !== null;
 
+    // Fase de preparación (Planeación)
     const prepApplicable = aPlaneacion ? 1 : 0;
     const prepNAWeight = aPlaneacion ? 0 : wPlaneacion;
     const prepExtra = prepApplicable === 0 ? 0 : prepNAWeight / prepApplicable;
 
-    const preconApplicable = (aEstudios ? 1 : 0) + (aViabili ? 1 : 0) + (aPredial ? 1 : 0) + (aContra ? 1 : 0);
-    const preconNAWeight = (aEstudios ? 0 : wEstudios) + (aViabili ? 0 : wViabili) + (aPredial ? 0 : wPredial) + (aContra ? 0 : wContra);
+    // Fase precontractual (Estudios, Viabilización, Predial, Licencias, Contratación)
+    const preconApplicable = (aEstudios ? 1 : 0) + (aViabili ? 1 : 0) + (aPredial ? 1 : 0) + (aLicencias ? 1 : 0) + (aContra ? 1 : 0);
+    const preconNAWeight = (aEstudios ? 0 : wEstudios) + (aViabili ? 0 : wViabili) + (aPredial ? 0 : wPredial) + (aLicencias ? 0 : wLicencias) + (aContra ? 0 : wContra);
     const preconExtra = preconApplicable === 0 ? 0 : preconNAWeight / preconApplicable;
 
-    const conApplicable = (aInicio ? 1 : 0) + (aDisenos ? 1 : 0) + (aEjec ? 1 : 0);
-    const conNAWeight = (aInicio ? 0 : wInicio) + (aDisenos ? 0 : wDisenos) + (aEjec ? 0 : wEjecucion);
+    // Fase contractual (Inicio, Diseños, Ejecución, Entrega)
+    const conApplicable = (aInicio ? 1 : 0) + (aDisenos ? 1 : 0) + (aEjec ? 1 : 0) + (aEnt ? 1 : 0);
+    const conNAWeight = (aInicio ? 0 : wInicio) + (aDisenos ? 0 : wDisenos) + (aEjec ? 0 : wEjecucion) + (aEnt ? 0 : wEntrega);
     const conExtra = conApplicable === 0 ? 0 : conNAWeight / conApplicable;
 
-    const postApplicable = (aEnt ? 1 : 0) + (aLiq ? 1 : 0);
-    const postNAWeight = (aEnt ? 0 : wEntrega) + (aLiq ? 0 : wLiq);
+    // Fase post-contractual (Liquidación)
+    const postApplicable = aLiq ? 1 : 0;
+    const postNAWeight = aLiq ? 0 : wLiq;
     const postExtra = postApplicable === 0 ? 0 : postNAWeight / postApplicable;
 
-    const prepPct = aPlaneacion ? pPlaneacion : (prepExtra + (preconExtra + conExtra + postExtra) / 3);
-    const preconPct = preconApplicable > 0 ? 
-      ((aEstudios ? pEstudios : 0) + (aViabili ? pViabili : 0) + (aPredial ? pPredial : 0) + (aContra ? pContra : 0)) / preconApplicable : 
-      (prepExtra + conExtra + postExtra) / 3;
-    const conPct = conApplicable > 0 ? 
-      ((aInicio ? (pInicio || 0) : 0) + (aDisenos ? (pDisenos || 0) : 0) + (aEjec ? (pEjec || 0) : 0)) / conApplicable : 
-      (prepExtra + preconExtra + postExtra) / 3;
-    const postPct = postApplicable > 0 ? 
-      ((aEnt ? pEnt : 0) + (aLiq ? pLiq : 0)) / postApplicable : 
-      (prepExtra + preconExtra + conExtra) / 3;
+    // Redistribución global
+    const totalApplicable = prepApplicable + preconApplicable + conApplicable + postApplicable;
+    const totalNAWeight = prepNAWeight + preconNAWeight + conNAWeight + postNAWeight;
+    const globalExtra = totalApplicable === 0 ? 0 : totalNAWeight / totalApplicable;
 
-    const indicador = (prepPct * wPlaneacion + preconPct * (wEstudios + wViabili + wPredial + wContra) + 
-                      conPct * (wInicio + wDisenos + wEjecucion) + postPct * (wEntrega + wLiq)) / 
-                     (wPlaneacion + wEstudios + wViabili + wPredial + wContra + wInicio + wDisenos + wEjecucion + wEntrega + wLiq);
+    // Contribuciones ponderadas (traducción fiel del DAX)
+    const cPlaneacion = aPlaneacion ? ((pPlaneacion || 0) * (wPlaneacion + prepExtra + globalExtra)) / 100.0 : 0;
+    const cEstudios   = aEstudios   ? ((pEstudios || 0)   * (wEstudios   + preconExtra + globalExtra)) / 100.0 : 0;
+    const cViabili    = aViabili    ? ((pViabili || 0)    * (wViabili    + preconExtra + globalExtra)) / 100.0 : 0;
+    const cPredial    = aPredial    ? ((pPredial || 0)    * (wPredial    + preconExtra + globalExtra)) / 100.0 : 0;
+    const cLicencias  = aLicencias  ? ((pLicencias || 0)  * (wLicencias  + preconExtra + globalExtra)) / 100.0 : 0;
+    const cContra     = aContra     ? ((pContra || 0)     * (wContra     + preconExtra + globalExtra)) / 100.0 : 0;
+    const cInicio     = aInicio     ? ((pInicio || 0)     * (wInicio     + conExtra   + globalExtra)) / 100.0 : 0;
+    const cDisen      = aDisenos    ? ((pDisenos || 0)    * (wDisenos    + conExtra   + globalExtra)) / 100.0 : 0;
+    const cEjec       = aEjec       ? ((pEjec || 0)       * (wEjecucion  + conExtra   + globalExtra)) / 100.0 : 0;
+    const cEnt        = aEnt        ? ((pEnt || 0)        * (wEntrega    + conExtra   + globalExtra)) / 100.0 : 0;
+    const cLiq        = aLiq        ? ((pLiq || 0)        * (wLiq        + postExtra  + globalExtra)) / 100.0 : 0;
 
-    return indicador;
+    const total = cPlaneacion + cEstudios + cViabili + cPredial + cLicencias + cContra + cInicio + cDisen + cEjec + cEnt + cLiq;
+    const bounded = Math.max(0, Math.min(100, total));
+    
+    return Number.isFinite(bounded) ? Math.round(bounded * 100) / 100 : 0;
   };
 
   // Obtener datos de las etapas

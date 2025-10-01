@@ -173,6 +173,18 @@ const kpiStyles = `
     box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
   }
 
+
+  /* Permitir que los estilos del Dashboard sobrescriban los del componente */
+  .kpis-main-row .kpi {
+    background: inherit !important;
+    box-shadow: inherit !important;
+  }
+
+  .kpis-main-row .kpi:hover {
+    transform: inherit !important;
+    box-shadow: inherit !important;
+  }
+
   .kpi::before {
     content: '';
     position: absolute;
@@ -187,17 +199,6 @@ const kpiStyles = `
   /* Quitar la línea verde para todos los KPIs del Dashboard principal */
   .kpis-main-row .kpi::before {
     display: none !important;
-  }
-
-  /* Permitir que los estilos del Dashboard sobrescriban los del componente */
-  .kpis-main-row .kpi {
-    background: inherit !important;
-    box-shadow: inherit !important;
-  }
-
-  .kpis-main-row .kpi:hover {
-    transform: inherit !important;
-    box-shadow: inherit !important;
   }
 
   .kpi-header {

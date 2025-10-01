@@ -57,7 +57,7 @@ export default function SimpleBarChart({
   // Si no hay datos, mostrar mensaje
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="recharts-container" style={{ width, height }}>
+      <div className="recharts-container simple-chart-container">
         <div className="no-data-message">
           <h3>{title}</h3>
           <p>No hay datos disponibles para mostrar</p>
@@ -67,7 +67,7 @@ export default function SimpleBarChart({
   }
 
   return (
-    <div className="recharts-container" style={{ width, height }}>
+    <div className="recharts-container simple-chart-container" style={{ width, height }}>
       {/* Título del gráfico */}
       <div className="chart-title">
         <h3>{title}</h3>
@@ -140,14 +140,14 @@ export default function SimpleBarChart({
               }}
             />
             <Bar 
-              dataKey="Inversión Total" 
+              dataKey={seriesNames[0]}
               fill="#2E8B57"
               radius={[4, 4, 0, 0]}
               stroke="white"
               strokeWidth={1}
             />
             <Bar 
-              dataKey="Presupuesto Ejecutado" 
+              dataKey={seriesNames[1]}
               fill="#FF6B35"
               radius={[4, 4, 0, 0]}
               stroke="white"
@@ -158,7 +158,7 @@ export default function SimpleBarChart({
         </div>
 
       <style>{`
-        .recharts-container {
+        .simple-chart-container {
           position: relative;
           background: linear-gradient(135deg, #E8F4F8 0%, #D4E6F1 100%);
           border-radius: 20px;
@@ -283,15 +283,15 @@ export default function SimpleBarChart({
 
         /* Responsive design */
         @media (max-width: 1400px) {
-          .recharts-container {
-            width: 95%;
+          .simple-chart-container {
+            width: 95% !important;
             max-width: 1200px;
             padding: 25px;
           }
         }
         
         @media (max-width: 1024px) {
-          .recharts-container {
+          .simple-chart-container {
             width: 100%;
             max-width: 1000px;
             padding: 20px;
@@ -299,17 +299,17 @@ export default function SimpleBarChart({
             min-height: 500px;
           }
           
+          .chart-wrapper {
+            height: 400px;
+          }
+          
           .chart-title h3 {
             font-size: 1.1rem;
-          }
-
-          .chart-scroll-wrapper {
-            height: calc(100% - 55px);
           }
         }
 
         @media (max-width: 768px) {
-          .recharts-container {
+          .simple-chart-container {
             width: 100%;
             max-width: 100%;
             padding: 15px;
@@ -318,16 +318,21 @@ export default function SimpleBarChart({
             margin: 0 10px;
           }
           
+          .chart-wrapper {
+            height: 350px;
+          }
+          
           .chart-title {
             padding: 6px 16px;
+            margin-bottom: 10px;
           }
           
           .chart-title h3 {
-            font-size: 1rem;
+            font-size: 0.95rem;
           }
 
           .recharts-legend-item-text {
-            font-size: 12px !important;
+            font-size: 11px !important;
           }
 
           .custom-tooltip {
@@ -335,16 +340,16 @@ export default function SimpleBarChart({
           }
 
           .tooltip-label {
-            font-size: 12px;
+            font-size: 11px;
           }
 
           .tooltip-entry {
-            font-size: 11px;
+            font-size: 10px;
           }
         }
 
         @media (max-width: 480px) {
-          .recharts-container {
+          .simple-chart-container {
             width: 100%;
             max-width: 100%;
             padding: 10px;
@@ -353,20 +358,54 @@ export default function SimpleBarChart({
             margin: 0 5px;
           }
           
+          .chart-wrapper {
+            height: 300px;
+            padding: 10px;
+          }
+          
           .chart-title {
-            padding: 5px 12px;
+            padding: 4px 10px;
+            margin-bottom: 8px;
           }
           
           .chart-title h3 {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
           }
           
           .recharts-legend-item-text {
-            font-size: 11px !important;
+            font-size: 10px !important;
           }
           
           .recharts-legend-item {
-            margin-right: 15px !important;
+            margin-right: 12px !important;
+          }
+        }
+        
+        @media (max-width: 360px) {
+          .simple-chart-container {
+            width: 100%;
+            padding: 10px;
+            height: 350px;
+            min-height: 350px;
+            border-radius: 12px;
+            border-width: 2px;
+          }
+          
+          .chart-wrapper {
+            height: 250px;
+            padding: 8px;
+          }
+          
+          .chart-title h3 {
+            font-size: 0.8rem;
+          }
+          
+          .recharts-legend-item-text {
+            font-size: 9px !important;
+          }
+          
+          .recharts-legend-item {
+            margin-right: 10px !important;
           }
         }
       `}</style>

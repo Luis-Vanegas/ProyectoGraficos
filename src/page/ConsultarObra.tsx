@@ -5,6 +5,7 @@ import {
   applyFilters,
   cleanDependentFilters,
   kpis,
+  formatMoneyColombian,
   type Filters,
   type Row
 } from '../utils/utils/metrics';
@@ -14,7 +15,7 @@ import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
 import NotificationCenter from '../components/NotificationCenter';
 import ProjectProgressIndicator from '../components/ProjectProgressIndicator';
 import { IconButton, Badge, Card, CardContent, Stack, Typography, Box } from '@mui/material';
-import { NotificationsActive, EventAvailable, Event, Remove, AttachMoney, Savings, CalendarMonth, History } from '@mui/icons-material';
+import { NotificationsActive, EventAvailable, Event, Remove } from '@mui/icons-material';
 
 // Importar las imágenes de las comunas
 import comuna1Image from '../assets/comuna1.jpeg';
@@ -322,7 +323,7 @@ export default function ConsultarObra() {
         minHeight: '100vh',
         width: '100%',
         display: 'block',
-        background: 'linear-gradient(180deg, #001724 0%, #001A28 50%, #00233D 100%)',
+        background: '#FFFFFF',
         fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
       }}
     >
@@ -523,7 +524,7 @@ export default function ConsultarObra() {
 
             {/* Fechas de entrega - Compactas */}
             <div className="delivery-dates-section-left compact">
-          <h3 className="delivery-dates-title" style={{color: '#E6EDF3', fontWeight: '600'}}>Fechas de Entrega</h3>
+          <h3 className="delivery-dates-title" style={{color: '#2d3748', fontWeight: '600'}}>Fechas de Entrega</h3>
               <div className="delivery-dates-grid-left compact">
               {/* Tarjeta MUI - Estimada */}
               <Card className="delivery-date-card estimated modern glass" elevation={6}
@@ -579,49 +580,84 @@ export default function ConsultarObra() {
             
           {/* Columna derecha - Detalles y métricas */}
           <div className="right-column">
-            {/* Sección de métricas financieras (diseño alterno compacto) */}
-            <div className="kpis-alt">
-              <div className="kpi-chip kpi-total">
-                <div className="kpi-icon"><AttachMoney fontSize="small" htmlColor="#00B4FF" /></div>
-                <div className="kpi-title">INVERSIÓN TOTAL</div>
-                <div className="kpi-value">
-                  {currentData ? 
-                    `$${((Number(currentData[F.costoTotalActualizado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
-                    '$10.69 bill.'
-                  }
+            {/* Sección de métricas financieras (diseño moderno) */}
+            <div className="modern-kpis-row-consultar">
+              <div className="modern-kpi-consultar modern-kpi-blue-consultar">
+                <div className="modern-kpi-content-consultar">
+                  <div className="modern-kpi-info-consultar">
+                    <div className="modern-kpi-label-consultar">Inversión total</div>
+                    <div className="modern-kpi-value-consultar">
+                      {currentData ? 
+                        formatMoneyColombian(Number(currentData[F.costoTotalActualizado] ?? 0)) : 
+                        formatMoneyColombian(totalMetrics.invTotal)
+                      }
+                    </div>
+                  </div>
+                  <div className="modern-kpi-icon-consultar">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
                 </div>
-              <div className="kpi-chip kpi-executed">
-                <div className="kpi-icon"><Savings fontSize="small" htmlColor="#2E5D5D" /></div>
-                <div className="kpi-title">PRESUPUESTO EJECUTADO</div>
-                <div className="kpi-value">
-                  {currentData ? 
-                    `$${((Number(currentData[F.presupuestoEjecutado] ?? 0) / 1000000000).toFixed(2))} bill.` : 
-                    `$${(totalMetrics.ejec / 1000000000).toFixed(2)} bill.`
-                  }
-                </div>
-                </div>
-              <div className="kpi-chip kpi-period">
-                <div className="kpi-icon"><CalendarMonth fontSize="small" htmlColor="#2D4B0A" /></div>
-                <div className="kpi-title">PRESUPUESTO 2024-2025</div>
-                <div className="kpi-value">
-                  {currentData ? 
-                    `$${((Number(currentData[F.presupuestoEjecutadoAdm2024_2027] ?? 0) / 1000000000).toFixed(2))} bill.` : 
-                    '$12.29 bill.'
-                  }
-                </div>
+              </div>
+              
+              <div className="modern-kpi-consultar modern-kpi-green-consultar">
+                <div className="modern-kpi-content-consultar">
+                  <div className="modern-kpi-info-consultar">
+                    <div className="modern-kpi-label-consultar">Presupuesto ejecutado</div>
+                    <div className="modern-kpi-value-consultar">
+                      {currentData ? 
+                        formatMoneyColombian(Number(currentData[F.presupuestoEjecutado] ?? 0)) : 
+                        formatMoneyColombian(totalMetrics.ejec)
+                      }
+                    </div>
                   </div>
-              <div className="kpi-chip kpi-previous">
-                <div className="kpi-icon"><History fontSize="small" htmlColor="#163B3B" /></div>
-                <div className="kpi-title">ADMINISTRACIONES ANTERIORES</div>
-                <div className="kpi-value">
-                  {currentData ? 
-                    `$${((Number(currentData[F.presupuestoEjecutadoAdmAnteriores] ?? 0) / 1000000000).toFixed(2))} bill.` : 
-                    '$3.45 bill.'
-                  }
-                </div>
+                  <div className="modern-kpi-icon-consultar">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
                 </div>
+              </div>
+              
+              <div className="modern-kpi-consultar modern-kpi-yellow-consultar">
+                <div className="modern-kpi-content-consultar">
+                  <div className="modern-kpi-info-consultar">
+                    <div className="modern-kpi-label-consultar">Presupuesto 2024-2027</div>
+                    <div className="modern-kpi-value-consultar">
+                      {currentData ? 
+                        formatMoneyColombian(Number(currentData[F.presupuestoEjecutadoAdm2024_2027] ?? 0)) : 
+                        formatMoneyColombian(totalMetrics.valorCuatrienio2024_2027 ?? 0)
+                      }
+                    </div>
+                  </div>
+                  <div className="modern-kpi-icon-consultar">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="modern-kpi-consultar modern-kpi-teal-consultar">
+                <div className="modern-kpi-content-consultar">
+                  <div className="modern-kpi-info-consultar">
+                    <div className="modern-kpi-label-consultar">Administraciones anteriores</div>
+                    <div className="modern-kpi-value-consultar">
+                      {currentData ? 
+                        formatMoneyColombian(Number(currentData[F.presupuestoEjecutadoAdmAnteriores] ?? 0)) : 
+                        formatMoneyColombian(totalMetrics.invTotal - (totalMetrics.valorCuatrienio2024_2027 ?? 0))
+                      }
+                    </div>
+                  </div>
+                  <div className="modern-kpi-icon-consultar">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
 
               {/* Grid de detalles organizados */}
               <div className="details-grid-new">
@@ -849,7 +885,7 @@ export default function ConsultarObra() {
           display: block !important;
           margin: 0 !important;
           padding: 0 !important;
-          background: linear-gradient(180deg, #001724 0%, #001A28 50%, #00233D 100%) !important;
+          background: #FFFFFF !important;
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
           box-sizing: border-box !important;
         }
@@ -860,7 +896,7 @@ export default function ConsultarObra() {
           padding: 95px 10px 15px 10px;
           box-sizing: border-box;
           margin: 0;
-          color: #E6EDF3;
+          color: #2d3748;
         }
 
         /* ========================================================================
@@ -1093,6 +1129,11 @@ export default function ConsultarObra() {
           flex-direction: column;
           gap: 12px;
           align-self: start;
+          background: #FFFFFF;
+          border: 2px solid #E9ECEF;
+          border-radius: 16px;
+          padding: 16px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .right-column {
@@ -1102,16 +1143,21 @@ export default function ConsultarObra() {
           width: 100%;
           min-width: 0;
           align-self: start;
+          background: #FFFFFF;
+          border: 2px solid #E9ECEF;
+          border-radius: 16px;
+          padding: 16px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         /* Sección de fechas en columna izquierda */
         .delivery-dates-section-left {
-          background: rgba(255, 255, 255, 0.06);
+          background: #F8F9FA;
           border-radius: 12px;
-          padding: 10px;
-          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-          border: 1px solid rgba(255,255,255,0.12);
-          margin-bottom: 8px;
+          padding: 14px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+          border: 2px solid #DEE2E6;
+          margin-bottom: 0px;
           flex-shrink: 0;
         }
         .delivery-dates-section-left.compact { padding: 8px; margin-top: 2px; }
@@ -1238,109 +1284,134 @@ export default function ConsultarObra() {
           line-height: 1.1;
         }
 
-        /* Diseño alterno tipo chip compacto */
-        .kpis-alt {
+        /* KPIs modernos para Consultar Obra */
+        .modern-kpis-row-consultar {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 8px;
+          gap: 12px;
+          margin-bottom: 20px;
         }
-        @media (min-width: 768px) and (max-width: 1199px) {
-          .kpis-alt { grid-template-columns: repeat(2, 1fr); }
+        
+        .modern-kpi-consultar {
+          border-radius: 32px;
+          padding: 16px 22px;
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
+          transition: all 0.3s ease;
+          height: 85px;
+          display: flex;
+          align-items: center;
         }
-        @media (max-width: 767px) {
-          .kpis-alt { grid-template-columns: repeat(2, 1fr); }
+        
+        .modern-kpi-consultar:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16);
         }
-        .kpi-chip {
-          position: relative;
+        
+        .modern-kpi-blue-consultar {
+          background: linear-gradient(135deg, #00B4FF 0%, #0099E0 100%);
+          color: white;
+        }
+        
+        .modern-kpi-green-consultar {
+          background: linear-gradient(135deg, #79BC99 0%, #6CAF8E 100%);
+          color: white;
+        }
+        
+        .modern-kpi-yellow-consultar {
+          background: linear-gradient(135deg, #A2D45E 0%, #8BC34A 100%);
+          color: white;
+        }
+        
+        .modern-kpi-teal-consultar {
+          background: linear-gradient(135deg, #3B8686 0%, #357A7A 100%);
+          color: white;
+        }
+        
+        .modern-kpi-content-consultar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          height: 100%;
+          gap: 16px;
+        }
+        
+        .modern-kpi-info-consultar {
+          flex: 1;
           display: flex;
           flex-direction: column;
           justify-content: center;
-          padding: 8px 12px 8px 14px;
-          border-radius: 14px;
-          background: #FFFFFF;
-          border: 1px solid #E6EEF3;
-          box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-          min-height: 66px;
-          transition: transform .15s ease, box-shadow .15s ease;
+          gap: 6px;
         }
-
-        /* Colores de fondo completos según título de tarjeta - igual que Reporte General */
-        .kpi-chip.kpi-total { background: #00B4FF !important; color: #FFFFFF !important; border: 1px solid #00A0E5 !important; }
-
-        .kpi-chip.kpi-executed { background: #79BC99 !important; color: #FFFFFF !important; border: 1px solid #6CAF8E !important; }
-
-        .kpi-chip.kpi-period { background: #98C73B !important; color: #002945 !important; border: 1px solid #8FBC35 !important; }
-
-        .kpi-chip.kpi-previous { background: #3B8686 !important; color: #FFFFFF !important; border: 1px solid #357A7A !important; }
-        /* Sin decorador izquierdo */
-        .kpi-chip::before { display: none; }
-        .kpi-chip:hover { 
-          transform: translateY(-2px); 
-          box-shadow: 0 12px 28px rgba(0,0,0,0.08); 
+        
+        .modern-kpi-label-consultar {
+          color: rgba(255, 255, 255, 0.85);
+          font-size: 0.75rem;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          line-height: 1.2;
+          text-align: left;
         }
-
-        /* Hover simple sin degradados */
-        .kpi-chip.kpi-total:hover { box-shadow: 0 15px 30px rgba(0, 180, 255, 0.35) !important; }
-        .kpi-chip.kpi-executed:hover { box-shadow: 0 15px 30px rgba(121, 188, 153, 0.35) !important; }
-        .kpi-chip.kpi-period:hover { box-shadow: 0 15px 30px rgba(152, 199, 59, 0.35) !important; }
-        .kpi-chip.kpi-previous:hover { box-shadow: 0 15px 30px rgba(59, 134, 134, 0.35) !important; }
-
-        /* Ícono con fondo blanco */
-        .kpi-chip .kpi-icon {
-          position: absolute;
-          left: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: #FFFFFF;
-          display: grid;
-          place-items: center;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        
+        .modern-kpi-value-consultar {
+          font-size: 1.4rem;
+          font-weight: 700;
+          color: #ffffff;
+          line-height: 1.1;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+          text-align: left;
         }
-
-        .kpi-chip { padding-left: 54px; }
-        .kpi-title {
-          font-size: 0.66rem;
-          font-weight: 800;
-          letter-spacing: .3px;
-          color: #002945;
-          margin-bottom: 2px;
-          text-transform: uppercase;
+        
+        .modern-kpi-icon-consultar {
+          flex-shrink: 0;
+          width: 50px;
+          height: 50px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.35;
         }
-
-        /* Títulos y valores para fondos de colores */
-        .kpi-chip.kpi-total .kpi-title,
-        .kpi-chip.kpi-executed .kpi-title,
-        .kpi-chip.kpi-previous .kpi-title {
-          color: rgba(255, 255, 255, 0.9) !important;
+        
+        .modern-kpi-icon-consultar svg {
+          width: 100%;
+          height: 100%;
+          fill: none;
+          color: white;
         }
-
-        .kpi-chip.kpi-total .kpi-value,
-        .kpi-chip.kpi-executed .kpi-value,
-        .kpi-chip.kpi-previous .kpi-value {
-          color: #FFFFFF !important;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        
+        /* Responsive para KPIs de Consultar Obra */
+        @media (max-width: 1200px) {
+          .modern-kpis-row-consultar {
+            grid-template-columns: repeat(2, 1fr);
+          }
         }
-
-        .kpi-chip.kpi-period .kpi-title {
-          color: rgba(0, 41, 69, 0.9) !important;
+        
+        @media (max-width: 768px) {
+          .modern-kpis-row-consultar {
+            grid-template-columns: 1fr;
+          }
+          
+          .modern-kpi-consultar {
+            height: auto;
+            min-height: 75px;
+            padding: 14px 20px;
+          }
+          
+          .modern-kpi-value-consultar {
+            font-size: 1.2rem;
+          }
+          
+          .modern-kpi-icon-consultar {
+            width: 40px;
+            height: 40px;
+          }
         }
-
-        .kpi-chip.kpi-period .kpi-value {
-          color: #002945 !important;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-        }
-        .kpi-value {
-          font-size: 1.0rem;
-          font-weight: 800;
-          color: #00233D;
-        }
-        .kpi-total { --accent:#00B4FF; background: linear-gradient(180deg, rgba(0,180,255,.12) 0%, rgba(0,180,255,.03) 100%) !important; }
-        .kpi-executed { --accent:#79BC99; background: linear-gradient(180deg, rgba(121,188,153,.12) 0%, rgba(121,188,153,.04) 100%) !important; }
-        .kpi-period { --accent:#98C73B; background: linear-gradient(180deg, rgba(152,199,59,.14) 0%, rgba(152,199,59,.04) 100%) !important; }
-        .kpi-previous { --accent:#98C73B; background: linear-gradient(180deg, rgba(152,199,59,.14) 0%, rgba(152,199,59,.04) 100%); }
 
         /* Refinar tamaños por breakpoints para mantener buena legibilidad y responsividad */
         @media (min-width: 1400px) {
@@ -1365,11 +1436,11 @@ export default function ConsultarObra() {
 
          /* Descripción de ancho completo */
          .description-card-full-width {
-           background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+           background: #FFFFFF;
            border-radius: 12px;
-           padding: 5px;
-           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-           border: 1px solid #e9ecef;
+           padding: 10px;
+           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+           border: 2px solid #DEE2E6;
            transition: all 0.3s ease;
            display: flex;
            flex-direction: column;
@@ -1380,16 +1451,16 @@ export default function ConsultarObra() {
 
          .description-card-full-width:hover {
            transform: translateY(-2px);
-           box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+           box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
            border-color: #79BC99;
          }
 
         .detail-card {
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-          border-radius: 10px;
-          padding: 6px;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-          border: 1px solid #e9ecef;
+          background: #FFFFFF;
+          border-radius: 12px;
+          padding: 10px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          border: 2px solid #DEE2E6;
           transition: all 0.3s ease;
           display: flex;
           flex-direction: column;
@@ -1398,7 +1469,7 @@ export default function ConsultarObra() {
 
         .detail-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
           border-color: #79BC99;
         }
 
@@ -1795,13 +1866,13 @@ export default function ConsultarObra() {
           text-transform: uppercase;
           letter-spacing: 0.3px;
           margin-bottom: 0;
-          color: var(--darker-blue);
+          color: #2d3748 !important;
         }
 
         .delivery-date-value {
           font-size: 0.8rem;
           font-weight: 700;
-          color: var(--text-medium);
+          color: #2d3748 !important;
           margin-bottom: 4px;
           line-height: 1.1;
         }
@@ -1849,12 +1920,12 @@ export default function ConsultarObra() {
             SECCION DE INFORMACION DE OBRA SELECCIONADA
         ======================================================================== */
         .selected-project-header {
-          background: rgba(255, 255, 255, 0.06);
+          background: #FFFFFF;
           border-radius: 16px;
           padding: 24px;
           margin-bottom: 24px;
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
-          border: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+          border: 2px solid #DEE2E6;
           display: flex;
           align-items: center;
           gap: 24px;
@@ -1912,7 +1983,7 @@ export default function ConsultarObra() {
         .project-name {
           font-size: 1.6rem;
           font-weight: 700;
-          color: #E6EDF3;
+          color: #2d3748;
           margin: 0 0 12px 0;
           line-height: 1.3;
           text-overflow: ellipsis;
@@ -1927,15 +1998,15 @@ export default function ConsultarObra() {
         }
 
         .status-badge {
-          background: #0E4C4C;
-          color: #E6EDF3;
+          background: #79BC99;
+          color: #FFFFFF;
           padding: 6px 12px;
           border-radius: 20px;
           font-size: 0.75rem;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+          box-shadow: 0 2px 8px rgba(121, 188, 153, 0.25);
         }
 
         /* Responsive para la sección de obra seleccionada */
@@ -2065,19 +2136,19 @@ export default function ConsultarObra() {
             SECCION DE GANTT
         ======================================================================== */
         .gantt-section {
-          background: #032C55;
+          background: #F8F9FA;
           border-radius: 12px;
           padding: 18px;
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
-          border: 1px solid #032C55;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+          border: 2px solid #DEE2E6;
           width: 100%;
           box-sizing: border-box;
-          color: #FFFFFF;
+          color: #2d3748;
         }
 
         .gantt-title {
           margin: 0 0 15px 0 !important;
-          color: #FFFFFF !important;
+          color: #2d3748 !important;
           font-size: 1.3rem !important;
           font-weight: 600 !important;
           text-align: center !important;
@@ -2086,7 +2157,7 @@ export default function ConsultarObra() {
         .gantt-container {
           width: 100%;
           overflow-x: auto;
-          color: #FFFFFF;
+          color: #2d3748;
         }
 
         /* ========================================================================
@@ -3036,9 +3107,9 @@ export default function ConsultarObra() {
           }
           
           .gantt-section {
-            background: #032C55 !important;
-            border-color: #032C55 !important;
-            color: #FFFFFF !important;
+            background: #FFFFFF !important;
+            border-color: #E9ECEF !important;
+            color: #2d3748 !important;
           }
           
           .selection-label,
@@ -3048,7 +3119,7 @@ export default function ConsultarObra() {
           }
           
           .gantt-title {
-            color: #FFFFFF !important;
+            color: #2d3748 !important;
           }
           
           .selection-select {

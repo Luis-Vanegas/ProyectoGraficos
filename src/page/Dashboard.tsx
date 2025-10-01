@@ -721,55 +721,79 @@ const Dashboard = () => {
             const pctAntSobreTotal = Math.round((presupuestoAnteriores / invTotal) * 100);
             return (
               <div className="budget-summary-card">
-                <div className="budget-grid-top">
-                  <div className="budget-top-duo">
-                    <div className="duo-cell">
-                      <div className="duo-title">Total obras</div>
-                      <div className="duo-value"><CountUp end={k.totalObras} duration={1.0} separator="." /></div>
+                <div className="modern-kpis-row">
+                  <div className="modern-kpi modern-kpi-blue">
+                    <div className="modern-kpi-content">
+                      <div className="modern-kpi-info">
+                        <div className="modern-kpi-label">Total de Obras</div>
+                        <div className="modern-kpi-value"><CountUp end={k.totalObras} duration={1.0} separator="." /></div>
+                      </div>
+                      <div className="modern-kpi-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M19 21V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V21M19 21H21M19 21H13.5M5 21H3M5 21H10.5M10.5 21V15.5C10.5 15.2239 10.7239 15 11 15H13C13.2761 15 13.5 15.2239 13.5 15.5V21M10.5 21H13.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M9 7H9.01M9 11H9.01M15 7H15.01M15 11H15.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
                     </div>
-                  <div className="duo-cell no-sep">
-                    <div className="duo-title with-badge">
-                      <span>Obras entregadas</span>
-                      <span className="pct-badge small">{Math.round(k.pctEntregadas * 100)}%</span>
-                    </div>
-                    <div className="duo-value"><CountUp end={k.entregadas} duration={1.0} separator="." /></div>
                   </div>
-                  </div>
-                  <div className="budget-item green-alt">
-                    <div className="budget-header no-badge">
-                      <span className="budget-title">Inversión total</span>
+                  
+                  <div className="modern-kpi modern-kpi-green">
+                    <div className="modern-kpi-content">
+                      <div className="modern-kpi-info">
+                        <div className="modern-kpi-label">Obras Entregadas</div>
+                        <div className="modern-kpi-value"><CountUp end={k.entregadas} duration={1.0} separator="." /></div>
+                        <div className="modern-kpi-subtitle">{Math.round(k.pctEntregadas * 100)}% del total</div>
+                      </div>
+                      <div className="modern-kpi-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
                     </div>
-                    <div className="budget-value">{formatMoneyColombian(k.invTotal)}</div>
+                  </div>
+                  
+                  <div className="modern-kpi modern-kpi-green-light">
+                    <div className="modern-kpi-content">
+                      <div className="modern-kpi-info">
+                        <div className="modern-kpi-label">Inversión total</div>
+                        <div className="modern-kpi-value">{formatMoneyColombian(k.invTotal)}</div>
+                      </div>
+                      <div className="modern-kpi-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2V22M17 5H9.5C8.57174 5 7.6815 5.36875 7.02513 6.02513C6.36875 6.6815 6 7.57174 6 8.5C6 9.42826 6.36875 10.3185 7.02513 10.9749C7.6815 11.6313 8.57174 12 9.5 12H14.5C15.4283 12 16.3185 12.3687 16.9749 13.0251C17.6313 13.6815 18 14.5717 18 15.5C18 16.4283 17.6313 17.3185 16.9749 17.9749C16.3185 18.6313 15.4283 19 14.5 19H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="budget-integrated">
-                  <div className="integrated-top center">
-                    <div className="integrated-header center">
-                      <span className="integrated-title">Presupuesto ejecutado</span>
-                      <span className="pct-badge">{pctEjecSobreTotal}%</span>
+                <div className="modern-budget-row">
+                  <div className="modern-budget-item modern-budget-blue">
+                    <div className="modern-budget-header">
+                      <span className="modern-budget-title">Presupuesto ejecutado</span>
+                      <span className="modern-budget-badge">{pctEjecSobreTotal}%</span>
                     </div>
-                    <div className="integrated-value center">
+                    <div className="modern-budget-value">
                       {formatMoneyColombian(presupuestoEjecutado)}
                     </div>
                   </div>
-                  <div className="integrated-duo">
-                    <div className="integrated-cell">
-                      <div className="integrated-header">
-                        <span className="integrated-title">Presupuesto 2024-2027</span>
-                        <span className="pct-badge">{pctCuatSobreTotal}%</span>
-                      </div>
-                      <div className="integrated-value">
-                        {formatMoneyColombian(presupuestoCuatrienio)}
-                      </div>
+                  
+                  <div className="modern-budget-item modern-budget-dark">
+                    <div className="modern-budget-header">
+                      <span className="modern-budget-title">Presupuesto 2024-2027</span>
+                      <span className="modern-budget-badge">{pctCuatSobreTotal}%</span>
                     </div>
-                    <div className="integrated-cell alt">
-                      <div className="integrated-header">
-                        <span className="integrated-title">Presupuesto administraciones anteriores</span>
-                        <span className="pct-badge">{pctAntSobreTotal}%</span>
-                      </div>
-                      <div className="integrated-value">
-                        {formatMoneyColombian(presupuestoAnteriores)}
-                      </div>
+                    <div className="modern-budget-value">
+                      {formatMoneyColombian(presupuestoCuatrienio)}
+                    </div>
+                  </div>
+                  
+                  <div className="modern-budget-item modern-budget-green">
+                    <div className="modern-budget-header">
+                      <span className="modern-budget-title">Presupuesto administraciones anteriores</span>
+                      <span className="modern-budget-badge">{pctAntSobreTotal}%</span>
+                    </div>
+                    <div className="modern-budget-value">
+                      {formatMoneyColombian(presupuestoAnteriores)}
                     </div>
                   </div>
                 </div>
@@ -990,7 +1014,7 @@ const Dashboard = () => {
         ======================================================================== */
         .dashboard-container {
           min-height: 100vh;
-          background: #ffffff;
+          background: #f5eeee;
           font-family: 'Metropolis', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -1081,8 +1105,10 @@ const Dashboard = () => {
           width: min(620px, 96vw);
           height: calc(100vh - 100px);
           background: #FFFFFF;
-          border-right: 1px solid #E9ECEF;
-          box-shadow: 12px 0 30px rgba(0,0,0,0.15);
+          border-right: 2px solid #E9ECEF;
+          box-shadow: 12px 0 30px rgba(0, 0, 0, 0.2),
+                      8px 0 20px rgba(0, 0, 0, 0.12),
+                      4px 0 10px rgba(0, 0, 0, 0.08);
           border-top-right-radius: 12px;
           border-bottom-right-radius: 12px;
           transform: translateX(-100%);
@@ -1585,11 +1611,11 @@ const Dashboard = () => {
         ======================================================================== */
         .main-dashboard-section {
           margin-bottom: 20px;
-          background: #032c55;
+          background: #dbdbdb7b;
           border-radius: 14px;
           padding: 16px;
           box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-          max-width: 1200px;
+          max-width: 1400px;
           margin-left: auto;
           margin-right: auto;
         }
@@ -1605,6 +1631,16 @@ const Dashboard = () => {
           align-items: stretch;
           width: 100%;
           overflow-x: auto;
+        }
+        
+        .kpis-main-row > div {
+          display: flex;
+          flex-direction: column;
+          height: 150px;
+        }
+        
+        .kpis-main-row .kpi-wrapper {
+          height: 100%;
         }
 
         .dashboard-separator {
@@ -1641,7 +1677,7 @@ const Dashboard = () => {
           box-shadow: 0 8px 20px rgba(0,0,0,0.15);
           min-height: 92px;
         }
-        .compact-kpi.navy { background:#002945; }
+        .compact-kpi.navy { background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); }
         .compact-kpi.green { background:#98C73B; color:#fff; }
         .compact-kpi-label { font-size: 0.72rem; font-weight: 700; opacity: 0.95; text-align:center; }
         .compact-kpi-value { font-size: 1.2rem; font-weight: 800; margin-top: 6px; text-align:center; }
@@ -1665,46 +1701,313 @@ const Dashboard = () => {
         }
 
         /* =====================
-           TARJETA: PRESUPUESTOS
+           TARJETA: PRESUPUESTOS - DISEÑO MEJORADO
            ===================== */
         .budget-summary-card {
-          background: rgba(255, 255, 255, 0.55);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border-radius: 18px;
-          padding: 16px;
-          border: 1px solid rgba(231, 236, 243, 0.9);
-          box-shadow:
-            0 10px 30px rgba(15, 23, 42, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+          background: #FFFFFF;
+          border-radius: 24px;
+          padding: 32px;
+          border: 2px solid #E5E7EB;
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
           display: flex;
           flex-direction: column;
-          gap: 14px;
-          margin-top: 6px;
-          max-width: 1120px;
+          gap: 24px;
+          margin-top: -30px;
+          max-width: 1400px;
           margin-left: auto;
           margin-right: auto;
+          transition: all 0.3s ease;
+        }
+        
+        .budget-summary-card:hover {
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16);
+          transform: translateY(-4px);
+        }
+
+        /* Estilos para tarjetas modernas con bordes redondeados */
+        .modern-kpis-row {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        
+        .modern-kpi {
+          border-radius: 40px;
+          padding: 20px 28px;
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
+          transition: all 0.3s ease;
+          height: 100px;
+          display: flex;
+          align-items: center;
+        }
+        
+        .modern-kpi:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16);
+        }
+        
+        .modern-kpi-blue {
+          background: linear-gradient(135deg, #4A90A4 0%, #357A8E 100%);
+          color: white;
+        }
+        
+        .modern-kpi-green {
+          background: linear-gradient(135deg, #7EC850 0%, #6BB13E 100%);
+          color: white;
+        }
+        
+        .modern-kpi-green-light {
+          background: linear-gradient(135deg, #A2D45E 0%, #8BC34A 100%);
+          color: white;
+        }
+        
+        .modern-kpi-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          height: 100%;
+          gap: 20px;
+        }
+        
+        .modern-kpi-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 8px;
+        }
+        
+        .modern-kpi-label {
+          color: rgba(255, 255, 255, 0.85);
+          font-size: 0.875rem;
+          font-weight: 600;
+          letter-spacing: 0.3px;
+          line-height: 1.3;
+          text-align: left;
+        }
+        
+        .modern-kpi-value {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #ffffff;
+          line-height: 1.1;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+          text-align: left;
+        }
+        
+        .modern-kpi-subtitle {
+          color: rgba(255, 255, 255, 0.75);
+          font-size: 0.75rem;
+          font-weight: 500;
+          line-height: 1.3;
+          text-align: left;
+        }
+        
+        .modern-kpi-icon {
+          flex-shrink: 0;
+          width: 60px;
+          height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.35;
+        }
+        
+        .modern-kpi-icon svg {
+          width: 100%;
+          height: 100%;
+          fill: none;
+          color: white;
+        }
+        
+        /* Estilos para tarjetas de presupuesto modernas más compactas */
+        .modern-budget-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 16px;
+        }
+        
+        .modern-budget-item {
+          border-radius: 32px;
+          padding: 20px 28px;
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
+          transition: all 0.3s ease;
+          height: 100px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 8px;
+        }
+        
+        .modern-budget-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16);
+        }
+        
+        .modern-budget-blue {
+          background: linear-gradient(135deg, #4F9FFF 0%, #3B82F6 100%);
+          color: white;
+        }
+        
+        .modern-budget-dark {
+          background: linear-gradient(135deg, #1E3A5F 0%, #0F2947 100%);
+          color: white;
+        }
+        
+        .modern-budget-green {
+          background: linear-gradient(135deg, #B0D45E 0%, #9BC24A 100%);
+          color: white;
+        }
+        
+        .modern-budget-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        
+        .modern-budget-title {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.95);
+          line-height: 1.3;
+        }
+        
+        .modern-budget-badge {
+          background: rgba(255, 255, 255, 0.25);
+          color: white;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          white-space: nowrap;
+          backdrop-filter: blur(8px);
+        }
+        
+        .modern-budget-value {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #ffffff;
+          line-height: 1.2;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Media Queries - Responsive para tarjetas modernas */
+        /* Pantallas grandes a medianas: mantener 3 columnas */
+        @media (max-width: 1100px) and (min-width: 769px) {
+          .modern-kpis-row,
+          .modern-budget-row {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          /* Hacer que la tercera tarjeta de cada fila ocupe el espacio completo */
+          .modern-kpis-row > div:nth-child(3) {
+            grid-column: 1 / -1;
+          }
+          
+          .modern-budget-row > div:nth-child(3) {
+            grid-column: 1 / -1;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .modern-kpis-row,
+          .modern-budget-row {
+            grid-template-columns: 1fr;
+          }
+          
+          .modern-kpi,
+          .modern-budget-item {
+            height: auto;
+            min-height: 90px;
+            padding: 18px 24px;
+          }
+          
+          .modern-kpi-value,
+          .modern-budget-value {
+            font-size: 1.5rem;
+          }
+          
+          .modern-kpi-icon {
+            width: 50px;
+            height: 50px;
+          }
+          
+          .modern-kpi-label,
+          .modern-budget-title {
+            font-size: 0.8rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .modern-kpi,
+          .modern-budget-item {
+            border-radius: 24px;
+            padding: 16px 20px;
+          }
+          
+          .modern-kpi-value,
+          .modern-budget-value {
+            font-size: 1.25rem;
+          }
+          
+          .modern-kpi-icon {
+            width: 40px;
+            height: 40px;
+          }
+          
+          .modern-budget-badge {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+          }
         }
 
         .budget-grid-top,
         .budget-grid-bottom {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 14px;
+          gap: 20px;
         }
 
         .budget-top-duo {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          background: rgba(255,255,255,0.6);
-          border-radius: 14px;
+          background: linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%);
+          border-radius: 16px;
           overflow: hidden;
-          border: 1px solid rgba(231, 236, 243, 0.9);
-          min-height: 62px;
-          box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.06);
+          border: 2px solid #E5E7EB;
+          min-height: 80px;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+          transition: all 0.3s ease;
         }
+        
+        .budget-top-duo:hover {
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.10);
+          transform: translateY(-2px);
+        }
+        
         .budget-top-duo .duo-cell {
-          padding: 14px 12px;
+          padding: 20px 16px;
           color: #0F172A;
           background: #FFFFFF;
           display: flex;
@@ -1713,13 +2016,41 @@ const Dashboard = () => {
           align-items: center;
           text-align: center;
           position: relative;
+          transition: background 0.3s ease;
         }
+        
+        .budget-top-duo .duo-cell:hover {
+          background: linear-gradient(135deg, #F0F8FF 0%, #FFFFFF 100%);
+        }
+        
         .budget-top-duo .duo-cell + .duo-cell {
-          background: #F8FAFC;
+          background: linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%);
+          border-left: 2px solid #E5E7EB;
         }
-        .duo-title { font-weight: 800; font-size: 0.92rem; color:#0F172A; letter-spacing: 0.2px; display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
-        .duo-title.with-badge .pct-badge.small { position: absolute; right: 10px; top: 10px; margin-left: 0; }
-        .duo-value { font-size: 1.2rem; font-weight: 900; margin-top: 6px; text-align: center; color:#0B1220; text-shadow: 0 1px 0 rgba(255,255,255,0.6); }
+        
+        .budget-top-duo .duo-cell + .duo-cell:hover {
+          background: linear-gradient(135deg, #F0F8FF 0%, #F8FAFC 100%);
+        }
+        .duo-title { 
+          font-weight: 700; 
+          font-size: 0.95rem; 
+          color: #334155; 
+          letter-spacing: 0.3px; 
+          display: flex; 
+          align-items: center; 
+          gap: 8px; 
+          justify-content: center; 
+          width: 100%;
+        }
+        .duo-title.with-badge .pct-badge.small { position: absolute; right: 12px; top: 12px; margin-left: 0; }
+        .duo-value { 
+          font-size: 1.5rem; 
+          font-weight: 800; 
+          margin-top: 8px; 
+          text-align: center; 
+          color: #0F172A; 
+          letter-spacing: -0.5px;
+        }
 
         .pct-badge { background: var(--brand-green-500); color: #FFFFFF; font-weight: 800; font-size: 0.72rem; padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.04); box-shadow: 0 2px 8px rgba(121,188,153,0.25); }
         .pct-badge.small { font-size: 0.68rem; padding: 3px 7px; }
@@ -1728,11 +2059,14 @@ const Dashboard = () => {
           background: rgba(255,255,255,0.6);
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
-          border: 1px solid rgba(231,236,243,0.9);
+          border: 2px solid rgba(231,236,243,0.9);
           border-radius: 14px;
           padding: 12px;
           position: relative;
-          box-shadow: 0 10px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+                      0 8px 12px -2px rgba(0, 0, 0, 0.1), 
+                      inset 0 1px 0 rgba(255,255,255,0.6);
         }
         .budget-item.green-alt { background: rgba(255,255,255,0.7); min-height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
 
@@ -1772,12 +2106,21 @@ const Dashboard = () => {
           background: #FFFFFF;
           border-radius: 20px;
           padding: 24px;
-          border: 1px solid var(--border);
-          box-shadow: var(--panel-shadow);
+          border: 2px solid var(--border);
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
           border-top: 4px solid var(--brand-blue-900);
           transition: all 0.3s ease;
         }
-        .chart-card:hover, .table-card:hover { box-shadow: 0 18px 36px rgba(15,23,42,0.16); transform: translateY(-2px); }
+        .chart-card:hover, .table-card:hover { 
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16);
+          transform: translateY(-3px); 
+        }
         
         /* Filetes de acento por sección */
         .chart-card { border-top-color: var(--brand-blue-500); }
@@ -1812,14 +2155,16 @@ const Dashboard = () => {
           background: transparent; /* permitir contraste entre celdas */
           border-radius: 10px;
           overflow: hidden;
-          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border: 2px solid #C8CFDA; /* borde más oscuro */
           min-height: 74px;
-          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
         }
         .budget-top-duo .duo-cell {
           padding: 12px;
           color: #fff;
-          background: #0b2a3f; /* celda 1: azul sólido */
+          background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); /* morado elegante */
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -1827,7 +2172,7 @@ const Dashboard = () => {
           text-align: center;
           position: relative;
         }
-        .budget-top-duo .duo-cell + .duo-cell { background: rgba(9, 67, 105, 0.88); }
+        .budget-top-duo .duo-cell + .duo-cell { background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%); /* cian */ }
         .budget-top-duo .duo-cell.no-sep { border-left: none !important; }
         .duo-title { font-weight: 700; font-size: 0.88rem; opacity: 0.95; display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
         .duo-title.with-badge .pct-badge.small { position: absolute; right: 10px; top: 10px; margin-left: 0; }
@@ -1840,11 +2185,14 @@ const Dashboard = () => {
           background: rgba(255,255,255,0.6);
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
-          border: 1px solid rgba(231,236,243,0.9);
+          border: 2px solid rgba(231,236,243,0.9);
           border-radius: 14px;
           padding: 12px;
           position: relative;
-          box-shadow: 0 10px 24px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.12), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+                      0 8px 12px -2px rgba(0, 0, 0, 0.1), 
+                      inset 0 1px 0 rgba(255,255,255,0.6);
         }
         .budget-item.green-alt { background: rgba(255,255,255,0.7); min-height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
 
@@ -1884,12 +2232,21 @@ const Dashboard = () => {
           background: #FFFFFF;
           border-radius: 20px;
           padding: 24px;
-          border: 1px solid var(--border);
-          box-shadow: var(--panel-shadow);
+          border: 2px solid var(--border);
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
           border-top: 4px solid var(--brand-blue-900);
           transition: all 0.3s ease;
         }
-        .chart-card:hover, .table-card:hover { box-shadow: 0 18px 36px rgba(15,23,42,0.16); transform: translateY(-2px); }
+        .chart-card:hover, .table-card:hover { 
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16);
+          transform: translateY(-3px); 
+        }
         
         /* Filetes de acento por sección */
         .chart-card { border-top-color: var(--brand-blue-500); }
@@ -1924,14 +2281,16 @@ const Dashboard = () => {
           background: transparent; /* permitir contraste entre celdas */
           border-radius: 10px;
           overflow: hidden;
-          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border: 2px solid #C8CFDA; /* borde más oscuro */
           min-height: 74px;
-          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
         }
         .budget-top-duo .duo-cell {
           padding: 12px;
           color: #fff;
-          background: #0b2a3f; /* celda 1: azul sólido */
+          background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); /* morado elegante */
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -1939,7 +2298,7 @@ const Dashboard = () => {
           text-align: center;
           position: relative;
         }
-        .budget-top-duo .duo-cell + .duo-cell { background: rgba(9, 67, 105, 0.88); }
+        .budget-top-duo .duo-cell + .duo-cell { background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%); /* cian */ }
         .budget-top-duo .duo-cell.no-sep { border-left: none !important; }
         .duo-title { font-weight: 700; font-size: 0.88rem; opacity: 0.95; display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
         .duo-title.with-badge .pct-badge.small { position: absolute; right: 10px; top: 10px; margin-left: 0; }
@@ -1957,13 +2316,15 @@ const Dashboard = () => {
            ===================== */
         .budget-integrated {
           background: #F8FFF1;
-          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border: 2px solid #C8CFDA; /* borde más oscuro */
           border-radius: 10px;
           padding: 6px 8px;
           display: flex;
           flex-direction: column;
           gap: 8px;
-          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
         }
         .integrated-top {
           background: #f5fde9;
@@ -1974,7 +2335,7 @@ const Dashboard = () => {
         }
         .integrated-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 2px; }
         .integrated-title { font-weight: 700; color:#2C3E50; font-size: 0.82rem; }
-        .integrated-value { font-size: 0.92rem; font-weight: 800; color:#002945; }
+        .integrated-value { font-size: 0.92rem; font-weight: 800; color:#8B5CF6; }
 
         /* Centrado explícito para el bloque solicitado */
         .integrated-top.center { text-align: center; position: relative; }
@@ -2038,14 +2399,16 @@ const Dashboard = () => {
           background: transparent; /* permitir contraste entre celdas */
           border-radius: 10px;
           overflow: hidden;
-          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border: 2px solid #C8CFDA; /* borde más oscuro */
           min-height: 74px;
-          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
         }
         .budget-top-duo .duo-cell {
           padding: 12px;
           color: #fff;
-          background: #0b2a3f; /* celda 1: azul sólido */
+          background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); /* morado elegante */
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -2053,7 +2416,7 @@ const Dashboard = () => {
           text-align: center;
           position: relative;
         }
-        .budget-top-duo .duo-cell + .duo-cell { background: rgba(9, 67, 105, 0.88); }
+        .budget-top-duo .duo-cell + .duo-cell { background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%); /* cian */ }
         .budget-top-duo .duo-cell.no-sep { border-left: none !important; }
         .duo-title { font-weight: 700; font-size: 0.88rem; opacity: 0.95; display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; }
         .duo-title.with-badge .pct-badge.small { position: absolute; right: 10px; top: 10px; margin-left: 0; }
@@ -2071,13 +2434,15 @@ const Dashboard = () => {
            ===================== */
         .budget-integrated {
           background: #F8FFF1;
-          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border: 2px solid #C8CFDA; /* borde más oscuro */
           border-radius: 10px;
           padding: 10px;
           display: flex;
           flex-direction: column;
           gap: 10px;
-          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
         }
         .integrated-top {
           background: #f5fde9;
@@ -2088,7 +2453,7 @@ const Dashboard = () => {
         }
         .integrated-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px; }
         .integrated-title { font-weight: 700; color:#2C3E50; font-size: 0.9rem; }
-        .integrated-value { font-size: 1.05rem; font-weight: 800; color:#002945; }
+        .integrated-value { font-size: 1.05rem; font-weight: 800; color:#8B5CF6; }
 
         /* Centrado explícito para el bloque solicitado */
         .integrated-top.center { text-align: center; position: relative; }
@@ -2135,11 +2500,13 @@ const Dashboard = () => {
 
         .budget-item {
           background: #F8FFF1;
-          border: 1px solid #C8CFDA; /* borde más oscuro */
+          border: 2px solid #C8CFDA; /* borde más oscuro */
           border-radius: 10px;
           padding: 12px;
           position: relative;
-          box-shadow: 0 7px 18px rgba(0,0,0,0.16);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
         }
 
         /* =====================
@@ -2178,8 +2545,8 @@ const Dashboard = () => {
         }
 
         .budget-item.dark {
-          background: #0b2a3f;
-          border-color: #0b2a3f;
+          background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+          border-color: #8B5CF6;
         }
         .budget-item.dark .budget-title { color: #e6f2f8; }
         .budget-item.dark .budget-value { color: #ffffff; }
@@ -2204,7 +2571,7 @@ const Dashboard = () => {
         .budget-value {
           font-size: 1.05rem;
           font-weight: 800;
-          color: #002945;
+          color: #8B5CF6;
           }
 
         .pct-badge {
@@ -2340,34 +2707,110 @@ const Dashboard = () => {
         /* Estilos base para KPIs del main-row */
         .kpis-main-row .kpi {
           color: #FFFFFF !important;
-          border-radius: 16px !important;
-          padding: 16px !important;
+          border-radius: 40px !important;
+          padding: 24px 30px !important;
           border: none !important;
-          transition: all 0.25s ease !important;
+          transition: all 0.3s ease !important;
           position: relative !important;
           overflow: hidden !important;
+          height: 150px !important;
+          min-height: 150px !important;
+          max-height: 150px !important;
+          display: flex !important;
+          align-items: center !important;
+        }
+        
+        .kpis-main-row .kpi-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          height: 100%;
+          gap: 20px;
+        }
+        
+        .kpis-main-row .kpi-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 8px;
+        }
+        
+        .kpis-main-row .kpi-label {
+          color: rgba(255, 255, 255, 0.85) !important;
+          font-size: 0.875rem !important;
+          font-weight: 600 !important;
+          letter-spacing: 0.3px !important;
+          line-height: 1.3 !important;
+          text-align: left !important;
+          text-transform: uppercase !important;
+        }
+        
+        .kpis-main-row .kpi-value {
+          font-size: 2.25rem !important;
+          font-weight: 700 !important;
+          color: #ffffff !important;
+          line-height: 1.1 !important;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+          text-align: left !important;
+          padding: 0 !important;
+        }
+        
+        .kpis-main-row .kpi-subtitle {
+          color: rgba(255, 255, 255, 0.75) !important;
+          font-size: 0.8rem !important;
+          font-weight: 500 !important;
+          line-height: 1.3 !important;
+          text-align: left !important;
+        }
+        
+        .kpis-main-row .kpi-icon {
+          flex-shrink: 0;
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.35;
+        }
+        
+        .kpis-main-row .kpi-icon svg {
+          width: 100%;
+          height: 100%;
+          fill: none;
+          color: white;
         }
 
-        /* Estilos específicos para KPIs 1 y 2 (TOTAL OBRAS y OBRAS ENTREGADAS) - AZUL MARINO - MÁXIMA ESPECIFICIDAD */
+        /* Estilos específicos para KPIs 1 y 2 (TOTAL OBRAS y OBRAS ENTREGADAS) - AZUL - MÁXIMA ESPECIFICIDAD */
         .main-dashboard-section .kpis-main-row .kpi-green-1 .kpi,
         .main-dashboard-section .kpis-main-row .kpi-green-2 .kpi {
-          background: #002945 !important;
-          box-shadow: 0 6px 18px rgba(0, 41, 69, 0.22) !important;
+          background: linear-gradient(135deg, #4A90A4 0%, #357A8E 100%) !important;
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14) !important;
         }
 
         .main-dashboard-section .kpis-main-row .kpi-green-1 .kpi:hover,
         .main-dashboard-section .kpis-main-row .kpi-green-2 .kpi:hover {
-          box-shadow: 0 15px 35px rgba(0, 41, 69, 0.4) !important;
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16) !important;
         }
 
-        /* Estilos específicos para KPIs 3-7 (VERDE) - MÁXIMA ESPECIFICIDAD */
+        /* Estilos específicos para KPIs 3-6 (AZUL MÁS OSCURO) - MÁXIMA ESPECIFICIDAD */
         .main-dashboard-section .kpis-main-row .kpi-blue-3 .kpi,
         .main-dashboard-section .kpis-main-row .kpi-blue-4 .kpi,
         .main-dashboard-section .kpis-main-row .kpi-blue-5 .kpi,
         .main-dashboard-section .kpis-main-row .kpi-blue-6 .kpi,
         .main-dashboard-section .kpis-main-row .kpi-blue-7 .kpi {
-          background: #98C73B !important;
-          box-shadow: 0 6px 18px rgba(152, 199, 59, 0.22) !important;
+          background: linear-gradient(135deg, #2B5D6E 0%, #1E4555 100%) !important;
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14) !important;
         }
 
         .main-dashboard-section .kpis-main-row .kpi-blue-3 .kpi:hover,
@@ -2375,7 +2818,10 @@ const Dashboard = () => {
         .main-dashboard-section .kpis-main-row .kpi-blue-5 .kpi:hover,
         .main-dashboard-section .kpis-main-row .kpi-blue-6 .kpi:hover,
         .main-dashboard-section .kpis-main-row .kpi-blue-7 .kpi:hover {
-          box-shadow: 0 15px 35px rgba(152, 199, 59, 0.4) !important;
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16) !important;
         }
 
 
@@ -2641,9 +3087,21 @@ const Dashboard = () => {
           height: 600px;
           border-radius: 15px;
           overflow: hidden;
-          border: 1px solid rgba(0,0,0,0.08);
-          box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+          border: 2px solid rgba(0,0,0,0.08);
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
           position: relative;
+          transition: all 0.3s ease;
+        }
+        
+        .map-container-expanded:hover {
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16);
+          transform: translateY(-2px);
         }
 
         .map-container-expanded .leaflet-container {
@@ -2910,9 +3368,21 @@ const Dashboard = () => {
           position: relative;
           background: #FFFFFF;
           border-radius: 20px;
-          border: 1px solid var(--border);
-          box-shadow: var(--panel-shadow);
+          border: 2px solid var(--border);
+          box-shadow: 0 -2px 8px -2px rgba(0, 0, 0, 0.08),
+                      0 4px 6px -1px rgba(0, 0, 0, 0.15), 
+                      0 2px 4px -1px rgba(0, 0, 0, 0.08),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.14);
           border-top: 6px solid var(--brand-yellow-500);
+          transition: all 0.3s ease;
+        }
+        
+        .map-main-panel:hover {
+          box-shadow: 0 -3px 10px -2px rgba(0, 0, 0, 0.1),
+                      0 10px 15px -3px rgba(0, 0, 0, 0.2), 
+                      0 4px 6px -2px rgba(0, 0, 0, 0.1),
+                      0 20px 25px -5px rgba(0, 0, 0, 0.16);
+          transform: translateY(-2px);
         }
 
         .map-main-panel .map-close-btn {
@@ -2947,9 +3417,9 @@ const Dashboard = () => {
         }
 
         /* Hacer que el gráfico ocupe todo el ancho disponible */
-        .main-chart-section .simple-chart-container .chart-svg {
-          width: 100%;
-          max-width: 100%;
+        .main-chart-section .simple-chart-container {
+          width: 100% !important;
+          max-width: 100% !important;
         }
 
         /* ========================================================================
@@ -2989,6 +3459,10 @@ const Dashboard = () => {
           .main-chart-section {
             padding: 15px;
             margin-bottom: 25px;
+          }
+          
+          .main-chart-section text {
+            font-size: 12px !important;
           }
 
           .dependencies-list {
@@ -3152,6 +3626,20 @@ const Dashboard = () => {
             margin-bottom: 20px;
             border-radius: 15px;
           }
+          
+          .main-chart-section .recharts-wrapper,
+          .main-chart-section .recharts-surface {
+            width: 100% !important;
+          }
+          
+          /* Ajustar tamaño de texto en gráficos para móviles */
+          .main-chart-section text {
+            font-size: 11px !important;
+          }
+          
+          .main-chart-section .recharts-legend-wrapper {
+            font-size: 10px !important;
+          }
         }
 
         @media (max-width: 480px) {
@@ -3186,6 +3674,25 @@ const Dashboard = () => {
           }
 
           .kpis-section { padding: 12px; margin-bottom: 14px; }
+          
+          /* Gráficos responsive en móviles pequeños */
+          .main-chart-section {
+            padding: 10px;
+            margin-bottom: 15px;
+          }
+          
+          .main-chart-section text {
+            font-size: 9px !important;
+          }
+          
+          .main-chart-section .recharts-legend-wrapper {
+            font-size: 9px !important;
+          }
+          
+          .chart-card, .table-card {
+            padding: 15px;
+            border-radius: 12px;
+          }
 
           .kpis-container { gap: 10px; }
 
@@ -3330,6 +3837,14 @@ const Dashboard = () => {
             margin-bottom: 15px;
             border-radius: 12px;
           }
+          
+          .main-chart-section text {
+            font-size: 8px !important;
+          }
+          
+          .main-chart-section .recharts-legend-wrapper {
+            font-size: 8px !important;
+          }
         }
 
         @media (max-width: 360px) {
@@ -3364,12 +3879,24 @@ const Dashboard = () => {
           .kpis-grid .kpi .kpi-value {
             font-size: 1.4rem !important;
           }
-
-          /* Estilos específicos para el gráfico principal en pantallas muy pequeñas */
+          
+          /* Gráficos ultra responsive para pantallas muy pequeñas */
           .main-chart-section {
             padding: 6px;
             margin-bottom: 12px;
-            border-radius: 10px;
+          }
+          
+          .main-chart-section text {
+            font-size: 7px !important;
+          }
+          
+          .main-chart-section .recharts-legend-wrapper {
+            font-size: 7px !important;
+            padding: 2px !important;
+          }
+          
+          .main-chart-section .recharts-legend-item {
+            margin: 2px !important;
           }
         }
 
@@ -3552,12 +4079,12 @@ const Dashboard = () => {
 
         /* ESTILOS DE PRUEBA - MÁXIMA PRIORIDAD */
         .main-dashboard-section .kpis-main-row .kpi-green-1 .kpi {
-          background: #002945 !important;
+          background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%) !important;
           box-shadow: 0 6px 18px rgba(0, 41, 69, 0.22) !important;
         }
 
         .main-dashboard-section .kpis-main-row .kpi-green-2 .kpi {
-          background: #002945 !important;
+          background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%) !important;
           box-shadow: 0 6px 18px rgba(0, 41, 69, 0.22) !important;
         }
 
@@ -3688,7 +4215,7 @@ const Dashboard = () => {
 
         /* ======== OVERRIDES DE ALTA ESPECIFICIDAD (aseguran paleta aplicada) ======== */
         .main-dashboard-section .budget-top-duo .duo-cell {
-          background: var(--darker-blue) !important; /* #002945 */
+          background: linear-gradient(135deg, #0075A4 0%, #0075A4 100%) !important; /* morado */
           color: var(--text-white) !important;
           border: 1px solid rgba(255,255,255,0.18) !important;
           box-shadow: 0 6px 18px rgba(0, 41, 69, 0.25) !important;
@@ -3707,7 +4234,7 @@ const Dashboard = () => {
         .main-dashboard-section .budget-top-duo .duo-cell + .duo-cell .pct-badge { background: rgba(0,0,0,0.08) !important; color: var(--dark-blue) !important; border-color: rgba(0,0,0,0.12) !important; }
 
         .main-dashboard-section .budget-item.green-alt {
-          background: var(--white) !important;
+          background: #5bbe2194 !important;
           color: var(--darker-blue) !important;
           border: 1px solid var(--border-light) !important;
           box-shadow: 0 6px 18px rgba(2,6,23,0.08) !important;
