@@ -695,8 +695,6 @@ const Dashboard = () => {
             const invTotal = k.invTotal || 1;
             const pctEjecSobreTotal = Math.round((presupuestoEjecutado / invTotal) * 100);
             const pctCuatSobreTotal = Math.round((presupuestoCuatrienio / invTotal) * 100);
-            // Calcular porcentaje de administraciones anteriores sobre presupuesto ejecutado total
-            const pctAntSobreTotal = Math.round((presupuestoAnteriores / presupuestoEjecutado) * 100);
             return (
               <div className="budget-summary-card">
                 <div className="modern-kpis-row">
@@ -768,7 +766,6 @@ const Dashboard = () => {
                   <div className="modern-budget-item modern-budget-green">
                     <div className="modern-budget-header">
                       <span className="modern-budget-title">Presupuesto administraciones anteriores</span>
-                      <span className="modern-budget-badge">{pctAntSobreTotal}%</span>
                       </div>
                     <div className="modern-budget-value">
                         {formatMoneyColombian(presupuestoAnteriores)}

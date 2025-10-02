@@ -25,6 +25,8 @@ interface ObraCalendario {
 export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, onToggleMap, isMapVisible }: HeaderIconsProps) {
   const [showCalendarPopup, setShowCalendarPopup] = useState(false);
   const [showAlertsPopup, setShowAlertsPopup] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOrder, setSortOrder] = useState<'year-asc' | 'year-desc' | 'status' | 'date'>('year-asc');
 
   // Función para aplicar la corrección de fecha de entrega según la fórmula de Power BI
   const getEntregaRealCorregida = (obra: Row): string | null => {
@@ -107,8 +109,38 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
     })
     .sort((a, b) => b.año - a.año); // Ordenar por año descendente
 
-  // Agrupar obras por año
-  const obrasPorAño = obrasCalendario.reduce((acc, obra) => {
+  // Filtrar obras por término de búsqueda
+  const obrasFiltradas = obrasCalendario.filter(obra => 
+    obra.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    obra.dependencia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    obra.comuna?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Aplicar ordenamiento según la opción seleccionada
+  const obrasOrdenadas = [...obrasFiltradas].sort((a, b) => {
+    switch (sortOrder) {
+      case 'year-asc':
+        return a.año - b.año; // 2024, 2025, 2026...
+      case 'year-desc':
+        return b.año - a.año; // 2029, 2028, 2027...
+      case 'status':
+        // Primero entregadas, luego pendientes, y dentro de cada grupo por año
+        if (a.estado !== b.estado) {
+          return a.estado === 'entregada' ? -1 : 1;
+        }
+        return b.año - a.año;
+      case 'date':
+        // Por fecha de entrega (más próximas primero)
+        const fechaA = new Date(a.fechaEntrega);
+        const fechaB = new Date(b.fechaEntrega);
+        return fechaA.getTime() - fechaB.getTime();
+      default:
+        return a.año - b.año;
+    }
+  });
+
+  // Agrupar obras ordenadas por año
+  const obrasPorAño = obrasOrdenadas.reduce((acc, obra) => {
     if (!acc[obra.año]) {
       acc[obra.año] = { entregadas: [], noEntregadas: [] };
     }
@@ -241,86 +273,259 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
 
       </div>
 
-      {/* Popup del Calendario */}
+      {/* Popup del Calendario - Diseño Moderno */}
       {showCalendarPopup && (
-        <div className="popup-overlay" onClick={() => setShowCalendarPopup(false)}>
-          <div className="popup-container calendar-popup" onClick={e => e.stopPropagation()}>
-            <div className="popup-header">
-              <h3>📅 Calendario de Obras</h3>
-              <button 
-                className="popup-close"
-                onClick={() => setShowCalendarPopup(false)}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="popup-content">
-              <div className="calendar-summary">
-                <div className="summary-stats">
-                  <div className="stat-item entregadas">
-                    <span className="stat-number">{obrasCalendario.filter(o => o.estado === 'entregada').length}</span>
-                    <span className="stat-label">Entregadas</span>
-                  </div>
-                  <div className="stat-item no-entregadas">
-                    <span className="stat-number">{obrasCalendario.filter(o => o.estado === 'no-entregada').length}</span>
-                    <span className="stat-label">Por Entregar</span>
-                  </div>
+        <div className="modern-popup-overlay" onClick={() => setShowCalendarPopup(false)}>
+          <div className="modern-popup-container" onClick={e => e.stopPropagation()}>
+            {/* Header moderno */}
+            <div className="modern-popup-header">
+              <div className="header-left">
+                <div className="header-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                </div>
+                <div className="header-text">
+                  <h2>Calendario de Obras</h2>
+                  <p>Gestión y seguimiento de proyectos</p>
                 </div>
               </div>
+              <button 
+                className="modern-close-btn"
+                onClick={() => setShowCalendarPopup(false)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
 
-              <div className="years-container">
-                {Object.keys(obrasPorAño)
-                  .map(Number)
-                  .sort((a, b) => b - a)
-                  .map(año => (
-                  <div key={año} className="year-section">
-                    <h4 className="year-title">{año}</h4>
-                    
-                    {/* Obras Entregadas */}
-                    {obrasPorAño[año].entregadas.length > 0 && (
-                      <div className="obras-group entregadas-group">
-                        <h5 className="group-title">
-                          ✅ Entregadas ({obrasPorAño[año].entregadas.length})
-                        </h5>
-                        <div className="obras-list">
-                          {obrasPorAño[año].entregadas.map(obra => (
-                            <div key={obra.id} className="obra-item entregada">
-                              <div className="obra-name">{obra.nombre}</div>
-                              <div className="obra-details">
-                                {obra.dependencia && <span className="obra-dependencia">{obra.dependencia}</span>}
-                                {obra.comuna && <span className="obra-comuna">{obra.comuna}</span>}
-                                <span className="obra-fecha">{formatDate(obra.fechaEntrega)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Obras No Entregadas */}
-                    {obrasPorAño[año].noEntregadas.length > 0 && (
-                      <div className="obras-group no-entregadas-group">
-                        <h5 className="group-title">
-                          ⏳ Por Entregar ({obrasPorAño[año].noEntregadas.length})
-                        </h5>
-                        <div className="obras-list">
-                          {obrasPorAño[año].noEntregadas.map(obra => (
-                            <div key={obra.id} className="obra-item no-entregada">
-                              <div className="obra-name">{obra.nombre}</div>
-                              <div className="obra-details">
-                                {obra.dependencia && <span className="obra-dependencia">{obra.dependencia}</span>}
-                                {obra.comuna && <span className="obra-comuna">{obra.comuna}</span>}
-                                <span className="obra-fecha">{formatDate(obra.fechaEntrega)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            {/* Barra de búsqueda y filtros */}
+            <div className="search-section">
+              <div className="search-filters-container">
+                <div className="search-container">
+                  <svg className="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, dependencia o comuna..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="search-input"
+                  />
+                  {searchTerm && (
+                    <button 
+                      className="clear-search"
+                      onClick={() => setSearchTerm('')}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                
+                <div className="sort-container">
+                  <svg className="sort-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M7 12h10M10 18h4"/>
+                  </svg>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as 'year-asc' | 'year-desc' | 'status' | 'date')}
+                    className="sort-select"
+                  >
+                    <option value="year-asc">📅 Año (2024 → 2029)</option>
+                    <option value="year-desc">📅 Año (2029 → 2024)</option>
+                    <option value="status">✅ Estado (Entregadas primero)</option>
+                    <option value="date">📆 Fecha de entrega</option>
+                  </select>
+                </div>
               </div>
+            </div>
+
+            {/* Estadísticas resumen */}
+            <div className="stats-section">
+              <div className="stat-card delivered">
+                <div className="stat-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 12l2 2 4-4"/>
+                    <circle cx="12" cy="12" r="10"/>
+                  </svg>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-number">{obrasFiltradas.filter(o => o.estado === 'entregada').length}</div>
+                  <div className="stat-label">Entregadas</div>
+                </div>
+              </div>
+              <div className="stat-card pending">
+                <div className="stat-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                  </svg>
+                </div>
+                <div className="stat-content">
+                  <div className="stat-number">{obrasFiltradas.filter(o => o.estado === 'no-entregada').length}</div>
+                  <div className="stat-label">Por Entregar</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de obras */}
+            <div className="works-section">
+              {obrasOrdenadas.length === 0 ? (
+                <div className="no-results">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <h3>No se encontraron obras</h3>
+                  <p>Intenta con otros términos de búsqueda</p>
+                </div>
+              ) : sortOrder === 'status' || sortOrder === 'date' ? (
+                // Vista plana para ordenamiento por estado o fecha
+                <div className="flat-works-list">
+                  <div className="works-group">
+                    <div className="group-header">
+                      <div className="group-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                          <line x1="16" y1="2" x2="16" y2="6"/>
+                          <line x1="8" y1="2" x2="8" y2="6"/>
+                          <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                      </div>
+                      <h4>
+                        {sortOrder === 'status' ? 'Obras Ordenadas por Estado' : 'Obras Ordenadas por Fecha de Entrega'}
+                        ({obrasOrdenadas.length})
+                      </h4>
+                    </div>
+                    <div className="works-list">
+                      {obrasOrdenadas.map(obra => (
+                        <div key={obra.id} className={`work-card ${obra.estado === 'entregada' ? 'delivered' : 'pending'}`}>
+                          <div className="work-status-indicator"></div>
+                          <div className="work-content">
+                            <h5 className="work-name">{obra.nombre}</h5>
+                            <div className="work-meta">
+                              {obra.dependencia && <span className="work-department">{obra.dependencia}</span>}
+                              {obra.comuna && <span className="work-location">{obra.comuna}</span>}
+                              <span className="work-year">{obra.año}</span>
+                            </div>
+                            <div className="work-date">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                              </svg>
+                              {formatDate(obra.fechaEntrega)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Vista agrupada por año para ordenamiento por año
+                Object.keys(obrasPorAño)
+                  .map(Number)
+                  .sort((a, b) => sortOrder === 'year-asc' ? a - b : b - a)
+                  .map(año => (
+                    <div key={año} className="year-section">
+                      <div className="year-header">
+                        <h3 className="year-title">{año}</h3>
+                        <div className="year-stats">
+                          <span className="year-delivered">{obrasPorAño[año].entregadas.length} entregadas</span>
+                          <span className="year-pending">{obrasPorAño[año].noEntregadas.length} pendientes</span>
+                        </div>
+                      </div>
+                      
+                      {/* Obras Entregadas */}
+                      {obrasPorAño[año].entregadas.length > 0 && (
+                        <div className="works-group delivered-group">
+                          <div className="group-header">
+                            <div className="group-icon">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="10"/>
+                              </svg>
+                            </div>
+                            <h4>Entregadas ({obrasPorAño[año].entregadas.length})</h4>
+                          </div>
+                          <div className="works-list">
+                            {obrasPorAño[año].entregadas.map(obra => (
+                              <div key={obra.id} className="work-card delivered">
+                                <div className="work-status-indicator"></div>
+                                <div className="work-content">
+                                  <h5 className="work-name">{obra.nombre}</h5>
+                                  <div className="work-meta">
+                                    {obra.dependencia && <span className="work-department">{obra.dependencia}</span>}
+                                    {obra.comuna && <span className="work-location">{obra.comuna}</span>}
+                                  </div>
+                                  <div className="work-date">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                      <line x1="16" y1="2" x2="16" y2="6"/>
+                                      <line x1="8" y1="2" x2="8" y2="6"/>
+                                      <line x1="3" y1="10" x2="21" y2="10"/>
+                                    </svg>
+                                    {formatDate(obra.fechaEntrega)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Obras Pendientes */}
+                      {obrasPorAño[año].noEntregadas.length > 0 && (
+                        <div className="works-group pending-group">
+                          <div className="group-header">
+                            <div className="group-icon">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12,6 12,12 16,14"/>
+                              </svg>
+                            </div>
+                            <h4>Por Entregar ({obrasPorAño[año].noEntregadas.length})</h4>
+                          </div>
+                          <div className="works-list">
+                            {obrasPorAño[año].noEntregadas.map(obra => (
+                              <div key={obra.id} className="work-card pending">
+                                <div className="work-status-indicator"></div>
+                                <div className="work-content">
+                                  <h5 className="work-name">{obra.nombre}</h5>
+                                  <div className="work-meta">
+                                    {obra.dependencia && <span className="work-department">{obra.dependencia}</span>}
+                                    {obra.comuna && <span className="work-location">{obra.comuna}</span>}
+                                  </div>
+                                  <div className="work-date">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                      <line x1="16" y1="2" x2="16" y2="6"/>
+                                      <line x1="8" y1="2" x2="8" y2="6"/>
+                                      <line x1="3" y1="10" x2="21" y2="10"/>
+                                    </svg>
+                                    {formatDate(obra.fechaEntrega)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
             </div>
           </div>
         </div>
@@ -634,159 +839,489 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
         }
 
         /* ========================================================================
-            POPUP DEL CALENDARIO
+            POPUP MODERNO DEL CALENDARIO
         ======================================================================== */
-        .calendar-summary {
-          margin-bottom: 25px;
-          padding: 20px;
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border-radius: 12px;
-          border: 1px solid #79BC99;
+        .modern-popup-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          backdrop-filter: blur(8px);
+          animation: fadeIn 0.3s ease-out;
         }
 
-        .summary-stats {
+        .modern-popup-container {
+          background: white;
+          border-radius: 24px;
+          max-width: 1200px;
+          width: 95%;
+          max-height: 90vh;
           display: flex;
-          gap: 30px;
+          flex-direction: column;
+          box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          overflow: hidden;
+          animation: slideUp 0.3s ease-out;
+        }
+
+        .modern-popup-header {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 24px 32px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .header-icon {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 12px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
           justify-content: center;
         }
 
-        .stat-item {
-          text-align: center;
-          padding: 15px;
-          border-radius: 10px;
+        .header-text h2 {
+          margin: 0;
+          font-size: 1.5rem;
+          font-weight: 700;
+        }
+
+        .header-text p {
+          margin: 4px 0 0 0;
+          opacity: 0.9;
+          font-size: 0.9rem;
+        }
+
+        .modern-close-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          padding: 8px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .modern-close-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+          transform: scale(1.05);
+        }
+
+        .search-section {
+          padding: 24px 32px 16px;
+          background: #f8f9fa;
+          border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-filters-container {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .search-container {
+          position: relative;
+          flex: 1;
+          min-width: 300px;
+        }
+
+        .sort-container {
+          display: flex;
+          align-items: center;
+          gap: 8px;
           background: white;
-          border: 2px solid transparent;
+          border: 2px solid #e9ecef;
+          border-radius: 12px;
+          padding: 0 16px;
+          transition: all 0.3s ease;
+          min-width: 200px;
+        }
+
+        .sort-container:focus-within {
+          border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .sort-icon {
+          color: #6c757d;
+          flex-shrink: 0;
+        }
+
+        .sort-select {
+          border: none;
+          background: none;
+          padding: 16px 0;
+          font-size: 1rem;
+          color: #495057;
+          cursor: pointer;
+          outline: none;
+          width: 100%;
+          font-weight: 500;
+        }
+
+        .sort-select option {
+          padding: 8px;
+          background: white;
+          color: #495057;
+        }
+
+        .search-icon {
+          position: absolute;
+          left: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #6c757d;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 16px 16px 16px 48px;
+          border: 2px solid #e9ecef;
+          border-radius: 12px;
+          font-size: 1rem;
+          transition: all 0.3s ease;
+          background: white;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .clear-search {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #6c757d;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+
+        .clear-search:hover {
+          background: #f8f9fa;
+          color: #495057;
+        }
+
+        .stats-section {
+          padding: 24px 32px;
+          background: white;
+          display: flex;
+          gap: 20px;
+          justify-content: center;
+        }
+
+        .stat-card {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 20px 24px;
+          border-radius: 16px;
+          min-width: 200px;
           transition: all 0.3s ease;
         }
 
-        .stat-item.entregadas {
-          border-color: #27ae60;
+        .stat-card.delivered {
+          background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+          border: 1px solid #c3e6cb;
         }
 
-        .stat-item.no-entregadas {
-          border-color: #f39c12;
+        .stat-card.pending {
+          background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+          border: 1px solid #ffeaa7;
         }
 
-        .stat-item.alerts {
-          border-color: #e74c3c;
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+          background: rgba(255, 255, 255, 0.3);
+          padding: 12px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .stat-card.delivered .stat-icon {
+          color: #155724;
+        }
+
+        .stat-card.pending .stat-icon {
+          color: #856404;
+        }
+
+        .stat-content {
+          display: flex;
+          flex-direction: column;
         }
 
         .stat-number {
-          display: block;
           font-size: 2rem;
-          font-weight: bold;
-          color: #2c3e50;
-          margin-bottom: 5px;
+          font-weight: 700;
+          line-height: 1;
+          margin-bottom: 4px;
+        }
+
+        .stat-card.delivered .stat-number {
+          color: #155724;
+        }
+
+        .stat-card.pending .stat-number {
+          color: #856404;
         }
 
         .stat-label {
           font-size: 0.9rem;
-          color: #6c757d;
-          font-weight: 500;
+          font-weight: 600;
+          opacity: 0.8;
         }
 
-        .years-container {
-          display: flex;
-          flex-direction: column;
-          gap: 25px;
+        .works-section {
+          flex: 1;
+          overflow-y: auto;
+          padding: 0 32px 32px;
+        }
+
+        .no-results {
+          text-align: center;
+          padding: 60px 20px;
+          color: #6c757d;
+        }
+
+        .no-results svg {
+          margin-bottom: 16px;
+          opacity: 0.5;
+        }
+
+        .no-results h3 {
+          margin: 0 0 8px 0;
+          font-size: 1.25rem;
+          font-weight: 600;
+        }
+
+        .no-results p {
+          margin: 0;
+          font-size: 0.9rem;
         }
 
         .year-section {
-          border: 1px solid #e9ecef;
+          margin-bottom: 32px;
+        }
+
+        .year-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding: 16px 20px;
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
           border-radius: 12px;
-          padding: 20px;
-          background: #f8f9fa;
+          border-left: 4px solid #667eea;
         }
 
         .year-title {
-          margin: 0 0 20px 0;
-          font-size: 1.4rem;
-          font-weight: bold;
-          color: #2c3e50;
-          text-align: center;
-          padding: 10px;
-          background: linear-gradient(135deg, #79BC99 0%, #4E8484 100%);
-          color: white;
-          border-radius: 8px;
+          margin: 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #495057;
         }
 
-        .obras-group {
-          margin-bottom: 20px;
+        .year-stats {
+          display: flex;
+          gap: 16px;
         }
 
-        .group-title {
-          margin: 0 0 15px 0;
-          font-size: 1.1rem;
+        .year-delivered,
+        .year-pending {
+          font-size: 0.85rem;
           font-weight: 600;
-          padding: 8px 12px;
+          padding: 4px 8px;
           border-radius: 6px;
         }
 
-        .entregadas-group .group-title {
-          background: rgba(39, 174, 96, 0.1);
-          color: #27ae60;
+        .year-delivered {
+          background: #d4edda;
+          color: #155724;
         }
 
-        .no-entregadas-group .group-title {
-          background: rgba(243, 156, 18, 0.1);
-          color: #f39c12;
+        .year-pending {
+          background: #fff3cd;
+          color: #856404;
         }
 
-        .obras-list {
+        .works-group {
+          margin-bottom: 24px;
+        }
+
+        .group-header {
           display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .obra-item {
-          padding: 12px 15px;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+          padding: 12px 16px;
+          background: #f8f9fa;
           border-radius: 8px;
-          border: 1px solid #e9ecef;
-          background: white;
-          transition: all 0.3s ease;
         }
 
-        .obra-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        .group-icon {
+          background: rgba(102, 126, 234, 0.1);
+          padding: 8px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
-        .obra-item.entregada {
-          border-left: 4px solid #27ae60;
+        .delivered-group .group-icon {
+          background: rgba(40, 167, 69, 0.1);
+          color: #28a745;
         }
 
-        .obra-item.no-entregada {
-          border-left: 4px solid #f39c12;
+        .pending-group .group-icon {
+          background: rgba(255, 193, 7, 0.1);
+          color: #ffc107;
         }
 
-        .obra-name {
+        .group-header h4 {
+          margin: 0;
+          font-size: 1rem;
           font-weight: 600;
-          color: #2c3e50;
-          margin-bottom: 5px;
-          line-height: 1.3;
+          color: #495057;
         }
 
-        .obra-details {
+        .works-list {
+          display: grid;
+          gap: 12px;
+        }
+
+        .work-card {
+          background: white;
+          border: 1px solid #e9ecef;
+          border-radius: 12px;
+          padding: 20px;
+          display: flex;
+          gap: 16px;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .work-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .work-card.delivered {
+          border-left: 4px solid #28a745;
+          background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+        }
+
+        .work-card.pending {
+          border-left: 4px solid #ffc107;
+          background: linear-gradient(135deg, #fffdf7 0%, #fff8e1 100%);
+        }
+
+        .work-status-indicator {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          margin-top: 8px;
+          flex-shrink: 0;
+        }
+
+        .work-card.delivered .work-status-indicator {
+          background: #28a745;
+        }
+
+        .work-card.pending .work-status-indicator {
+          background: #ffc107;
+        }
+
+        .work-content {
+          flex: 1;
+        }
+
+        .work-name {
+          margin: 0 0 12px 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #212529;
+          line-height: 1.4;
+        }
+
+        .work-meta {
           display: flex;
           flex-wrap: wrap;
-          gap: 10px;
-          font-size: 0.85rem;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .work-department,
+        .work-location,
+        .work-year {
+          background: rgba(102, 126, 234, 0.1);
+          color: #667eea;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        .work-year {
+          background: rgba(108, 117, 125, 0.1);
           color: #6c757d;
         }
 
-        .obra-dependencia,
-        .obra-comuna,
-        .obra-fecha {
-          padding: 2px 8px;
-          border-radius: 4px;
-          background: #f8f9fa;
-          border: 1px solid #e9ecef;
+        .flat-works-list {
+          margin-bottom: 24px;
         }
 
-        .obra-fecha {
-          background: #e3f2fd;
-          color: #1976d2;
+        .work-date {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: #6c757d;
+          font-size: 0.9rem;
           font-weight: 500;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+          from { 
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to { 
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         /* ========================================================================
