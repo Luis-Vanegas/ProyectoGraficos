@@ -1175,9 +1175,25 @@ export default function MapLibreVisor({ height = 600, query, onComunaChange, onO
   const sinUbicacion = obrasDeComuna ? obrasDeComuna.length - totalConUbicacion : 0;
   const indicadorPromedio = useMemo(() => {
     if (!obrasDeComuna || obrasDeComuna.length === 0) return 0;
-    const vals = (obrasDeComuna as any[]).map(o => Number((o as any)[getFieldNames.porcentaje]) || 0);
+    const vals = (obrasDeComuna as any[])
+      .map(o => Number((o as any)[getFieldNames.porcentaje]))
+      .filter(val => !isNaN(val) && val !== null && val !== undefined);
+    
+    if (vals.length === 0) return 0;
+    
     const sum = vals.reduce((a, b) => a + b, 0);
-    return Math.round((sum / vals.length) * 100) / 100;
+    const promedio = Math.round((sum / vals.length) * 100) / 100;
+    
+    // Debug para verificar el cálculo del promedio
+    console.log('🔍 === CÁLCULO PROMEDIO CLUSTER ===');
+    console.log('📊 Total obras en comuna:', obrasDeComuna.length);
+    console.log('✅ Valores válidos:', vals.length);
+    console.log('📈 Valores individuales:', vals);
+    console.log('➕ Suma total:', sum);
+    console.log('📊 Promedio calculado:', promedio);
+    console.log('🔍 === FIN CÁLCULO PROMEDIO ===');
+    
+    return promedio;
   }, [obrasDeComuna, getFieldNames]);
 
   // (El visor no usa filtros internos; se controla por props/URL)

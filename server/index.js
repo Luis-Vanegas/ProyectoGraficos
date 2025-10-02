@@ -282,7 +282,40 @@ app.get('/api/obras', async (req, res) => {
 
       const total = cPlaneacion + cEstudios + cViabili + cPredial + cLicencias + cContra + cInicio + cDisen + cEjec + cEnt + cLiq;
       const bounded = Math.max(0, Math.min(100, total));
-      return Number.isFinite(bounded) ? Math.round(bounded * 100) / 100 : 0;
+      const resultado = Number.isFinite(bounded) ? Math.round(bounded * 100) / 100 : 0;
+      
+      // Debug para verificar el cálculo del indicador
+      console.log('🔍 === CÁLCULO INDICADOR BACKEND ===');
+      console.log('📊 Obra:', r['NOMBRE DEL PROYECTO'] || 'Sin nombre');
+      console.log('📈 Porcentajes individuales:');
+      console.log('  - Planeación:', pPlaneacion);
+      console.log('  - Estudios:', pEstudios);
+      console.log('  - Viabilización:', pViabili);
+      console.log('  - Predial:', pPredial);
+      console.log('  - Licencias:', pLicencias);
+      console.log('  - Contratación:', pContra);
+      console.log('  - Inicio:', pInicio);
+      console.log('  - Diseños:', pDisenos);
+      console.log('  - Ejecución:', pEjec);
+      console.log('  - Entrega:', pEnt);
+      console.log('  - Liquidación:', pLiq);
+      console.log('⚖️ Contribuciones ponderadas:');
+      console.log('  - Planeación:', cPlaneacion);
+      console.log('  - Estudios:', cEstudios);
+      console.log('  - Viabilización:', cViabili);
+      console.log('  - Predial:', cPredial);
+      console.log('  - Licencias:', cLicencias);
+      console.log('  - Contratación:', cContra);
+      console.log('  - Inicio:', cInicio);
+      console.log('  - Diseños:', cDisen);
+      console.log('  - Ejecución:', cEjec);
+      console.log('  - Entrega:', cEnt);
+      console.log('  - Liquidación:', cLiq);
+      console.log('📊 Total calculado:', total);
+      console.log('📊 Resultado final:', resultado);
+      console.log('🔍 === FIN CÁLCULO INDICADOR ===');
+      
+      return resultado;
     };
 
     // Sanitizador simple de URL de imagen (toma el primer http/https válido)

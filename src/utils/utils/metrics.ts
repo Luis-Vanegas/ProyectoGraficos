@@ -12,6 +12,61 @@ export function toNumber(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+// Función específica para procesar valores de administraciones anteriores
+export function toNumberAdminAnteriores(v: unknown): number {
+  if (v == null || v === undefined || v === '') return 0;
+  
+  // Convertir a string y limpiar
+  let s = String(v).trim();
+  
+  // Si está vacío después de trim, retornar 0
+  if (!s || s === 'null' || s === 'undefined') return 0;
+  
+  // Log para debug de valores problemáticos
+  const originalValue = s;
+  
+  // Remover espacios
+  s = s.replace(/\s/g, '');
+  
+  // Si es solo texto sin números, retornar 0
+  if (!/\d/.test(s)) return 0;
+  
+  // Manejar diferentes formatos de números
+  // 1. Formato con puntos como separadores de miles: 1.234.567,89
+  if (/^\d{1,3}(\.\d{3})*,\d{1,2}$/.test(s)) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  // 2. Formato con comas como separadores de miles: 1,234,567.89
+  else if (/^\d{1,3}(,\d{3})*\.\d{1,2}$/.test(s)) {
+    s = s.replace(/,/g, '');
+  }
+  // 3. Formato solo con puntos (ambiguo): determinar por contexto
+  else if (/^\d+\.\d+$/.test(s)) {
+    // Si hay solo un punto y 1-2 dígitos después, es decimal
+    if (/^\d+\.\d{1,2}$/.test(s)) {
+      // Es decimal, mantener como está
+    }
+    // Si hay más de 2 dígitos después del punto, probablemente es separador de miles
+    else if (/^\d+\.\d{3,}$/.test(s)) {
+      s = s.replace('.', '');
+    }
+  }
+  // 4. Múltiples puntos: separadores de miles
+  else if (/^\d+(\.\d{3})+$/.test(s)) {
+    s = s.replace(/\./g, '');
+  }
+  // 5. Múltiples comas: separadores de miles
+  else if (/^\d+(,\d{3})+$/.test(s)) {
+    s = s.replace(/,/g, '');
+  }
+  
+  const n = Number(s);
+  const result = Number.isFinite(n) ? Math.round(n * 100) / 100 : 0; // Redondear a 2 decimales
+  
+  
+  return result;
+}
+
 // Fila genérica proveniente del backend
 export type Row = Record<string, string | number | Date | null>;
 
@@ -24,8 +79,15 @@ export function formatMoneyColombian(value: number): string {
   const abs = Math.abs(value);
   
   if (abs >= 1e12) {
-    // Billones (10^12)
-    return `$${(value / 1e12).toFixed(2).replace('.', ',')} bill`;
+    // Billones (10^12) - Formato corto redondeado a 2 decimales
+    const billones = value / 1e12;
+    const redondeado = Math.round(billones * 100) / 100; // 3287.89 -> 3287.89
+    // Si es mayor a 1000, mostrar solo 1 decimal: 3287.89 -> 3.29
+    if (redondeado >= 1000) {
+      const simplificado = redondeado / 1000; // 3287.89 / 1000 = 3.28789
+      return `$${simplificado.toFixed(2).replace('.', ',')} bill`;
+    }
+    return `$${redondeado.toFixed(2).replace('.', ',')} bill`;
   } else if (abs >= 1e9) {
     // Mil millones (10^9)
     return `$${(value / 1e9).toFixed(2).replace('.', ',')} mil M`;
@@ -227,7 +289,7 @@ export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
     if (!f.desde && !f.hasta) return true;
     
     // Si no hay campo de fecha, no filtrar
-    if (!F.fechaEstimadaDeEntrega) return true;
+    if (!F.fechaEstimadaDeEntrega && !F.fechaRealDeEntrega) return true;
     
     const raw = String(x ?? '');
     if (!raw || raw === 'Sin información' || raw === 'undefined') return true;
@@ -246,7 +308,7 @@ export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
       }
       // Si es fecha completa (YYYY-MM-DD)
       else if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-        dateValue = raw.slice(0, 7); // Solo año-mes para comparación
+        dateValue = raw; // Mantener fecha completa para comparación exacta
       }
       // Si es otro formato, intentar extraer año
       else {
@@ -278,7 +340,7 @@ export function applyFiltersForOptions(rows: Row[], f: Filters): Row[] {
     inStr(f.estadoDeLaObra)(F.estadoDeLaObra ? r[F.estadoDeLaObra] : undefined) &&
     inStr(f.contratista)(F.contratistaOperador ? r[F.contratistaOperador] : undefined) &&
     inStr(f.nombre)(F.nombre ? r[F.nombre] : undefined) &&
-    inDateRange(F.fechaEstimadaDeEntrega ? r[F.fechaEstimadaDeEntrega] : undefined)
+    inDateRange(F.fechaEstimadaDeEntrega ? r[F.fechaEstimadaDeEntrega] : F.fechaRealDeEntrega ? r[F.fechaRealDeEntrega] : undefined)
   );
 }
 
@@ -342,7 +404,7 @@ export function applyFilters(rows: Row[], f: Filters): Row[] {
     if (!f.desde && !f.hasta) return true;
     
     // Si no hay campo de fecha, no filtrar
-    if (!F.fechaEstimadaDeEntrega) return true;
+    if (!F.fechaEstimadaDeEntrega && !F.fechaRealDeEntrega) return true;
     
     const raw = String(x ?? '');
     if (!raw || raw === 'Sin información' || raw === 'undefined') return true;
@@ -361,7 +423,7 @@ export function applyFilters(rows: Row[], f: Filters): Row[] {
       }
       // Si es fecha completa (YYYY-MM-DD)
       else if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-        dateValue = raw.slice(0, 7); // Solo año-mes para comparación
+        dateValue = raw; // Mantener fecha completa para comparación exacta
       }
       // Si es otro formato, intentar extraer año
       else {
@@ -374,11 +436,25 @@ export function applyFilters(rows: Row[], f: Filters): Row[] {
       }
 
       // Comparar fechas
-      if (f.desde && dateValue < f.desde) return false;
-      if (f.hasta && dateValue > f.hasta) return false;
+      const desdeCheck = f.desde ? dateValue >= f.desde : true;
+      const hastaCheck = f.hasta ? dateValue <= f.hasta : true;
       
-      return true;
+      // Debug para verificar el filtrado (solo para los primeros registros)
+      if ((f.desde || f.hasta) && Math.random() < 0.1) {
+        console.log('🔍 Filtro de fecha (muestra):', {
+          fechaOriginal: raw,
+          fechaNormalizada: dateValue,
+          desde: f.desde,
+          hasta: f.hasta,
+          desdeCheck,
+          hastaCheck,
+          resultado: desdeCheck && hastaCheck
+        });
+      }
+      
+      return desdeCheck && hastaCheck;
     } catch (error) {
+      console.error('❌ Error en filtro de fecha:', error);
       return true; // Si hay error, no filtrar
     }
   };
@@ -391,7 +467,8 @@ export function applyFilters(rows: Row[], f: Filters): Row[] {
     inStr(f.tipo)(F.tipoDeIntervecion ? r[F.tipoDeIntervecion] : undefined) &&
     inStr(f.estadoDeLaObra)(F.estadoDeLaObra ? r[F.estadoDeLaObra] : undefined) &&
     inStr(f.contratista)(F.contratistaOperador ? r[F.contratistaOperador] : undefined) &&
-    inDateRange(F.fechaEstimadaDeEntrega ? r[F.fechaEstimadaDeEntrega] : undefined)
+    inStr(f.nombre)(F.nombre ? r[F.nombre] : undefined) &&
+    inDateRange(F.fechaEstimadaDeEntrega ? r[F.fechaEstimadaDeEntrega] : F.fechaRealDeEntrega ? r[F.fechaRealDeEntrega] : undefined)
   );
 }
 
@@ -503,18 +580,39 @@ export function kpis(rows: Row[]) {
     ? rows.reduce((s, r) => s + Number(r[F.presupuestoEjecutado] ?? 0), 0)
     : 0;
 
-  // Heurística de “entregadas”
+  // Heurística de "entregadas"
   let entregadas = 0;
   const yearNow = new Date().getFullYear();
   for (const r of rows) {
     const byEstado =
       F.estadoDeLaObra && String(r[F.estadoDeLaObra] ?? '').toLowerCase().includes('entreg');
+    
     let byFecha = false;
-    if (F.fechaRealDeEntrega && !byEstado) {
-      const y = Number(String(r[F.fechaRealDeEntrega] ?? '').slice(0, 4));
-      if (y && y <= yearNow) byFecha = true;
+    if (F.fechaRealDeEntrega) {
+      const fechaReal = String(r[F.fechaRealDeEntrega] ?? '').trim();
+      if (fechaReal && fechaReal !== 'Sin información' && fechaReal !== 'N/A' && fechaReal !== '') {
+        const y = Number(fechaReal.slice(0, 4));
+        if (y && y <= yearNow) byFecha = true;
+      }
     }
-    if (byEstado || byFecha) entregadas++;
+    
+    // Una obra está entregada si:
+    // 1. Su estado contiene "entreg" O
+    // 2. Tiene fecha real de entrega válida
+    if (byEstado || byFecha) {
+      entregadas++;
+      
+      // Debug para verificar la lógica (solo para algunos casos)
+      if (Math.random() < 0.05) {
+        console.log('✅ Obra clasificada como entregada:', {
+          nombre: r['NOMBRE DEL PROYECTO'] || 'Sin nombre',
+          porEstado: byEstado,
+          porFecha: byFecha,
+          estado: r[F.estadoDeLaObra],
+          fechaReal: r[F.fechaRealDeEntrega]
+        });
+      }
+    }
   }
 
   const pctEntregadas = totalObras ? entregadas / totalObras : 0;
@@ -535,6 +633,7 @@ export function kpis(rows: Row[]) {
   const entregadasConfirmadas = calcularEntregadas(rows);
   const porcentajeCuatrienio2024_2027 = calcularPorcentajeCuatrienio2024_2027(rows);
   const valorCuatrienio2024_2027 = calcularValorCuatrienio2024_2027(rows);
+  const valorAdministracionesAnteriores = calcularValorAdministracionesAnteriores(rows);
 
   // Calcular obras con y sin coordenadas
   const conUbicacion = rows.filter(r => {
@@ -561,6 +660,7 @@ export function kpis(rows: Row[]) {
     entregadasConfirmadas,
     porcentajeCuatrienio2024_2027,
     valorCuatrienio2024_2027,
+    valorAdministracionesAnteriores,
     conUbicacion,
     sinUbicacion
   };
@@ -610,11 +710,19 @@ export function calcularPorcentajeEntregadas(rows: Row[]): number {
   for (const r of rows) {
     const byEstado =
       F.estadoDeLaObra && String(r[F.estadoDeLaObra] ?? '').toLowerCase().includes('entreg');
+    
     let byFecha = false;
-    if (F.fechaRealDeEntrega && !byEstado) {
-      const y = Number(String(r[F.fechaRealDeEntrega] ?? '').slice(0, 4));
-      if (y && y <= yearNow) byFecha = true;
+    if (F.fechaRealDeEntrega) {
+      const fechaReal = String(r[F.fechaRealDeEntrega] ?? '').trim();
+      if (fechaReal && fechaReal !== 'Sin información' && fechaReal !== 'N/A' && fechaReal !== '') {
+        const y = Number(fechaReal.slice(0, 4));
+        if (y && y <= yearNow) byFecha = true;
+      }
     }
+    
+    // Una obra está entregada si:
+    // 1. Su estado contiene "entreg" O
+    // 2. Tiene fecha real de entrega válida
     if (byEstado || byFecha) entregadas++;
   }
   
@@ -730,6 +838,24 @@ export function calcularValorCuatrienio2024_2027(rows: Row[]): number {
   return rows.reduce((sum, r) => {
     return sum + toNumber(r[F.presupuestoEjecutadoAdm2024_2027]);
   }, 0);
+}
+
+/**
+ * Valor monetario del Presupuesto de Administraciones Anteriores
+ * Suma directa del campo 'PRESUPUESTO EJECUTADO ADMINISTRACIONES ANTERIORES'
+ */
+export function calcularValorAdministracionesAnteriores(rows: Row[]): number {
+  // Usar siempre el campo directo - suma de lo gastado en administraciones anteriores
+  if (!F.presupuestoEjecutadoAdmAnteriores) {
+    return 0;
+  }
+  
+  const valorDirecto = rows.reduce((sum, r) => {
+    const valor = toNumberAdminAnteriores(r[F.presupuestoEjecutadoAdmAnteriores]);
+    return sum + valor;
+  }, 0);
+  
+  return valorDirecto;
 }
 
 // Dataset 2D con dos métricas (dim, v1, v2)

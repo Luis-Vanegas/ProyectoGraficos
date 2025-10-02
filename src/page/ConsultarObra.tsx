@@ -646,7 +646,7 @@ export default function ConsultarObra() {
                     <div className="modern-kpi-value-consultar">
                       {currentData ? 
                         formatMoneyColombian(Number(currentData[F.presupuestoEjecutadoAdmAnteriores] ?? 0)) : 
-                        formatMoneyColombian(totalMetrics.invTotal - (totalMetrics.valorCuatrienio2024_2027 ?? 0))
+                        formatMoneyColombian(totalMetrics.valorAdministracionesAnteriores ?? 0)
                       }
                     </div>
                   </div>
