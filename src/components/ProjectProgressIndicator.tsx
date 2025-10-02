@@ -204,7 +204,7 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages, showStages = 
     const cContra     = aContra     ? ((pContra)     * (wContra     + preconExtra + globalExtra)) / 100.0 : 0;
     const cInicio     = aInicio     ? ((pInicio)     * (wInicio     + conExtra   + globalExtra)) / 100.0 : 0;
     const cDisen      = aDisenos    ? ((pDisenos)    * (wDisenos    + conExtra   + globalExtra)) / 100.0 : 0;
-    const cEjec       = aEjec       ? ((pEjec)       * (wEjecucion  + conExtra   + globalExtra)) / 100.0 : 0;
+    const cEjec       = aEjec       ? ((pEjec || 0)  * (wEjecucion  + conExtra   + globalExtra)) / 100.0 : 0;
     const cEnt        = aEnt        ? ((pEnt)        * (wEntrega    + conExtra   + globalExtra)) / 100.0 : 0;
     const cLiq        = aLiq        ? ((pLiq)        * (wLiq        + postExtra  + globalExtra)) / 100.0 : 0;
 

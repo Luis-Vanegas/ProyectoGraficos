@@ -22,8 +22,6 @@ export function toNumberAdminAnteriores(v: unknown): number {
   // Si está vacío después de trim, retornar 0
   if (!s || s === 'null' || s === 'undefined') return 0;
   
-  // Log para debug de valores problemáticos
-  const originalValue = s;
   
   // Remover espacios
   s = s.replace(/\s/g, '');
