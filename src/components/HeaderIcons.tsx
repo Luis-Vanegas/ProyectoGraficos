@@ -10,6 +10,7 @@ interface HeaderIconsProps {
   isChartVisible?: boolean;
   onToggleMap?: () => void;
   isMapVisible?: boolean;
+  onSearchClick?: () => void;
 }
 
 interface ObraCalendario {
@@ -22,7 +23,7 @@ interface ObraCalendario {
   comuna?: string;
 }
 
-export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, onToggleMap, isMapVisible }: HeaderIconsProps) {
+export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, onToggleMap, isMapVisible, onSearchClick }: HeaderIconsProps) {
   const [showCalendarPopup, setShowCalendarPopup] = useState(false);
   const [showAlertsPopup, setShowAlertsPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -129,11 +130,12 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
           return a.estado === 'entregada' ? -1 : 1;
         }
         return b.año - a.año;
-      case 'date':
+      case 'date': {
         // Por fecha de entrega (más próximas primero)
         const fechaA = new Date(a.fechaEntrega);
         const fechaB = new Date(b.fechaEntrega);
         return fechaA.getTime() - fechaB.getTime();
+      }
       default:
         return a.año - b.año;
     }
@@ -271,6 +273,18 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
           </svg>
         </button>
 
+        {/* Icono de Búsqueda */}
+        <button 
+          className="header-icon search-button"
+          onClick={onSearchClick}
+          title="Buscar obras con filtros actuales"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+
       </div>
 
       {/* Popup del Calendario - Diseño Moderno */}
@@ -303,7 +317,7 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                 </svg>
               </button>
             </div>
-
+            
             {/* Barra de búsqueda y filtros */}
             <div className="search-section">
               <div className="search-filters-container">
@@ -330,7 +344,7 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                       </svg>
                     </button>
                   )}
-                </div>
+                  </div>
                 
                 <div className="sort-container">
                   <svg className="sort-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -346,9 +360,9 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                     <option value="status">✅ Estado (Entregadas primero)</option>
                     <option value="date">📆 Fecha de entrega</option>
                   </select>
+                  </div>
                 </div>
               </div>
-            </div>
 
             {/* Estadísticas resumen */}
             <div className="stats-section">
@@ -439,7 +453,7 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                   .map(Number)
                   .sort((a, b) => sortOrder === 'year-asc' ? a - b : b - a)
                   .map(año => (
-                    <div key={año} className="year-section">
+                  <div key={año} className="year-section">
                       <div className="year-header">
                         <h3 className="year-title">{año}</h3>
                         <div className="year-stats">
@@ -447,9 +461,9 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                           <span className="year-pending">{obrasPorAño[año].noEntregadas.length} pendientes</span>
                         </div>
                       </div>
-                      
-                      {/* Obras Entregadas */}
-                      {obrasPorAño[año].entregadas.length > 0 && (
+                    
+                    {/* Obras Entregadas */}
+                    {obrasPorAño[año].entregadas.length > 0 && (
                         <div className="works-group delivered-group">
                           <div className="group-header">
                             <div className="group-icon">
@@ -461,7 +475,7 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                             <h4>Entregadas ({obrasPorAño[año].entregadas.length})</h4>
                           </div>
                           <div className="works-list">
-                            {obrasPorAño[año].entregadas.map(obra => (
+                          {obrasPorAño[año].entregadas.map(obra => (
                               <div key={obra.id} className="work-card delivered">
                                 <div className="work-status-indicator"></div>
                                 <div className="work-content">
@@ -479,15 +493,15 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                                     </svg>
                                     {formatDate(obra.fechaEntrega)}
                                   </div>
-                                </div>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
-                      )}
+                      </div>
+                    )}
 
                       {/* Obras Pendientes */}
-                      {obrasPorAño[año].noEntregadas.length > 0 && (
+                    {obrasPorAño[año].noEntregadas.length > 0 && (
                         <div className="works-group pending-group">
                           <div className="group-header">
                             <div className="group-icon">
@@ -499,7 +513,7 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                             <h4>Por Entregar ({obrasPorAño[año].noEntregadas.length})</h4>
                           </div>
                           <div className="works-list">
-                            {obrasPorAño[año].noEntregadas.map(obra => (
+                          {obrasPorAño[año].noEntregadas.map(obra => (
                               <div key={obra.id} className="work-card pending">
                                 <div className="work-status-indicator"></div>
                                 <div className="work-content">
@@ -517,13 +531,13 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
                                     </svg>
                                     {formatDate(obra.fechaEntrega)}
                                   </div>
-                                </div>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                  </div>
                   ))
               )}
             </div>
@@ -657,13 +671,13 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
 
         .header-icon {
           position: relative;
-          background: rgba(255, 255, 255, 0.95);
-          border: 1px solid #79BC99;
+          background: rgba(233, 211, 211, 0.932);
+          border: 1px solid #b1b1b1;
           border-radius: 8px;
           padding: 8px;
           cursor: pointer;
           transition: all 0.3s ease;
-          color: #4E8484;
+          color: #003A59;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -699,7 +713,7 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
         }
 
         .header-icon.chart-toggle-icon.active {
-          border: 2px solid #4E8484;
+          border: 1px solid #a3a8a8;
           background: rgba(121, 188, 153, 0.12);
           box-shadow: 0 0 12px rgba(121, 188, 153, 0.25);
         }
@@ -709,6 +723,19 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
           background: rgba(230, 126, 34, 0.06);
           color: #e67e22;
           box-shadow: 0 0 15px rgba(230, 126, 34, 0.25);
+        }
+
+        .header-icon.search-button {
+          background: rgba(121, 188, 153, 0.1);
+          color: #4E8484;
+          border: 1px solid #79BC99;
+        }
+
+        .header-icon.search-button:hover {
+          background: rgba(121, 188, 153, 0.2);
+          border-color: #4E8484;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(121, 188, 153, 0.3);
         }
 
         .alert-indicator {
@@ -871,7 +898,7 @@ export default function HeaderIcons({ filtered, onToggleChart, isChartVisible, o
         }
 
         .modern-popup-header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #00AABB 0%, #00abbb89 100%);
           color: white;
           padding: 24px 32px;
           display: flex;

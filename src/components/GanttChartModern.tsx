@@ -48,8 +48,8 @@ function parseDate(value: unknown): Date | undefined {
         d = new Date(num * 1000);
       } else {
         // Tratar como año directo si está en rango razonable
-        if (num >= 2024 && num <= 2029) {
-          d = new Date(num, 0, 1); // 1 de enero del año
+        if (num >= 2015 && num <= 2035) {
+          d = new Date(Date.UTC(num, 0, 1)); // 1 de enero del año en UTC
         } else {
           return undefined;
         }
@@ -66,7 +66,7 @@ function parseDate(value: unknown): Date | undefined {
       
       for (const format of formats) {
         d = new Date(format);
-        if (!isNaN(d.getTime()) && d.getFullYear() >= 2024 && d.getFullYear() <= 2029) {
+        if (!isNaN(d.getTime()) && d.getFullYear() >= 2015 && d.getFullYear() <= 2035) {
           break;
         }
       }
@@ -85,10 +85,11 @@ function parseDate(value: unknown): Date | undefined {
           fullYear = parseInt(year) < 30 ? 2000 + parseInt(year) : 1900 + parseInt(year);
         }
         
-        // Solo aceptar años entre 2024 y 2029
-        if (fullYear < 2024 || fullYear > 2029) return undefined;
+        // Solo aceptar años entre 2015 y 2035 (rango amplio para incluir fechas históricas)
+        if (fullYear < 2015 || fullYear > 2035) return undefined;
         
-        d = new Date(fullYear, parseInt(month) - 1, parseInt(day));
+        // Crear fecha en UTC para evitar problemas de zona horaria
+        d = new Date(Date.UTC(fullYear, parseInt(month) - 1, parseInt(day)));
       } else {
         d = new Date(raw);
       }
@@ -99,10 +100,10 @@ function parseDate(value: unknown): Date | undefined {
       return undefined;
     }
     
-    // Validar que esté en el rango 2024-2029
+    // Validar que esté en el rango 2015-2035 (rango amplio para incluir fechas históricas)
     const year = d.getFullYear();
-    if (year < 2024 || year > 2029) {
-      console.log('Date outside range 2024-2029:', d, 'from:', raw);
+    if (year < 2015 || year > 2035) {
+      console.log('🚫 Fecha fuera de rango 2015-2035:', d, 'from:', raw);
       return undefined;
     }
     
@@ -118,7 +119,15 @@ export default function GanttChartModern({ rows, limit = 30, mode = 'phase' }: G
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
-  console.log('GanttChartModern received rows:', rows?.length || 0, 'mode:', mode);
+  console.log('📊 GanttChartModern received rows:', rows?.length || 0, 'mode:', mode);
+  
+  // Debug: Mostrar algunas obras de ejemplo
+  if (rows && rows.length > 0) {
+    console.log('📋 Primeras 3 obras:', rows.slice(0, 3).map(r => ({
+      nombre: r[F.nombre],
+      proyecto: r[F.proyectoEstrategico]
+    })));
+  }
 
   const items = useMemo<GanttItem[]>(() => {
     if (mode === 'work') {
@@ -237,16 +246,23 @@ export default function GanttChartModern({ rows, limit = 30, mode = 'phase' }: G
 
     const result: GanttItem[] = [];
     for (const ph of phases) {
+      console.log(`🔍 Procesando fase: ${ph.label}`);
       let minEst = Number.POSITIVE_INFINITY;
       let maxEst = Number.NEGATIVE_INFINITY;
       let minReal = Number.POSITIVE_INFINITY;
       let maxReal = Number.NEGATIVE_INFINITY;
 
+      let fechasEncontradas = 0;
       for (const r of rows) {
         const se = ph.estStartKey ? parseDate((r as Record<string, unknown>)[ph.estStartKey]) : undefined;
         const ee = ph.estEndKey ? parseDate((r as Record<string, unknown>)[ph.estEndKey]) : undefined;
         const sr = ph.realStartKey ? parseDate((r as Record<string, unknown>)[ph.realStartKey]) : undefined;
         const er = ph.realEndKey ? parseDate((r as Record<string, unknown>)[ph.realEndKey]) : undefined;
+        
+        if (se || ee || sr || er) {
+          fechasEncontradas++;
+          console.log(`  📅 ${ph.label} - Obra: ${r[F.nombre]} - Est: ${se ? se.toISOString().split('T')[0] : 'N/A'}-${ee ? ee.toISOString().split('T')[0] : 'N/A'}, Real: ${sr ? sr.toISOString().split('T')[0] : 'N/A'}-${er ? er.toISOString().split('T')[0] : 'N/A'}`);
+        }
 
         if (se && ee && ee >= se) {
           const s = se.getTime();
@@ -264,7 +280,16 @@ export default function GanttChartModern({ rows, limit = 30, mode = 'phase' }: G
 
       const hasEst = isFinite(minEst) && isFinite(maxEst) && maxEst >= minEst;
       const hasReal = isFinite(minReal) && isFinite(maxReal) && maxReal >= minReal;
-      if (!hasEst && !hasReal) continue;
+      
+      console.log(`📊 ${ph.label} - Fechas encontradas: ${fechasEncontradas}, hasEst: ${hasEst}, hasReal: ${hasReal}`);
+      
+      // Debug: Log para ver qué etapas se están omitiendo
+      if (!hasEst && !hasReal) {
+        console.log(`🚫 Etapa omitida: ${ph.label} - Sin fechas válidas`);
+        continue;
+      }
+      
+      console.log(`✅ Etapa incluida: ${ph.label} - hasEst: ${hasEst}, hasReal: ${hasReal}`);
 
       result.push({
         id: ph.id,
@@ -301,6 +326,27 @@ export default function GanttChartModern({ rows, limit = 30, mode = 'phase' }: G
     if (items.length === 0) return null;
 
     const categories = items.map(item => item.name);
+    
+    // Calcular rango dinámico de fechas basado en los datos
+    let minDate = new Date(2020, 0, 1); // Fecha mínima por defecto (más flexible)
+    let maxDate = new Date(2030, 11, 31); // Fecha máxima por defecto (más flexible)
+    
+    // Encontrar la fecha más temprana y más tardía en los datos
+    for (const item of items) {
+      if (item.startEst && item.startEst < minDate) minDate = item.startEst;
+      if (item.endEst && item.endEst > maxDate) maxDate = item.endEst;
+      if (item.startReal && item.startReal < minDate) minDate = item.startReal;
+      if (item.endReal && item.endReal > maxDate) maxDate = item.endReal;
+    }
+    
+    // Agregar un margen de 3 meses antes y después
+    minDate = new Date(minDate.getFullYear(), Math.max(0, minDate.getMonth() - 3), 1);
+    maxDate = new Date(maxDate.getFullYear(), Math.min(11, maxDate.getMonth() + 3), 31);
+    
+    console.log('📅 Rango dinámico de fechas:', {
+      min: minDate.toISOString().split('T')[0],
+      max: maxDate.toISOString().split('T')[0]
+    });
 
     // Datos para barras estimadas
     const estimatedData = items.map((item, index) => {
@@ -474,12 +520,14 @@ export default function GanttChartModern({ rows, limit = 30, mode = 'phase' }: G
       },
       xAxis: {
         type: 'time',
-        min: new Date(2024, 0, 1).getTime(), // Enero 2024
-        max: new Date(2029, 11, 31).getTime(), // Diciembre 2029
+        min: minDate.getTime(), // Fecha mínima dinámica
+        max: maxDate.getTime(), // Fecha máxima dinámica
         axisLabel: {
           formatter: function(value: number) {
+            // Evitar problemas de zona horaria usando UTC
             const date = new Date(value);
-            return `${MONTHS_ES[date.getMonth()]}\n${date.getFullYear()}`;
+            const utcDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+            return `${MONTHS_ES[utcDate.getMonth()]}\n${utcDate.getFullYear()}`;
           },
           color: '#4a5568',
           fontWeight: '600',

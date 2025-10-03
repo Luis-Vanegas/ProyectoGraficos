@@ -216,7 +216,9 @@ const Dashboard = () => {
       dependencia: filters.dependencia,
       tipo: filters.tipo,
       estadoDeLaObra: filters.estadoDeLaObra,
-      contratista: filters.contratista
+      contratista: filters.contratista,
+      // incluir nombre para permitir filtrar por obra
+      nombre: filters.nombre
     };
     
     // Usar fechas directas del DatePicker si están disponibles
@@ -261,13 +263,12 @@ const Dashboard = () => {
     const result = applyFilters(rows, combinedFilters);
     
     // Debug para verificar el resultado del filtrado
-    if (combinedFilters.desde || combinedFilters.hasta) {
-      console.log('📊 Resultado del filtrado de fechas:', {
-        totalRegistros: rows.length,
-        registrosFiltrados: result.length,
-        filtrosAplicados: combinedFilters
-      });
-    }
+    console.log('🔍 Aplicando filtros:', {
+      totalRegistros: rows.length,
+      registrosFiltrados: result.length,
+      filtrosAplicados: combinedFilters,
+      filtrosOriginales: filters
+    });
     
     return result;
   }, [rows, combinedFilters]);
@@ -462,6 +463,84 @@ const Dashboard = () => {
         isChartVisible={showMainChart}
         onToggleMap={() => setShowMap(v => !v)}
         isMapVisible={showMap}
+        onSearchClick={() => {
+          console.log('🔍 BOTÓN DE BÚSQUEDA CLICKEADO!');
+          // Debug: Mostrar filtros actuales
+          console.log('🔍 Filtros actuales al hacer clic en búsqueda:', filters);
+          console.log('🔍 Datos filtrados actuales:', filtered.length);
+          
+          // Construir URL con los filtros actuales
+          const params = new URLSearchParams();
+          
+          // Agregar filtros de proyecto estratégico
+          if (filters.proyecto && filters.proyecto.length > 0) {
+            filters.proyecto.forEach(proyecto => {
+              params.append('proyectoEstrategico', proyecto);
+            });
+          }
+          
+          // Agregar filtros de dependencia
+          if (filters.dependencia && filters.dependencia.length > 0) {
+            filters.dependencia.forEach(dep => {
+              params.append('dependencia', dep);
+            });
+          }
+          
+          // Agregar filtros de comuna
+          if (filters.comuna && filters.comuna.length > 0) {
+            filters.comuna.forEach(comuna => {
+              params.append('comuna', comuna);
+            });
+          }
+          
+          // Agregar filtros de estado
+          if (filters.estadoDeLaObra && filters.estadoDeLaObra.length > 0) {
+            filters.estadoDeLaObra.forEach(estado => {
+              params.append('estado', estado);
+            });
+          }
+          
+          // Agregar filtros de fecha
+          if (filters.desde) {
+            params.append('fechaInicio', filters.desde);
+          }
+          if (filters.hasta) {
+            params.append('fechaFin', filters.hasta);
+          }
+          
+          // Agregar filtros de presupuesto (si existen)
+          if (filters.presupuestoMin && filters.presupuestoMin !== '') {
+            params.append('presupuestoMin', filters.presupuestoMin);
+          }
+          if (filters.presupuestoMax && filters.presupuestoMax !== '') {
+            params.append('presupuestoMax', filters.presupuestoMax);
+          }
+          
+          // Agregar filtros de nombre de obra
+          if (filters.nombre && filters.nombre.length > 0) {
+            filters.nombre.forEach(nombre => {
+              params.append('nombre', nombre);
+            });
+          }
+          
+          // Agregar otros filtros disponibles
+          if (filters.tipo && filters.tipo.length > 0) {
+            filters.tipo.forEach(tipo => {
+              params.append('tipo', tipo);
+            });
+          }
+          
+          if (filters.contratista && filters.contratista.length > 0) {
+            filters.contratista.forEach(contratista => {
+              params.append('contratista', contratista);
+            });
+          }
+          
+          // Navegar a Consultar Obra con los filtros
+          const url = `/consultar-obra?${params.toString()}`;
+          console.log('🔍 URL construida:', url);
+          window.location.href = url;
+        }}
       />
 
       {/* Botón flotante para abrir el panel de filtros (derecha) */}
@@ -498,7 +577,7 @@ const Dashboard = () => {
         {/* ========================================================================
             PANEL LATERAL DE FILTROS (COLAPSABLE A LA DERECHA)
          ======================================================================== */}
-        <aside id="filtersDrawer" className={`filters-drawer${isFiltersOpen ? ' open' : ''}`} aria-hidden={!isFiltersOpen}>
+        <aside id="filtersDrawer" className={`filters-drawer${isFiltersOpen ? ' open' : ''}`} aria-hidden={isFiltersOpen ? 'false' : 'true'} aria-expanded={isFiltersOpen}>
           <div className="filters-actions drawer-header">
             <h3 className="drawer-title">Filtros</h3>
             <div className="filters-status">

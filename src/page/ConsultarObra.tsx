@@ -863,7 +863,7 @@ export default function ConsultarObra() {
           <h3 className="gantt-title" style={{color: '#2d3748', fontWeight: '600'}}>Cronograma del Proyecto</h3>
           <div className="gantt-container">
             <GanttChartModern 
-              rows={currentData ? [currentData] : []} 
+              rows={filteredRows} 
               limit={10}
               mode="phase"
             />

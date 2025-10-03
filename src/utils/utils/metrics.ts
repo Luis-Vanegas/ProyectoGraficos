@@ -22,47 +22,72 @@ export function toNumberAdminAnteriores(v: unknown): number {
   // Si está vacío después de trim, retornar 0
   if (!s || s === 'null' || s === 'undefined') return 0;
   
-  
-  // Remover espacios
+  // === Replicar pasos de Excel ===
+  // 1) Remover espacios
   s = s.replace(/\s/g, '');
-  
-  // Si es solo texto sin números, retornar 0
+
+  // 2) Negativos por paréntesis
+  const isNegativeByParens = /^\(.*\)$/.test(s);
+  if (isNegativeByParens) s = s.slice(1, -1);
+
+  // 3) Remover símbolos monetarios y texto
+  s = s.replace(/\$|cop|col/gi, '');
+
+  // 4) Reemplazar todos los puntos por comas (como haces en Excel)
+  s = s.replace(/\./g, ',');
+
+  // 5) Mantener solo dígitos, comas y signo
+  s = s.replace(/[^0-9,\-]/g, '');
+
+  // 6) Si no hay dígitos, 0
   if (!/\d/.test(s)) return 0;
-  
-  // Manejar diferentes formatos de números
-  // 1. Formato con puntos como separadores de miles: 1.234.567,89
-  if (/^\d{1,3}(\.\d{3})*,\d{1,2}$/.test(s)) {
-    s = s.replace(/\./g, '').replace(',', '.');
+
+  // 7) Simular VALOR(): última coma es el separador decimal; el resto son miles
+  const commaCount = (s.match(/,/g) || []).length;
+  if (commaCount > 1) {
+    const last = s.lastIndexOf(',');
+    const integerPart = s.slice(0, last).replace(/,/g, '');
+    const decimalPart = s.slice(last + 1);
+    s = integerPart + '.' + decimalPart;
+  } else if (commaCount === 1) {
+    s = s.replace(',', '.');
   }
-  // 2. Formato con comas como separadores de miles: 1,234,567.89
-  else if (/^\d{1,3}(,\d{3})*\.\d{1,2}$/.test(s)) {
-    s = s.replace(/,/g, '');
-  }
-  // 3. Formato solo con puntos (ambiguo): determinar por contexto
-  else if (/^\d+\.\d+$/.test(s)) {
-    // Si hay solo un punto y 1-2 dígitos después, es decimal
-    if (/^\d+\.\d{1,2}$/.test(s)) {
-      // Es decimal, mantener como está
-    }
-    // Si hay más de 2 dígitos después del punto, probablemente es separador de miles
-    else if (/^\d+\.\d{3,}$/.test(s)) {
-      s = s.replace('.', '');
-    }
-  }
-  // 4. Múltiples puntos: separadores de miles
-  else if (/^\d+(\.\d{3})+$/.test(s)) {
-    s = s.replace(/\./g, '');
-  }
-  // 5. Múltiples comas: separadores de miles
-  else if (/^\d+(,\d{3})+$/.test(s)) {
-    s = s.replace(/,/g, '');
-  }
-  
-  const n = Number(s);
-  const result = Number.isFinite(n) ? Math.round(n * 100) / 100 : 0; // Redondear a 2 decimales
+
+  // 8) Parsear y convertir a entero COP
+  let n = Number(s);
+  if (!Number.isFinite(n)) n = 0;
+  if (isNegativeByParens) n = -n;
+  const result = Math.round(n);
   
   
   return result;
+}
+
+// Función específica para procesar valores de administración 2024-2027 (misma lógica Excel)
+export function toNumberAdmin2024_2027(v: unknown): number {
+  if (v == null || v === undefined || v === '') return 0;
+  let s = String(v).trim();
+  if (!s || s === 'null' || s === 'undefined') return 0;
+  s = s.replace(/\s/g, '');
+  const isNegativeByParens = /^\(.*\)$/.test(s);
+  if (isNegativeByParens) s = s.slice(1, -1);
+  s = s.replace(/\$|cop|col/gi, '');
+  s = s.replace(/\./g, ',');
+  s = s.replace(/[^0-9,\-]/g, '');
+  if (!/\d/.test(s)) return 0;
+  const commaCount = (s.match(/,/g) || []).length;
+  if (commaCount > 1) {
+    const last = s.lastIndexOf(',');
+    const integerPart = s.slice(0, last).replace(/,/g, '');
+    const decimalPart = s.slice(last + 1);
+    s = integerPart + '.' + decimalPart;
+  } else if (commaCount === 1) {
+    s = s.replace(',', '.');
+  }
+  let n = Number(s);
+  if (!Number.isFinite(n)) n = 0;
+  if (isNegativeByParens) n = -n;
+  return Math.round(n);
 }
 
 // Fila genérica proveniente del backend
@@ -71,6 +96,38 @@ export type Row = Record<string, string | number | Date | null>;
 // Formateadores
 export const nf = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
 export const cf = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+
+// Limpieza estricta para valores monetarios con logging opcional
+export function toNumberStrict(v: unknown): number {
+  if (v == null || v === undefined || v === '') return 0;
+  let s = String(v).trim();
+  if (!s || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return 0;
+
+  const original = s;
+  s = s.replace(/\s/g, '');
+  if (!/\d/.test(s)) return 0;
+
+  // Casos con miles por punto y coma decimal opcional
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) {
+    // 1.234.567,89 ó 1.234.567 -> 1234567.89 / 1234567
+    s = s.replace(/\./g, '');
+    s = s.replace(',', '.');
+  }
+  // Casos con miles por coma y punto decimal opcional
+  else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) {
+    // 1,234,567.89 ó 1,234,567 -> 1234567.89 / 1234567
+    s = s.replace(/,/g, '');
+  }
+  // En cualquier otro caso, si ya viene con punto decimal (p.ej. 868805864.5562), NO tocar
+
+  const n = Number(s);
+  const result = Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+
+  if (original !== s) {
+    try { console.log(`🔄 toNumberStrict: "${original}" -> "${s}" -> ${result}`); } catch {}
+  }
+  return result;
+}
 
 // Formateador para valores monetarios con notación colombiana (bill, mil M, mill) y 2 decimales
 export function formatMoneyColombian(value: number): string {
@@ -123,15 +180,12 @@ export function formatDate(dateValue: string | null | undefined): string {
       return `${monthNames[parseInt(month) - 1]} ${year}`;
     }
     
-    // Si es fecha completa (YYYY-MM-DD)
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-      const date = new Date(dateValue);
-      return date.toLocaleDateString('es-CO', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    }
+  // Si es fecha completa (YYYY-MM-DD) evitar timezone
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    const [y, m, d] = dateValue.split('-');
+    // Mostrar como DD/MM/YYYY sin crear Date (evita que baje un día)
+    return `${d}/${m}/${y}`;
+  }
     
     // Si es otro formato, intentar extraer año
     const yearMatch = dateValue.match(/\d{4}/);
@@ -457,6 +511,15 @@ export function applyFilters(rows: Row[], f: Filters): Row[] {
     }
   };
 
+  // Debug específico para filtro de nombre
+  if (f.nombre && f.nombre.length > 0) {
+    console.log('🔍 Aplicando filtro de nombre:', {
+      filtroNombre: f.nombre,
+      campoNombre: F.nombre,
+      totalFilas: rows.length
+    });
+  }
+
   return rows.filter(r =>
     inStr(f.proyecto)(F.proyectoEstrategico ? r[F.proyectoEstrategico] : undefined) &&
     inStr(f.subproyecto)(F.subproyectoEstrategico ? r[F.subproyectoEstrategico] : undefined) &&
@@ -564,12 +627,36 @@ export function kpis(rows: Row[]) {
 
   const invTotal = F.costoTotalActualizado
     ? rows.reduce((s, r) => {
-        const costoActualizado = toNumber(r[F.costoTotalActualizado]);
-        const costoEstimado = toNumber(r[F.costoEstimadoTotal]);
-        // Si costo total actualizado es null o 0, usar costo estimado total
-        const costoFinal = (costoActualizado === null || costoActualizado === 0) 
-          ? costoEstimado 
-          : costoActualizado;
+        // Replicar exactamente las fórmulas de Excel:
+        // 1) =SI(O(ESBLANCO([@[COSTO TOTAL ACTUALIZADO]]);[@[COSTO TOTAL ACTUALIZADO]]=0);[@[COSTO ESTIMADO TOTAL]];[@[COSTO TOTAL ACTUALIZADO]])
+        // 2) =(SI(ESBLANCO([@Columna7]);0;TEXTOANTES([@Columna7];".";;;;[@Columna7])))*1
+        
+        const rawActualizado = r[F.costoTotalActualizado];
+        const rawEstimado = r[F.costoEstimadoTotal];
+        
+        // Función para aplicar la segunda fórmula: TEXTOANTES + *1
+        const aplicarFormula2 = (valor: unknown): number => {
+          if (valor == null || valor === '' || valor === 'undefined') return 0;
+          const s = String(valor).trim();
+          if (!s) return 0;
+          
+          // TEXTOANTES([@Columna7];".";;;;[@Columna7]) - tomar todo antes del primer punto
+          const antesDelPunto = s.split('.')[0];
+          // *1 - convertir a número
+          const n = Number(antesDelPunto);
+          return Number.isFinite(n) ? n : 0;
+        };
+        
+        // Aplicar fórmula 2 a ambos campos
+        const costoActualizado = aplicarFormula2(rawActualizado);
+        const costoEstimado = aplicarFormula2(rawEstimado);
+        
+        // Aplicar fórmula 1: SI(O(ESBLANCO(...);...=0);...;...)
+        const esBlancoActualizado = rawActualizado == null || rawActualizado === '' || rawActualizado === 'undefined';
+        const esCeroActualizado = costoActualizado === 0;
+        
+        const costoFinal = (esBlancoActualizado || esCeroActualizado) ? costoEstimado : costoActualizado;
+        
         return s + costoFinal;
       }, 0)
     : 0;
@@ -680,12 +767,27 @@ export function calcularPorcentajePresupuestoEjecutado(rows: Row[]): number {
   }, 0);
   
   const costoTotalActualizado = rows.reduce((sum, r) => {
-    const costoActualizado = toNumber(r[F.costoTotalActualizado]);
-    const costoEstimado = toNumber(r[F.costoEstimadoTotal]);
-    // Si costo total actualizado es null o 0, usar costo estimado total
-    const costoFinal = (costoActualizado === null || costoActualizado === 0) 
-      ? costoEstimado 
-      : costoActualizado;
+    // Aplicar las mismas fórmulas de Excel
+    const rawActualizado = r[F.costoTotalActualizado];
+    const rawEstimado = r[F.costoEstimadoTotal];
+    
+    const aplicarFormula2 = (valor: unknown): number => {
+      if (valor == null || valor === '' || valor === 'undefined') return 0;
+      const s = String(valor).trim();
+      if (!s) return 0;
+      const antesDelPunto = s.split('.')[0];
+      const n = Number(antesDelPunto);
+      return Number.isFinite(n) ? n : 0;
+    };
+    
+    const costoActualizado = aplicarFormula2(rawActualizado);
+    const costoEstimado = aplicarFormula2(rawEstimado);
+    
+    const esBlancoActualizado = rawActualizado == null || rawActualizado === '' || rawActualizado === 'undefined';
+    const esCeroActualizado = costoActualizado === 0;
+    
+    const costoFinal = (esBlancoActualizado || esCeroActualizado) ? costoEstimado : costoActualizado;
+    
     return sum + costoFinal;
   }, 0);
   
@@ -810,17 +912,31 @@ export function calcularPorcentajeCuatrienio2024_2027(rows: Row[]): number {
   if (!F.presupuestoEjecutadoAdm2024_2027 || !F.costoTotalActualizado) return 0;
   
   const presupuestoEjecutadoCuatrienio = rows.reduce((sum, r) => {
-    return sum + toNumber(r[F.presupuestoEjecutadoAdm2024_2027]);
+    return sum + toNumberAdmin2024_2027(r[F.presupuestoEjecutadoAdm2024_2027]);
   }, 0);
   
-  // Calcular la inversión total (costo total actualizado)
+  // Calcular la inversión total (costo total actualizado) con fórmulas de Excel
   const inversionTotal = rows.reduce((sum, r) => {
-    const costoActualizado = toNumber(r[F.costoTotalActualizado]);
-    const costoEstimado = toNumber(r[F.costoEstimadoTotal]);
-    // Si costo total actualizado es null o 0, usar costo estimado total
-    const costoFinal = (costoActualizado === null || costoActualizado === 0) 
-      ? costoEstimado 
-      : costoActualizado;
+    const rawActualizado = r[F.costoTotalActualizado];
+    const rawEstimado = r[F.costoEstimadoTotal];
+    
+    const aplicarFormula2 = (valor: unknown): number => {
+      if (valor == null || valor === '' || valor === 'undefined') return 0;
+      const s = String(valor).trim();
+      if (!s) return 0;
+      const antesDelPunto = s.split('.')[0];
+      const n = Number(antesDelPunto);
+      return Number.isFinite(n) ? n : 0;
+    };
+    
+    const costoActualizado = aplicarFormula2(rawActualizado);
+    const costoEstimado = aplicarFormula2(rawEstimado);
+    
+    const esBlancoActualizado = rawActualizado == null || rawActualizado === '' || rawActualizado === 'undefined';
+    const esCeroActualizado = costoActualizado === 0;
+    
+    const costoFinal = (esBlancoActualizado || esCeroActualizado) ? costoEstimado : costoActualizado;
+    
     return sum + costoFinal;
   }, 0);
   
@@ -834,7 +950,7 @@ export function calcularValorCuatrienio2024_2027(rows: Row[]): number {
   if (!F.presupuestoEjecutadoAdm2024_2027) return 0;
   
   return rows.reduce((sum, r) => {
-    return sum + toNumber(r[F.presupuestoEjecutadoAdm2024_2027]);
+    return sum + toNumberAdmin2024_2027(r[F.presupuestoEjecutadoAdm2024_2027]);
   }, 0);
 }
 
