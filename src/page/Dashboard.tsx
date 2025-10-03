@@ -75,6 +75,9 @@ type UIFilters = {
   hastaDia?: string;
   hastaMes?: string;
   hastaAnio?: string;
+  // Filtros de presupuesto
+  presupuestoMin?: string;
+  presupuestoMax?: string;
 };
 
 const Dashboard = () => {
