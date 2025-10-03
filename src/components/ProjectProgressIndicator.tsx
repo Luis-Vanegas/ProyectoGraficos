@@ -196,17 +196,17 @@ const ProjectProgressIndicator = ({ data, allData, onToggleStages, showStages = 
     const globalExtra = totalApplicable === 0 ? 0 : totalNAWeight / totalApplicable;
 
     // Contribuciones ponderadas (traducción fiel del DAX)
-    const cPlaneacion = aPlaneacion ? ((pPlaneacion || 0) * (wPlaneacion + prepExtra + globalExtra)) / 100.0 : 0;
-    const cEstudios   = aEstudios   ? ((pEstudios || 0)   * (wEstudios   + preconExtra + globalExtra)) / 100.0 : 0;
-    const cViabili    = aViabili    ? ((pViabili || 0)    * (wViabili    + preconExtra + globalExtra)) / 100.0 : 0;
-    const cPredial    = aPredial    ? ((pPredial || 0)    * (wPredial    + preconExtra + globalExtra)) / 100.0 : 0;
-    const cLicencias  = aLicencias  ? ((pLicencias || 0)  * (wLicencias  + preconExtra + globalExtra)) / 100.0 : 0;
-    const cContra     = aContra     ? ((pContra || 0)     * (wContra     + preconExtra + globalExtra)) / 100.0 : 0;
-    const cInicio     = aInicio     ? ((pInicio || 0)     * (wInicio     + conExtra   + globalExtra)) / 100.0 : 0;
-    const cDisen      = aDisenos    ? ((pDisenos || 0)    * (wDisenos    + conExtra   + globalExtra)) / 100.0 : 0;
-    const cEjec       = aEjec       ? ((pEjec || 0)       * (wEjecucion  + conExtra   + globalExtra)) / 100.0 : 0;
-    const cEnt        = aEnt        ? ((pEnt || 0)        * (wEntrega    + conExtra   + globalExtra)) / 100.0 : 0;
-    const cLiq        = aLiq        ? ((pLiq || 0)        * (wLiq        + postExtra  + globalExtra)) / 100.0 : 0;
+    const cPlaneacion = aPlaneacion ? ((pPlaneacion) * (wPlaneacion + prepExtra + globalExtra)) / 100.0 : 0;
+    const cEstudios   = aEstudios   ? ((pEstudios)   * (wEstudios   + preconExtra + globalExtra)) / 100.0 : 0;
+    const cViabili    = aViabili    ? ((pViabili)    * (wViabili    + preconExtra + globalExtra)) / 100.0 : 0;
+    const cPredial    = aPredial    ? ((pPredial)    * (wPredial    + preconExtra + globalExtra)) / 100.0 : 0;
+    const cLicencias  = aLicencias  ? ((pLicencias)  * (wLicencias  + preconExtra + globalExtra)) / 100.0 : 0;
+    const cContra     = aContra     ? ((pContra)     * (wContra     + preconExtra + globalExtra)) / 100.0 : 0;
+    const cInicio     = aInicio     ? ((pInicio)     * (wInicio     + conExtra   + globalExtra)) / 100.0 : 0;
+    const cDisen      = aDisenos    ? ((pDisenos)    * (wDisenos    + conExtra   + globalExtra)) / 100.0 : 0;
+    const cEjec       = aEjec       ? ((pEjec || 0)  * (wEjecucion  + conExtra   + globalExtra)) / 100.0 : 0;
+    const cEnt        = aEnt        ? ((pEnt)        * (wEntrega    + conExtra   + globalExtra)) / 100.0 : 0;
+    const cLiq        = aLiq        ? ((pLiq)        * (wLiq        + postExtra  + globalExtra)) / 100.0 : 0;
 
     const total = cPlaneacion + cEstudios + cViabili + cPredial + cLicencias + cContra + cInicio + cDisen + cEjec + cEnt + cLiq;
     const bounded = Math.max(0, Math.min(100, total));

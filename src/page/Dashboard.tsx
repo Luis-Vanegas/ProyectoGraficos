@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
+import { Dayjs } from 'dayjs';
 
 import { F } from '../dataConfig';
 // import type * as GeoJSON from 'geojson';
@@ -28,6 +29,7 @@ import MapLibreVisor from '../components/MapLibreVisor';
 import VigenciasTable from '../components/VigenciasTable';
 import HeaderIcons from '../components/HeaderIcons';
 import ImprovedMultiSelect from '../components/ImprovedMultiSelect';
+import DateFilter from '../components/DateFilter';
 
 //
 
@@ -73,6 +75,9 @@ type UIFilters = {
   hastaDia?: string;
   hastaMes?: string;
   hastaAnio?: string;
+  // Filtros de presupuesto
+  presupuestoMin?: string;
+  presupuestoMax?: string;
 };
 
 const Dashboard = () => {
@@ -82,6 +87,8 @@ const Dashboard = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState('Cargando...');
   const [filters, setFilters] = useState<UIFilters>({});
+  const [selectedDateFrom, setSelectedDateFrom] = useState<Dayjs | null>(null);
+  const [selectedDateTo, setSelectedDateTo] = useState<Dayjs | null>(null);
   
   // Función para contar filtros activos (que no sean undefined o vacíos)
   const getActiveFiltersCount = (filters: UIFilters): number => {
@@ -95,6 +102,63 @@ const Dashboard = () => {
   useEffect(() => {
     // Filtros actualizados
   }, [filters]);
+  
+  // Función para manejar el cambio de fecha desde
+  const handleDateFromChange = (date: Dayjs | null) => {
+    setSelectedDateFrom(date);
+    updateDateFilters(date, selectedDateTo);
+  };
+
+  // Función para manejar el cambio de fecha hasta
+  const handleDateToChange = (date: Dayjs | null) => {
+    setSelectedDateTo(date);
+    updateDateFilters(selectedDateFrom, date);
+  };
+
+  // Función para actualizar los filtros de fecha
+  const updateDateFilters = (dateFrom: Dayjs | null, dateTo: Dayjs | null) => {
+    if (dateFrom || dateTo) {
+      let desde = '';
+      let hasta = '';
+
+      if (dateFrom) {
+        const year = dateFrom.year();
+        const month = dateFrom.month() + 1;
+        const day = dateFrom.date();
+        desde = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      }
+
+      if (dateTo) {
+        const year = dateTo.year();
+        const month = dateTo.month() + 1;
+        const day = dateTo.date();
+        hasta = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      }
+
+      setFilters(prev => ({
+        ...prev,
+        desde: desde || undefined,
+        hasta: hasta || undefined
+      }));
+
+      console.log('📅 Filtro de fecha actualizado:', {
+        desde: desde || 'No seleccionado',
+        hasta: hasta || 'No seleccionado',
+        rangoCompleto: desde && hasta
+      });
+    } else {
+      // Si no hay fechas seleccionadas, limpiar filtros de fecha
+      setFilters(prev => {
+        const newFilters = { ...prev };
+        delete newFilters.desde;
+        delete newFilters.hasta;
+        return newFilters;
+      });
+      
+      console.log('📅 Filtros de fecha limpiados');
+    }
+  };
+  
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [showMainChart, setShowMainChart] = useState(true);
   const [showMap, setShowMap] = useState(true);
@@ -155,16 +219,26 @@ const Dashboard = () => {
       dependencia: filters.dependencia,
       tipo: filters.tipo,
       estadoDeLaObra: filters.estadoDeLaObra,
-      contratista: filters.contratista
+      contratista: filters.contratista,
+      // incluir nombre para permitir filtrar por obra
+      nombre: filters.nombre
     };
     
-    // Combinar fecha desde
-    if (filters.desdeDia && filters.desdeMes && filters.desdeAnio) {
+    // Usar fechas directas del DatePicker si están disponibles
+    if (filters.desde) {
+      newFilters.desde = filters.desde;
+    }
+    // Si no, combinar fecha desde (para compatibilidad con filtros antiguos)
+    else if (filters.desdeDia && filters.desdeMes && filters.desdeAnio) {
       newFilters.desde = `${filters.desdeAnio}-${filters.desdeMes}-${filters.desdeDia}`;
     }
     
-    // Combinar fecha hasta
-    if (filters.hastaDia && filters.hastaMes && filters.hastaAnio) {
+    // Usar fechas directas del DatePicker si están disponibles
+    if (filters.hasta) {
+      newFilters.hasta = filters.hasta;
+    }
+    // Si no, combinar fecha hasta (para compatibilidad con filtros antiguos)
+    else if (filters.hastaDia && filters.hastaMes && filters.hastaAnio) {
       newFilters.hasta = `${filters.hastaAnio}-${filters.hastaMes}-${filters.hastaDia}`;
     }
     
@@ -175,10 +249,30 @@ const Dashboard = () => {
     return getFilterOptions(rows, filters);
   }, [rows, filters]);
   const combinedFilters = useMemo(() => {
-    return combineDateFields(filters);
+    const combined = combineDateFields(filters);
+    
+    // Debug para verificar los filtros combinados
+    if (combined.desde || combined.hasta) {
+      console.log('🔍 Filtros combinados aplicados:', {
+        desde: combined.desde,
+        hasta: combined.hasta,
+        totalFiltros: Object.keys(combined).filter(key => combined[key as keyof typeof combined]).length
+      });
+    }
+    
+    return combined;
   }, [filters]);
   const filtered = useMemo(() => {
     const result = applyFilters(rows, combinedFilters);
+    
+    // Debug para verificar el resultado del filtrado
+    console.log('🔍 Aplicando filtros:', {
+      totalRegistros: rows.length,
+      registrosFiltrados: result.length,
+      filtrosAplicados: combinedFilters,
+      filtrosOriginales: filters
+    });
+    
     return result;
   }, [rows, combinedFilters]);
 
@@ -233,12 +327,20 @@ const Dashboard = () => {
     return filtered.filter(r => {
       const est = F.estadoDeLaObra ? String(r[F.estadoDeLaObra] ?? '').toLowerCase() : '';
       const okEstado = est.includes('entreg');
-      if (okEstado) return true;
+      
+      let okFecha = false;
       if (F.fechaRealDeEntrega) {
-        const y = Number(String(r[F.fechaRealDeEntrega] ?? '').slice(0, 4));
-        return !!y && y <= new Date().getFullYear();
+        const fechaReal = String(r[F.fechaRealDeEntrega] ?? '').trim();
+        if (fechaReal && fechaReal !== 'Sin información' && fechaReal !== 'N/A' && fechaReal !== '') {
+          const y = Number(fechaReal.slice(0, 4));
+          okFecha = !!y && y <= new Date().getFullYear();
+        }
       }
-      return false;
+      
+      // Una obra está entregada si:
+      // 1. Su estado contiene "entreg" O
+      // 2. Tiene fecha real de entrega válida
+      return okEstado || okFecha;
     });
   }, [filtered]);
 
@@ -364,6 +466,84 @@ const Dashboard = () => {
         isChartVisible={showMainChart}
         onToggleMap={() => setShowMap(v => !v)}
         isMapVisible={showMap}
+        onSearchClick={() => {
+          console.log('🔍 BOTÓN DE BÚSQUEDA CLICKEADO!');
+          // Debug: Mostrar filtros actuales
+          console.log('🔍 Filtros actuales al hacer clic en búsqueda:', filters);
+          console.log('🔍 Datos filtrados actuales:', filtered.length);
+          
+          // Construir URL con los filtros actuales
+          const params = new URLSearchParams();
+          
+          // Agregar filtros de proyecto estratégico
+          if (filters.proyecto && filters.proyecto.length > 0) {
+            filters.proyecto.forEach(proyecto => {
+              params.append('proyectoEstrategico', proyecto);
+            });
+          }
+          
+          // Agregar filtros de dependencia
+          if (filters.dependencia && filters.dependencia.length > 0) {
+            filters.dependencia.forEach(dep => {
+              params.append('dependencia', dep);
+            });
+          }
+          
+          // Agregar filtros de comuna
+          if (filters.comuna && filters.comuna.length > 0) {
+            filters.comuna.forEach(comuna => {
+              params.append('comuna', comuna);
+            });
+          }
+          
+          // Agregar filtros de estado
+          if (filters.estadoDeLaObra && filters.estadoDeLaObra.length > 0) {
+            filters.estadoDeLaObra.forEach(estado => {
+              params.append('estado', estado);
+            });
+          }
+          
+          // Agregar filtros de fecha
+          if (filters.desde) {
+            params.append('fechaInicio', filters.desde);
+          }
+          if (filters.hasta) {
+            params.append('fechaFin', filters.hasta);
+          }
+          
+          // Agregar filtros de presupuesto (si existen)
+          if (filters.presupuestoMin && filters.presupuestoMin !== '') {
+            params.append('presupuestoMin', filters.presupuestoMin);
+          }
+          if (filters.presupuestoMax && filters.presupuestoMax !== '') {
+            params.append('presupuestoMax', filters.presupuestoMax);
+          }
+          
+          // Agregar filtros de nombre de obra
+          if (filters.nombre && filters.nombre.length > 0) {
+            filters.nombre.forEach(nombre => {
+              params.append('nombre', nombre);
+            });
+          }
+          
+          // Agregar otros filtros disponibles
+          if (filters.tipo && filters.tipo.length > 0) {
+            filters.tipo.forEach(tipo => {
+              params.append('tipo', tipo);
+            });
+          }
+          
+          if (filters.contratista && filters.contratista.length > 0) {
+            filters.contratista.forEach(contratista => {
+              params.append('contratista', contratista);
+            });
+          }
+          
+          // Navegar a Consultar Obra con los filtros
+          const url = `/consultar-obra?${params.toString()}`;
+          console.log('🔍 URL construida:', url);
+          window.location.href = url;
+        }}
       />
 
       {/* Botón flotante para abrir el panel de filtros (derecha) */}
@@ -400,7 +580,7 @@ const Dashboard = () => {
         {/* ========================================================================
             PANEL LATERAL DE FILTROS (COLAPSABLE A LA DERECHA)
          ======================================================================== */}
-        <aside id="filtersDrawer" className={`filters-drawer${isFiltersOpen ? ' open' : ''}`} aria-hidden={!isFiltersOpen}>
+        <aside id="filtersDrawer" className={`filters-drawer${isFiltersOpen ? ' open' : ''}`} aria-hidden={isFiltersOpen ? 'false' : 'true'} aria-expanded={isFiltersOpen}>
           <div className="filters-actions drawer-header">
             <h3 className="drawer-title">Filtros</h3>
             <div className="filters-status">
@@ -418,7 +598,16 @@ const Dashboard = () => {
             </div>
             <button
               className="clear-filters-btn"
-              onClick={() => setFilters({})}
+              onClick={() => {
+                // Resetear las fechas seleccionadas primero
+                setSelectedDateFrom(null);
+                setSelectedDateTo(null);
+                
+                // Resetear todos los filtros (incluyendo fechas)
+                setFilters({});
+                
+                console.log('🧹 Todos los filtros limpiados (incluyendo fechas)');
+              }}
               title="Borrar todos los filtros"
               disabled={getActiveFiltersCount(filters) === 0}
             >
@@ -428,7 +617,7 @@ const Dashboard = () => {
             <button className="drawer-close-btn" aria-label="Cerrar filtros" onClick={() => setIsFiltersOpen(false)}>✖</button>
           </div>
           <div className="drawer-scroll">
-          {/* Primera fila de filtros */}
+          {/* Primera fila de filtros - 6 columnas */}
           <div className="filters-container filters-row-main">
             {/* Filtro: Proyectos estratégicos */}
             {F.proyectoEstrategico && (
@@ -477,6 +666,7 @@ const Dashboard = () => {
                 placeholder="Todas las comunas"
               />
             )}
+
             {/* Filtro: Obra (Nombre) */}
             {F.nombre && (
               <ImprovedMultiSelect
@@ -488,10 +678,7 @@ const Dashboard = () => {
                 placeholder="Todas las obras"
               />
             )}
-          </div>
 
-          {/* Segunda fila de filtros */}
-          <div className="filters-container filters-row-secondary">
             {/* Filtro: Tipo de Intervención */}
             {F.tipoDeIntervecion && (
               <ImprovedMultiSelect
@@ -503,7 +690,10 @@ const Dashboard = () => {
                 placeholder="Todos los tipos"
               />
             )}
+          </div>
 
+          {/* Segunda fila de filtros - 3 columnas */}
+          <div className="filters-container filters-row-secondary">
             {/* Filtro: Contratista */}
             {F.contratistaOperador && (
               <ImprovedMultiSelect
@@ -526,101 +716,38 @@ const Dashboard = () => {
             />
           </div>
 
-          {/* Tercera fila - Filtros de fecha */}
+          {/* Tercera fila - Filtros de fecha con DatePicker */}
           {(F.fechaRealDeEntrega || F.fechaEstimadaDeEntrega) && (
             <div className="filters-container filters-row-dates">
               <div className="filter-group date-filter-group">
                 <label className="filter-label">FECHA DESDE</label>
-                <div className="date-inputs">
-                  <select
-                    className="filter-select date-select"
-                    value={filters.desdeDia ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, desdeDia: e.target.value || undefined }))}
-                  >
-                    <option value="">Día</option>
-                    {Array.from({length: 31}, (_, i) => i + 1).map(day => (
-                      <option key={day} value={day.toString().padStart(2, '0')}>
-                        {day.toString().padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="filter-select date-select"
-                    value={filters.desdeMes ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, desdeMes: e.target.value || undefined }))}
-                  >
-                    <option value="">Mes</option>
-                    <option value="01">Enero</option>
-                    <option value="02">Febrero</option>
-                    <option value="03">Marzo</option>
-                    <option value="04">Abril</option>
-                    <option value="05">Mayo</option>
-                    <option value="06">Junio</option>
-                    <option value="07">Julio</option>
-                    <option value="08">Agosto</option>
-                    <option value="09">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                  </select>
-                  <select
-                    className="filter-select date-select"
-                    value={filters.desdeAnio ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, desdeAnio: e.target.value || undefined }))}
-                  >
-                    <option value="">Año</option>
-                    {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
+                <div className="date-picker-container">
+                  <DateFilter
+                    onDateChange={handleDateFromChange}
+                    label="Fecha desde"
+                    placeholder="DD/MM/YYYY"
+                    value={selectedDateFrom}
+                  />
                 </div>
               </div>
-
+              
               <div className="filter-group date-filter-group">
                 <label className="filter-label">FECHA HASTA</label>
-                <div className="date-inputs">
-                  <select
-                    className="filter-select date-select"
-                    value={filters.hastaDia ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, hastaDia: e.target.value || undefined }))}
-                  >
-                    <option value="">Día</option>
-                    {Array.from({length: 31}, (_, i) => i + 1).map(day => (
-                      <option key={day} value={day.toString().padStart(2, '0')}>
-                        {day.toString().padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="filter-select date-select"
-                    value={filters.hastaMes ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, hastaMes: e.target.value || undefined }))}
-                  >
-                    <option value="">Mes</option>
-                    <option value="01">Enero</option>
-                    <option value="02">Febrero</option>
-                    <option value="03">Marzo</option>
-                    <option value="04">Abril</option>
-                    <option value="05">Mayo</option>
-                    <option value="06">Junio</option>
-                    <option value="07">Julio</option>
-                    <option value="08">Agosto</option>
-                    <option value="09">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                  </select>
-                  <select
-                    className="filter-select date-select"
-                    value={filters.hastaAnio ?? ''}
-                    onChange={e => setFilters(f => ({ ...f, hastaAnio: e.target.value || undefined }))}
-                  >
-                    <option value="">Año</option>
-                    {Array.from({length: 7}, (_, i) => 2024 + i).map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
+                <div className="date-picker-container">
+                  <DateFilter
+                    onDateChange={handleDateToChange}
+                    label="Fecha hasta"
+                    placeholder="DD/MM/YYYY"
+                    value={selectedDateTo}
+                  />
                 </div>
+              </div>
+              
+              <div className="date-filter-info" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
+                <small style={{ color: '#6B7280', fontSize: '0.8rem' }}>
+                  📅 Selecciona un rango de fechas para filtrar las obras<br/>
+                  <strong>Desde:</strong> Fecha de inicio | <strong>Hasta:</strong> Fecha de fin
+                </small>
               </div>
             </div>
           )}
@@ -640,11 +767,16 @@ const Dashboard = () => {
           {(() => {
             const presupuestoEjecutado = k.ejec;
             const presupuestoCuatrienio = k.valorCuatrienio2024_2027;
-            const presupuestoAnteriores = Math.max(0, presupuestoEjecutado - presupuestoCuatrienio);
+            const presupuestoAnteriores = k.valorAdministracionesAnteriores;
+            
+            console.log('📊 === VALORES EN DASHBOARD ===');
+            console.log('💰 Presupuesto ejecutado:', formatMoneyColombian(presupuestoEjecutado));
+            console.log('📅 Presupuesto cuatrienio 2024-2027:', formatMoneyColombian(presupuestoCuatrienio));
+            console.log('🏛️ Presupuesto administraciones anteriores:', formatMoneyColombian(presupuestoAnteriores));
+            console.log('📊 === FIN VALORES DASHBOARD ===');
             const invTotal = k.invTotal || 1;
             const pctEjecSobreTotal = Math.round((presupuestoEjecutado / invTotal) * 100);
             const pctCuatSobreTotal = Math.round((presupuestoCuatrienio / invTotal) * 100);
-            const pctAntSobreTotal = Math.round((presupuestoAnteriores / invTotal) * 100);
             return (
               <div className="budget-summary-card">
                 <div className="modern-kpis-row">
@@ -653,14 +785,14 @@ const Dashboard = () => {
                       <div className="modern-kpi-info">
                         <div className="modern-kpi-label">Total de Obras</div>
                         <div className="modern-kpi-value"><CountUp end={k.totalObras} duration={1.0} separator="." /></div>
-                      </div>
+                    </div>
                       <div className="modern-kpi-icon">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M19 21V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V21M19 21H21M19 21H13.5M5 21H3M5 21H10.5M10.5 21V15.5C10.5 15.2239 10.7239 15 11 15H13C13.2761 15 13.5 15.2239 13.5 15.5V21M10.5 21H13.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                           <path d="M9 7H9.01M9 11H9.01M15 7H15.01M15 11H15.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
-                      </div>
                     </div>
+                  </div>
                   </div>
                   
                   <div className="modern-kpi modern-kpi-green">
@@ -669,14 +801,14 @@ const Dashboard = () => {
                         <div className="modern-kpi-label">Obras Entregadas</div>
                         <div className="modern-kpi-value"><CountUp end={k.entregadas} duration={1.0} separator="." /></div>
                         <div className="modern-kpi-subtitle">{Math.round(k.pctEntregadas * 100)}% del total</div>
-                      </div>
+                    </div>
                       <div className="modern-kpi-icon">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
-                      </div>
-                    </div>
                   </div>
+                </div>
+                    </div>
                   
                   <div className="modern-kpi modern-kpi-green-light">
                     <div className="modern-kpi-content">
@@ -707,19 +839,18 @@ const Dashboard = () => {
                     <div className="modern-budget-header">
                       <span className="modern-budget-title">Presupuesto 2024-2027</span>
                       <span className="modern-budget-badge">{pctCuatSobreTotal}%</span>
-                    </div>
+                      </div>
                     <div className="modern-budget-value">
-                      {formatMoneyColombian(presupuestoCuatrienio)}
+                        {formatMoneyColombian(presupuestoCuatrienio)}
+                      </div>
                     </div>
-                  </div>
                   
                   <div className="modern-budget-item modern-budget-green">
                     <div className="modern-budget-header">
                       <span className="modern-budget-title">Presupuesto administraciones anteriores</span>
-                      <span className="modern-budget-badge">{pctAntSobreTotal}%</span>
-                    </div>
+                      </div>
                     <div className="modern-budget-value">
-                      {formatMoneyColombian(presupuestoAnteriores)}
+                        {formatMoneyColombian(presupuestoAnteriores)}
                     </div>
                   </div>
                 </div>
@@ -1221,7 +1352,7 @@ const Dashboard = () => {
         }
 
         .filters-row-main {
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(6, 1fr);
         }
 
         .filters-row-secondary {
@@ -1229,8 +1360,53 @@ const Dashboard = () => {
         }
 
         .filters-row-dates {
-          grid-template-columns: repeat(2, 1fr);
-          gap: 30px;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+        
+        .date-picker-container {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          margin: 10px 0;
+          position: relative;
+          z-index: 1;
+        }
+        
+        .date-filter-info {
+          position: relative;
+          z-index: 0;
+          text-align: center;
+          margin-top: 12px;
+        }
+        
+        /* Responsive para DateFilter */
+        @media (max-width: 768px) {
+          .date-picker-container {
+            margin: 5px 0;
+          }
+          
+          .date-filter-info {
+            font-size: 0.75rem;
+            margin-top: 5px;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .filters-row-dates {
+            grid-template-columns: 1fr;
+            gap: 15px;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .filters-row-dates {
+            gap: 10px;
+          }
+          
+          .date-picker-container {
+            margin: 0;
+          }
         }
 
         .filter-group {
@@ -1308,6 +1484,7 @@ const Dashboard = () => {
         .multi-select-container {
           position: relative;
           width: 100%;
+          z-index: 10;
         }
 
         .multi-select-trigger {
@@ -1365,11 +1542,12 @@ const Dashboard = () => {
           top: 100%;
           left: 0;
           right: 0;
-          background: white;
+          background: #ffffff !important;
+          opacity: 1 !important;
           border: 2px solid #79BC99;
           border-radius: 12px;
           box-shadow: 0 8px 25px rgba(121, 188, 153, 0.2);
-          z-index: 1000;
+          z-index: 1500;
           max-height: 300px;
           overflow: hidden;
         }
@@ -1377,6 +1555,7 @@ const Dashboard = () => {
         .multi-select-search {
           padding: 12px;
           border-bottom: 1px solid #E9ECEF;
+          background: #ffffff !important;
         }
 
         .multi-select-search-input {
@@ -1398,6 +1577,7 @@ const Dashboard = () => {
           border-bottom: 1px solid #E9ECEF;
           display: flex;
           gap: 8px;
+          background: #ffffff !important;
         }
 
         .multi-select-action-btn {
@@ -1427,6 +1607,7 @@ const Dashboard = () => {
           max-height: 200px;
           overflow-y: auto;
           padding: 8px 0;
+          background: #ffffff !important;
         }
 
         .multi-select-option {
@@ -1435,10 +1616,11 @@ const Dashboard = () => {
           padding: 8px 16px;
           cursor: pointer;
           transition: background-color 0.2s ease;
+          background: #ffffff !important;
         }
 
         .multi-select-option:hover {
-          background-color: #F8F9FA;
+          background-color: #F8F9FA !important;
         }
 
         .multi-select-option input[type="checkbox"] {
@@ -1450,6 +1632,36 @@ const Dashboard = () => {
           color: #2C3E50;
           font-size: 14px;
           flex: 1;
+        }
+
+        /* ========================================================================
+            REACT-SELECT OVERRIDES - Para solucionar transparencia
+        ======================================================================== */
+        .improved-multi-select__menu {
+          background: #ffffff !important;
+          z-index: 1500 !important;
+          opacity: 1 !important;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        .improved-multi-select__menu-list {
+          background: #ffffff !important;
+          opacity: 1 !important;
+        }
+        
+        .improved-multi-select__option {
+          background: #ffffff !important;
+          opacity: 1 !important;
+        }
+        
+        .improved-multi-select__option--is-focused {
+          background: #f3f4f6 !important;
+          opacity: 1 !important;
+        }
+        
+        .improved-multi-select__option--is-selected {
+          background: #3b82f6 !important;
+          opacity: 1 !important;
         }
 
         /* Estilos específicos para móviles en filtros */
@@ -3805,7 +4017,7 @@ const Dashboard = () => {
           .kpis-grid .kpi .kpi-value {
             font-size: 1.4rem !important;
           }
-          
+
           /* Gráficos ultra responsive para pantallas muy pequeñas */
           .main-chart-section {
             padding: 6px;
@@ -3977,9 +4189,19 @@ const Dashboard = () => {
           min-width: 45px;
         }
 
+        /* Responsive para pantallas grandes */
+        @media (max-width: 1400px) {
+          .filters-row-main {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
         /* Responsive para tablets */
         @media (max-width: 1200px) {
-          .filters-row-main,
+          .filters-row-main {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          
           .filters-row-secondary {
             grid-template-columns: repeat(2, 1fr);
           }
